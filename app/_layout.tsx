@@ -10,8 +10,11 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { ensureCooksySession, subscribeToCooksyAuth } from "@/lib/auth";
+import { hasSupabaseConfig } from "@/lib/env";
 import { queryClient } from "@/lib/query-client";
 import { fetchRecipeBooks, fetchRecentRecipes } from "@/services/recipe-service";
+import { useAuthStore } from "@/store/use-auth-store";
 import { useCooksyStore } from "@/store/use-cooksy-store";
 
 SplashScreen.preventAutoHideAsync();
@@ -24,6 +27,8 @@ export default function RootLayout() {
   });
   const mergeBooks = useCooksyStore((state) => state.mergeBooks);
   const mergeRecipes = useCooksyStore((state) => state.mergeRecipes);
+  const authStatus = useAuthStore((state) => state.status);
+  const setAuthState = useAuthStore((state) => state.setAuthState);
 
   useEffect(() => {
     if (loaded || error) {
@@ -33,6 +38,40 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (!loaded) {
+      return;
+    }
+
+    if (!hasSupabaseConfig) {
+      setAuthState({
+        status: "ready",
+        userId: undefined,
+        errorMessage: undefined
+      });
+      return;
+    }
+
+    setAuthState({ status: "loading", errorMessage: undefined });
+    ensureCooksySession().then(({ userId, errorMessage }) => {
+      setAuthState({
+        status: errorMessage ? "error" : "ready",
+        userId,
+        errorMessage
+      });
+    });
+
+    const unsubscribe = subscribeToCooksyAuth((userId) => {
+      setAuthState({
+        status: "ready",
+        userId,
+        errorMessage: undefined
+      });
+    });
+
+    return unsubscribe;
+  }, [loaded, setAuthState]);
+
+  useEffect(() => {
+    if (!loaded || authStatus === "loading") {
       return;
     }
 
@@ -51,7 +90,7 @@ export default function RootLayout() {
       .catch(() => {
         return;
       });
-  }, [loaded, mergeBooks, mergeRecipes]);
+  }, [authStatus, loaded, mergeBooks, mergeRecipes]);
 
   if (!loaded && !error) {
     return null;

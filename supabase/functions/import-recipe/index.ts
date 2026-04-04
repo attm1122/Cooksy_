@@ -105,11 +105,13 @@ const getJobState = (createdAt: string) => {
 const persistCompletedRecipe = async ({
   supabase,
   jobId,
+  userId,
   sourceUrl,
   sourcePlatform
 }: {
   supabase: ReturnType<typeof createClient>;
   jobId: string;
+  userId: string;
   sourceUrl: string;
   sourcePlatform: string;
 }) => {
@@ -118,6 +120,7 @@ const persistCompletedRecipe = async ({
     .from("recipes")
     .select("id")
     .eq("import_job_id", jobId)
+    .eq("user_id", userId)
     .maybeSingle();
 
   let recipeId = existingRecipe?.id as string | undefined;
@@ -126,6 +129,7 @@ const persistCompletedRecipe = async ({
     const { data: createdRecipe, error: recipeError } = await supabase
       .from("recipes")
       .insert({
+        user_id: userId,
         import_job_id: jobId,
         status: mockRecipe.status,
         title: mockRecipe.title,
@@ -199,7 +203,23 @@ Deno.serve(async (request) => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
   const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+  const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      headers: {
+        Authorization: request.headers.get("Authorization") ?? ""
+      }
+    }
+  });
+
+  const {
+    data: { user }
+  } = await authClient.auth.getUser();
+
+  if (!user) {
+    return Response.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
+  }
 
   const body = await request.json();
   const action = body.action;
@@ -212,11 +232,12 @@ Deno.serve(async (request) => {
       .from("import_sources")
       .upsert(
         {
+          user_id: user.id,
           source_url: sourceUrl,
           source_platform: sourcePlatform
         },
         {
-          onConflict: "source_url"
+          onConflict: "user_id,source_url"
         }
       )
       .select("id")
@@ -229,6 +250,7 @@ Deno.serve(async (request) => {
     const { data: job, error: jobError } = await supabase
       .from("recipe_import_jobs")
       .insert({
+        user_id: user.id,
         import_source_id: importSource.id,
         status: "queued",
         progress: 0.08,
@@ -284,6 +306,7 @@ Deno.serve(async (request) => {
         `
       )
       .eq("id", jobId)
+      .eq("user_id", user.id)
       .single();
 
     if (error) {
@@ -309,6 +332,7 @@ Deno.serve(async (request) => {
         ? await persistCompletedRecipe({
             supabase,
             jobId,
+            userId: user.id,
             sourceUrl: source.source_url,
             sourcePlatform: source.source_platform
           })

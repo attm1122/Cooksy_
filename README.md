@@ -110,6 +110,21 @@ The next persistence slice is also in place:
 - recipe books hydrate on startup
 - book creation and recipe-to-book membership changes can persist through Supabase when configured
 
+### Auth and ownership
+
+Cooksy now assumes a user-scoped backend shape:
+
+- the app bootstraps a Supabase session on startup
+- data models are moving behind user ownership
+- the latest migration adds row-level-security-ready ownership columns and policies
+- the import edge function now expects an authenticated JWT
+
+For best results in Supabase:
+
+1. Enable Anonymous Auth if you want the MVP to work without a full sign-up flow yet.
+2. Deploy the latest migrations before testing production persistence.
+3. Deploy the `import-recipe` edge function after switching `verify_jwt` on.
+
 ### Environment
 
 Copy `.env.example` to `.env` and fill in:

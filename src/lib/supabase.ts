@@ -5,8 +5,9 @@ import { appEnv, hasSupabaseConfig } from "@/lib/env";
 export const supabase = hasSupabaseConfig
   ? createClient(appEnv.supabaseUrl!, appEnv.supabaseAnonKey!, {
       auth: {
-        persistSession: false,
-        autoRefreshToken: false
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: false
       }
     })
   : null;
