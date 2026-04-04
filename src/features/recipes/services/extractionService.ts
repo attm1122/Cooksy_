@@ -1,5 +1,6 @@
 import { detectPlatformFromUrl, parseInstagramUrl, parseTikTokUrl, parseYouTubeUrl } from "@/features/recipes/lib/platform";
 import { ExtractionFailedError } from "@/features/recipes/lib/errors";
+import { fetchYouTubeOEmbedMetadata, getYouTubeThumbnailFromVideoId } from "@/features/recipes/lib/youtube";
 import { getMockContextForUrl } from "@/features/recipes/mocks/sourceContexts";
 import { getThumbnailFromContext } from "@/features/recipes/services/thumbnailService";
 import type { RawRecipeContext } from "@/features/recipes/types";
@@ -9,17 +10,41 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export const extractYouTubeContext = async (url: string): Promise<RawRecipeContext> => {
   const parsed = parseYouTubeUrl(url);
   await sleep(40);
-  const context = getMockContextForUrl(url, "youtube");
+  const mockContext = getMockContextForUrl(url, "youtube");
+
+  try {
+    const oembed = await fetchYouTubeOEmbedMetadata(parsed.normalizedUrl);
+
+    return {
+      ...mockContext,
+      sourceUrl: parsed.normalizedUrl,
+      platform: "youtube",
+      title: oembed?.title ?? mockContext.title,
+      creator: oembed?.author_name ?? mockContext.creator,
+      metadata: {
+        ...(mockContext.metadata ?? {}),
+        videoId: parsed.videoId,
+        authorUrl: oembed?.author_url ?? null,
+        extractionSource: oembed ? "youtube-oembed" : "mock-fallback"
+      },
+      thumbnailUrl: oembed?.thumbnail_url ?? getYouTubeThumbnailFromVideoId(parsed.normalizedUrl) ?? getThumbnailFromContext(mockContext)
+    };
+  } catch {
+    if (!parsed.videoId) {
+      throw new ExtractionFailedError("Cooksy could not extract a valid YouTube video id from this link");
+    }
+  }
 
   return {
-    ...context,
+    ...mockContext,
     sourceUrl: parsed.normalizedUrl,
     platform: "youtube",
     metadata: {
-      ...(context.metadata ?? {}),
-      videoId: parsed.videoId
+      ...(mockContext.metadata ?? {}),
+      videoId: parsed.videoId,
+      extractionSource: "mock-fallback"
     },
-    thumbnailUrl: context.thumbnailUrl ?? getThumbnailFromContext(context)
+    thumbnailUrl: getYouTubeThumbnailFromVideoId(parsed.normalizedUrl) ?? mockContext.thumbnailUrl ?? getThumbnailFromContext(mockContext)
   };
 };
 
@@ -76,4 +101,3 @@ export const extractRecipeContextFromUrl = async (url: string): Promise<RawRecip
 
   throw new ExtractionFailedError();
 };
-
