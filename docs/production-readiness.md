@@ -36,6 +36,7 @@ Run these checks after every schema or function deploy:
 1. Start the app and confirm an anonymous session is created.
 2. Import a YouTube URL and verify a `recipe_import_jobs` row is created for the current user.
 3. Poll the import flow until the recipe reaches `ready` or `failed`.
+   The current backend advances jobs by persisted stage transitions on each status check, not by elapsed wall-clock time.
 4. Confirm `recipes`, `recipe_ingredients`, and `recipe_steps` rows are persisted for completed imports.
 5. Edit a recipe and confirm the updated title or ingredients persist after reload.
 6. Create a book, add a recipe to it, reload, and confirm the relationship remains.

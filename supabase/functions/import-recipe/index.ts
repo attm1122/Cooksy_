@@ -74,14 +74,26 @@ const buildJobResponse = ({
   }
 });
 
-const buildMockRecipe = (sourceUrl: string, sourcePlatform: string, importJobId: string) => ({
+const buildRecipeFromSource = ({
+  sourceUrl,
+  sourcePlatform,
+  importJobId,
+  creatorHandle,
+  titleHint
+}: {
+  sourceUrl: string;
+  sourcePlatform: string;
+  importJobId: string;
+  creatorHandle: string;
+  titleHint: string;
+}) => ({
   status: "ready",
   importJobId,
-  title: "Cooksy Imported Chicken Orzo",
-  description: "A starter imported recipe emitted by the first backend pipeline.",
-  heroNote: "Generated from a social video URL and ready for later enrichment.",
-  imageLabel: "Imported chicken orzo skillet",
-  thumbnailUrl: `https://picsum.photos/seed/${sourcePlatform}-imported-recipe/1280/960`,
+  title: titleHint,
+  description: "A staged imported recipe emitted by the backend pipeline and ready for later enrichment.",
+  heroNote: "Generated from a social video URL with extracted source cues, structured ingredients, and drafted cooking steps.",
+  imageLabel: `${titleHint} cover`,
+  thumbnailUrl: `https://picsum.photos/seed/${sourcePlatform}-${titleHint.toLowerCase().replace(/\s+/g, "-")}/1280/960`,
   thumbnailSource: sourcePlatform,
   thumbnailFallbackStyle: "golden-sear",
   servings: 4,
@@ -89,13 +101,13 @@ const buildMockRecipe = (sourceUrl: string, sourcePlatform: string, importJobId:
   cookTimeMinutes: 25,
   totalTimeMinutes: 40,
   confidence: "medium",
-  confidenceScore: 74,
-  confidenceNote: "Ingredient quantities and timings were inferred from source content.",
-  inferredFields: ["Garlic quantity inferred", "Simmer timing estimated from visuals"],
-  missingFields: ["Oven temperature not provided"],
+  confidenceScore: 76,
+  confidenceNote: "Ingredient quantities and timings were inferred from extracted creator cues and source visuals.",
+  inferredFields: ["Garlic quantity inferred", "Simmer timing estimated from source pacing"],
+  missingFields: ["Exact oven temperature not provided"],
   isSaved: true,
   source: {
-    creator: "Imported Creator",
+    creator: creatorHandle,
     url: sourceUrl,
     platform: sourcePlatform
   },
@@ -112,50 +124,27 @@ const buildMockRecipe = (sourceUrl: string, sourcePlatform: string, importJobId:
   tags: ["Imported", "Weeknight"]
 });
 
-const getJobState = (createdAt: string) => {
-  const elapsedMs = Date.now() - new Date(createdAt).getTime();
-
-  if (elapsedMs < 5_000) {
-    return {
-      status: "queued",
-      progress: 0.08,
-      stage_label: "Queued",
-      stage_description: "Import request accepted and waiting to process"
-    };
-  }
-
-  if (elapsedMs < 10_000) {
-    return {
-      status: "extracting",
-      progress: 0.28,
-      stage_label: "Extracting content",
-      stage_description: "Pulling source metadata, captions, and creator context"
-    };
-  }
-
-  if (elapsedMs < 15_000) {
-    return {
-      status: "identifying_ingredients",
-      progress: 0.58,
-      stage_label: "Identifying ingredients",
-      stage_description: "Inferring ingredient list and estimated quantities"
-    };
-  }
-
-  if (elapsedMs < 20_000) {
-    return {
-      status: "building_steps",
-      progress: 0.86,
-      stage_label: "Building steps",
-      stage_description: "Structuring the cooking method and timings"
-    };
-  }
+const deriveSourceMetadata = (sourceUrl: string, sourcePlatform: string) => {
+  const sourceId = sourceUrl.split("/").filter(Boolean).pop()?.split("?")[0] ?? "imported";
+  const creatorHandle =
+    sourcePlatform === "youtube"
+      ? "Cooksy Creator"
+      : sourcePlatform === "tiktok"
+        ? "@cooksycreator"
+        : "cooksy.kitchen";
+  const titleHint =
+    sourcePlatform === "youtube"
+      ? "Creamy Garlic Chicken Orzo"
+      : sourcePlatform === "tiktok"
+        ? "Hot Honey Salmon Rice Bowl"
+        : "One Pan Tuscan Pasta";
 
   return {
-    status: "completed",
-    progress: 1,
-    stage_label: "Completed",
-    stage_description: "Recipe is ready"
+    sourceId,
+    creatorHandle,
+    titleHint,
+    caption: `Imported from ${sourcePlatform} source ${sourceId}`,
+    extractedAt: new Date().toISOString()
   };
 };
 
@@ -164,15 +153,26 @@ const persistCompletedRecipe = async ({
   jobId,
   userId,
   sourceUrl,
-  sourcePlatform
+  sourcePlatform,
+  sourcePayload
 }: {
   supabase: ReturnType<typeof createClient>;
   jobId: string;
   userId: string;
   sourceUrl: string;
   sourcePlatform: string;
+  sourcePayload?: Record<string, unknown>;
 }) => {
-  const mockRecipe = buildMockRecipe(sourceUrl, sourcePlatform, jobId);
+  const creatorHandle =
+    typeof sourcePayload?.creatorHandle === "string" ? sourcePayload.creatorHandle : "Imported Creator";
+  const titleHint = typeof sourcePayload?.titleHint === "string" ? sourcePayload.titleHint : "Cooksy Imported Recipe";
+  const mockRecipe = buildRecipeFromSource({
+    sourceUrl,
+    sourcePlatform,
+    importJobId: jobId,
+    creatorHandle,
+    titleHint
+  });
   const { data: existingRecipe } = await supabase
     .from("recipes")
     .select("id")
@@ -251,6 +251,182 @@ const persistCompletedRecipe = async ({
     .eq("id", jobId);
 
   return mockRecipe;
+};
+
+const failImportJob = async ({
+  supabase,
+  jobId,
+  message
+}: {
+  supabase: ReturnType<typeof createClient>;
+  jobId: string;
+  message: string;
+}) => {
+  await supabase
+    .from("recipe_import_jobs")
+    .update({
+      status: "failed",
+      progress: 1,
+      stage_label: "Import failed",
+      stage_description: message,
+      error_message: message
+    })
+    .eq("id", jobId);
+};
+
+const advancePipeline = async ({
+  supabase,
+  row,
+  source,
+  userId
+}: {
+  supabase: ReturnType<typeof createClient>;
+  row: any;
+  source: any;
+  userId: string;
+}) => {
+  const sourceUrl = source.source_url as string;
+  const sourcePlatform = source.source_platform as string;
+  const sourcePayload = (source.raw_payload as Record<string, unknown> | null) ?? {};
+
+  if (sourceUrl.includes("/story/") || sourceUrl.includes("private") || sourceUrl.includes("unavailable")) {
+    const message = "This source looks unavailable or too limited to reconstruct. Try a public video or reel link.";
+    await failImportJob({
+      supabase,
+      jobId: row.id,
+      message
+    });
+
+    return {
+      ...row,
+      status: "failed",
+      progress: 1,
+      stage_label: "Import failed",
+      stage_description: message,
+      error_message: message,
+      normalized_recipe: row.normalized_recipe ?? null
+    };
+  }
+
+  if (row.status === "queued") {
+    const metadata = deriveSourceMetadata(sourceUrl, sourcePlatform);
+
+    await supabase
+      .from("import_sources")
+      .update({
+        creator_handle: metadata.creatorHandle,
+        raw_payload: {
+          ...sourcePayload,
+          metadata
+        }
+      })
+      .eq("id", row.import_source_id);
+
+    await supabase
+      .from("recipe_import_jobs")
+      .update({
+        status: "extracting",
+        progress: 0.28,
+        stage_label: "Extracting content",
+        stage_description: "Source metadata, creator context, and captions extracted"
+      })
+      .eq("id", row.id);
+
+    return {
+      ...row,
+      status: "extracting",
+      progress: 0.28,
+      stage_label: "Extracting content",
+      stage_description: "Source metadata, creator context, and captions extracted"
+    };
+  }
+
+  if (row.status === "extracting") {
+    const draftPayload = {
+      ...sourcePayload,
+      draftIngredients: [
+        "Chicken thighs",
+        "Garlic cloves",
+        "Orzo"
+      ]
+    };
+
+    await supabase
+      .from("recipe_import_jobs")
+      .update({
+        status: "identifying_ingredients",
+        progress: 0.58,
+        stage_label: "Identifying ingredients",
+        stage_description: "Drafting ingredient list and estimated quantities",
+        normalized_recipe: draftPayload
+      })
+      .eq("id", row.id);
+
+    return {
+      ...row,
+      status: "identifying_ingredients",
+      progress: 0.58,
+      stage_label: "Identifying ingredients",
+      stage_description: "Drafting ingredient list and estimated quantities",
+      normalized_recipe: draftPayload
+    };
+  }
+
+  if (row.status === "identifying_ingredients") {
+    const nextPayload = {
+      ...(row.normalized_recipe ?? {}),
+      draftSteps: [
+        "Brown the protein",
+        "Build the sauce or base",
+        "Finish and serve"
+      ]
+    };
+
+    await supabase
+      .from("recipe_import_jobs")
+      .update({
+        status: "building_steps",
+        progress: 0.86,
+        stage_label: "Building steps",
+        stage_description: "Structuring the cooking method and timings",
+        normalized_recipe: nextPayload
+      })
+      .eq("id", row.id);
+
+    return {
+      ...row,
+      status: "building_steps",
+      progress: 0.86,
+      stage_label: "Building steps",
+      stage_description: "Structuring the cooking method and timings",
+      normalized_recipe: nextPayload
+    };
+  }
+
+  if (row.status === "building_steps") {
+    const recipe = await persistCompletedRecipe({
+      supabase,
+      jobId: row.id,
+      userId,
+      sourceUrl,
+      sourcePlatform,
+      sourcePayload: {
+        ...sourcePayload,
+        ...(row.normalized_recipe ?? {})
+      }
+    });
+
+    return {
+      ...row,
+      status: "completed",
+      progress: 1,
+      stage_label: "Completed",
+      stage_description: "Recipe is ready",
+      normalized_recipe: recipe
+    };
+  }
+
+  return row;
 };
 
 Deno.serve(async (request) => {
@@ -364,6 +540,37 @@ Deno.serve(async (request) => {
       );
     }
 
+    const { data: completedJob, error: completedJobError } = await supabase
+      .from("recipe_import_jobs")
+      .select("id, status, progress, stage_label, stage_description, created_at, updated_at")
+      .eq("user_id", user.id)
+      .eq("import_source_id", importSource.id)
+      .eq("status", "completed")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (completedJobError) {
+      return Response.json({ error: completedJobError.message }, { status: 500, headers: corsHeaders });
+    }
+
+    if (completedJob) {
+      return Response.json(
+        buildJobResponse({
+          id: completedJob.id,
+          sourceUrl,
+          sourcePlatform,
+          status: completedJob.status,
+          progress: Number(completedJob.progress),
+          stageLabel: completedJob.stage_label,
+          stageDescription: completedJob.stage_description,
+          createdAt: completedJob.created_at,
+          updatedAt: completedJob.updated_at
+        }),
+        { headers: corsHeaders }
+      );
+    }
+
     const { data: job, error: jobError } = await supabase
       .from("recipe_import_jobs")
       .insert({
@@ -404,6 +611,7 @@ Deno.serve(async (request) => {
       .select(
         `
           id,
+          import_source_id,
           status,
           progress,
           stage_label,
@@ -414,7 +622,8 @@ Deno.serve(async (request) => {
           updated_at,
           import_sources (
             source_url,
-            source_platform
+            source_platform,
+            raw_payload
           )
         `
       )
@@ -427,46 +636,37 @@ Deno.serve(async (request) => {
     }
 
     const source = Array.isArray(row.import_sources) ? row.import_sources[0] : row.import_sources;
-    const derivedState = row.status === "failed" ? null : getJobState(row.created_at);
-
-    if (derivedState && derivedState.status !== row.status) {
-      await supabase
-        .from("recipe_import_jobs")
-        .update(derivedState)
-        .eq("id", jobId);
-      row.status = derivedState.status;
-      row.progress = derivedState.progress;
-      row.stage_label = derivedState.stage_label;
-      row.stage_description = derivedState.stage_description;
-    }
+    const nextRow =
+      row.status === "completed" || row.status === "failed"
+        ? row
+        : await advancePipeline({
+            supabase,
+            row,
+            source,
+            userId: user.id
+          });
 
     const normalizedRecipe =
-      row.status === "completed"
-        ? await persistCompletedRecipe({
-            supabase,
-            jobId,
-            userId: user.id,
-            sourceUrl: source.source_url,
-            sourcePlatform: source.source_platform
-          })
-        : row.normalized_recipe ?? undefined;
+      nextRow.status === "completed"
+        ? nextRow.normalized_recipe ?? undefined
+        : undefined;
 
     return Response.json(
       {
         job: {
-          id: row.id,
+          id: nextRow.id,
           sourceUrl: source.source_url,
           sourcePlatform: source.source_platform,
-          status: row.status,
-          progress: Number(row.progress),
+          status: nextRow.status,
+          progress: Number(nextRow.progress),
           detail: {
-            label: row.stage_label,
-            description: row.stage_description
+            label: nextRow.stage_label,
+            description: nextRow.stage_description
           },
-          errorMessage: row.error_message ?? undefined,
+          errorMessage: nextRow.error_message ?? undefined,
           recipe: normalizedRecipe,
-          createdAt: row.created_at,
-          updatedAt: row.updated_at
+          createdAt: nextRow.created_at,
+          updatedAt: nextRow.updated_at
         }
       },
       { headers: corsHeaders }

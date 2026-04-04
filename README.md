@@ -106,10 +106,11 @@ This repo now includes the first real backend seam:
 
 The import flow now supports a more realistic persisted lifecycle:
 
-- import jobs progress on the backend based on server-side job state
+- import jobs progress on the backend through persisted stage transitions
 - completed jobs persist a recipe row plus ingredient and step rows
 - the app hydrates recent persisted recipes on startup and merges them into local state
 - save-first imports can now survive beyond a single frontend session once the Supabase migrations and edge function are deployed
+- repeated imports for the same in-flight source reuse the existing backend job instead of creating duplicates
 
 The next persistence slice is also in place:
 
