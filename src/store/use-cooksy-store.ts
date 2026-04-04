@@ -1,0 +1,86 @@
+import { create } from "zustand";
+
+import { mockBooks, mockRecipes } from "@/mocks/recipes";
+import type { ImportProgress, Recipe, RecipeBook } from "@/types/recipe";
+
+type CooksyState = {
+  recipes: Recipe[];
+  books: RecipeBook[];
+  selectedRecipeId?: string;
+  importProgress: ImportProgress;
+  cookingRecipeId?: string;
+  cookingStepIndex: number;
+  setSelectedRecipe: (recipeId?: string) => void;
+  setImportProgress: (progress: Partial<ImportProgress>) => void;
+  saveRecipe: (recipe: Recipe) => void;
+  updateRecipe: (recipe: Recipe) => void;
+  addRecipeToBook: (recipeId: string, bookId: string) => void;
+  removeRecipeFromBook: (recipeId: string, bookId: string) => void;
+  startCooking: (recipeId: string) => void;
+  nextCookingStep: (stepCount: number) => void;
+  previousCookingStep: () => void;
+};
+
+export const initialImportProgress: ImportProgress = {
+  url: "",
+  stage: "idle",
+  progress: 0
+};
+
+export const useCooksyStore = create<CooksyState>((set) => ({
+  recipes: mockRecipes,
+  books: mockBooks,
+  selectedRecipeId: mockRecipes[0]?.id,
+  importProgress: initialImportProgress,
+  cookingRecipeId: undefined,
+  cookingStepIndex: 0,
+  setSelectedRecipe: (recipeId) => set({ selectedRecipeId: recipeId }),
+  setImportProgress: (progress) =>
+    set((state) => ({
+      importProgress: {
+        ...state.importProgress,
+        ...progress
+      }
+    })),
+  saveRecipe: (recipe) =>
+    set((state) => {
+      const existing = state.recipes.find((item) => item.id === recipe.id);
+
+      if (existing) {
+        return {
+          recipes: state.recipes.map((item) => (item.id === recipe.id ? { ...recipe, isSaved: true } : item))
+        };
+      }
+
+      return {
+        recipes: [{ ...recipe, isSaved: true }, ...state.recipes]
+      };
+    }),
+  updateRecipe: (recipe) =>
+    set((state) => ({
+      recipes: state.recipes.map((item) => (item.id === recipe.id ? recipe : item))
+    })),
+  addRecipeToBook: (recipeId, bookId) =>
+    set((state) => ({
+      books: state.books.map((book) =>
+        book.id === bookId && !book.recipeIds.includes(recipeId)
+          ? { ...book, recipeIds: [...book.recipeIds, recipeId] }
+          : book
+      )
+    })),
+  removeRecipeFromBook: (recipeId, bookId) =>
+    set((state) => ({
+      books: state.books.map((book) =>
+        book.id === bookId ? { ...book, recipeIds: book.recipeIds.filter((id) => id !== recipeId) } : book
+      )
+    })),
+  startCooking: (recipeId) => set({ cookingRecipeId: recipeId, cookingStepIndex: 0 }),
+  nextCookingStep: (stepCount) =>
+    set((state) => ({
+      cookingStepIndex: Math.min(state.cookingStepIndex + 1, stepCount - 1)
+    })),
+  previousCookingStep: () =>
+    set((state) => ({
+      cookingStepIndex: Math.max(state.cookingStepIndex - 1, 0)
+    }))
+}));
