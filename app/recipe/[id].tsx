@@ -1,6 +1,6 @@
 import { Link, router, useLocalSearchParams } from "expo-router";
 import { AlertCircle, LoaderCircle, PencilLine, Play, RotateCw, Save, ShoppingBasket, SquareStack } from "lucide-react-native";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Text, View } from "react-native";
 
 import { ConfidenceBanner } from "@/components/common/ConfidenceBanner";
@@ -17,6 +17,7 @@ import { SourceEvidenceSummary } from "@/components/recipe/SourceEvidenceSummary
 import { StepCard } from "@/components/recipe/StepCard";
 import { useAddRecipeToBook, useCompleteImportJob, useRetryRecipeImport, useUpdateRecipe } from "@/hooks/use-recipes";
 import { captureError } from "@/lib/monitoring";
+import { fetchRecipeById } from "@/services/recipe-service";
 import { useCooksyStore } from "@/store/use-cooksy-store";
 import { formatMinutes } from "@/utils/time";
 
@@ -37,6 +38,42 @@ export default function RecipeDetailScreen() {
   const addToBookMutation = useAddRecipeToBook();
   const completeImportMutation = useCompleteImportJob();
   const retryImportMutation = useRetryRecipeImport();
+  const [recipeLoadState, setRecipeLoadState] = useState<{ recipeId?: string; message?: string }>({});
+  const recipeLoadError = recipeLoadState.recipeId === id ? recipeLoadState.message : undefined;
+  const isHydratingRecipe = Boolean(id && !recipe && !recipeLoadError);
+
+  useEffect(() => {
+    if (!id || recipe) {
+      return;
+    }
+
+    fetchRecipeById(id)
+      .then((fetchedRecipe) => {
+        if (!fetchedRecipe) {
+          setRecipeLoadState({
+            recipeId: id,
+            message: "Recipe not found."
+          });
+          return;
+        }
+
+        setRecipeLoadState({
+          recipeId: id,
+          message: undefined
+        });
+        mergeRecipes([fetchedRecipe]);
+      })
+      .catch((error) => {
+        setRecipeLoadState({
+          recipeId: id,
+          message: error instanceof Error ? error.message : "Could not load this recipe."
+        });
+        captureError(error, {
+          action: "hydrate_recipe_detail",
+          recipeId: id
+        });
+      });
+  }, [id, mergeRecipes, recipe]);
 
   useEffect(() => {
     if (!recipe || recipe.status !== "processing" || !recipe.importJobId || completeImportMutation.isPending) {
@@ -75,10 +112,21 @@ export default function RecipeDetailScreen() {
     });
   }, [completeImportMutation, mergeRecipes, patchRecipe, recipe, setLastCompletedRecipeId]);
 
+  if (!recipe && isHydratingRecipe) {
+    return (
+      <ScreenContainer>
+        <View className="flex-row items-center" style={{ gap: 10 }}>
+          <LoaderCircle size={18} color="#6B655C" />
+          <Text className="text-[18px] font-semibold text-soft-ink">Loading recipe…</Text>
+        </View>
+      </ScreenContainer>
+    );
+  }
+
   if (!recipe) {
     return (
       <ScreenContainer>
-        <Text className="text-[18px] font-semibold text-soft-ink">Recipe not found.</Text>
+        <Text className="text-[18px] font-semibold text-soft-ink">{recipeLoadError ?? "Recipe not found."}</Text>
       </ScreenContainer>
     );
   }

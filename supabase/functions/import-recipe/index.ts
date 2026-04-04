@@ -116,7 +116,7 @@ const persistCompletedRecipe = async ({
     throw persistError;
   }
 
-  await supabase
+  const { error: completionError } = await supabase
     .from("recipe_import_jobs")
     .update({
       status: "completed",
@@ -126,6 +126,10 @@ const persistCompletedRecipe = async ({
       normalized_recipe: recipe
     })
     .eq("id", jobId);
+
+  if (completionError) {
+    throw completionError;
+  }
 
   return recipe;
 };

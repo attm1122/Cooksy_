@@ -15,7 +15,7 @@ import { trackEvent } from "@/lib/analytics";
 import { hasSupabaseConfig } from "@/lib/env";
 import { captureError } from "@/lib/monitoring";
 import { queryClient } from "@/lib/query-client";
-import { fetchRecipeBooks, fetchRecentRecipes } from "@/services/recipe-service";
+import { fetchRecipeBooks, fetchRecentRecipes, pollImportJobUntilComplete } from "@/services/recipe-service";
 import { useAuthStore } from "@/store/use-auth-store";
 import { useCooksyStore } from "@/store/use-cooksy-store";
 
@@ -29,8 +29,10 @@ export default function RootLayout() {
   });
   const mergeBooks = useCooksyStore((state) => state.mergeBooks);
   const mergeRecipes = useCooksyStore((state) => state.mergeRecipes);
+  const patchRecipe = useCooksyStore((state) => state.patchRecipe);
   const setRecipesHydrationError = useCooksyStore((state) => state.setRecipesHydrationError);
   const setBooksHydrationError = useCooksyStore((state) => state.setBooksHydrationError);
+  const setLastCompletedRecipeId = useCooksyStore((state) => state.setLastCompletedRecipeId);
   const authStatus = useAuthStore((state) => state.status);
   const setAuthState = useAuthStore((state) => state.setAuthState);
 
@@ -90,6 +92,40 @@ export default function RootLayout() {
       .then((recipes) => {
         setRecipesHydrationError(undefined);
         mergeRecipes(recipes);
+
+        recipes
+          .filter((recipe) => recipe.status === "processing" && recipe.importJobId)
+          .forEach((recipe) => {
+            void pollImportJobUntilComplete(recipe.importJobId!)
+              .then((completedRecipe) => {
+                mergeRecipes([
+                  {
+                    ...completedRecipe,
+                    importJobId: completedRecipe.importJobId ?? recipe.importJobId,
+                    status: "ready",
+                    processingMessage: undefined,
+                    isSaved: true
+                  }
+                ]);
+                setLastCompletedRecipeId(completedRecipe.id);
+              })
+              .catch((resumeError) => {
+                patchRecipe(recipe.id, {
+                  status: "failed",
+                  processingMessage: resumeError instanceof Error ? resumeError.message : "Recipe generation failed",
+                  confidence: "low",
+                  confidenceScore: 28,
+                  confidenceNote: "Cooksy could not confidently reconstruct this recipe from the source.",
+                  missingFields: ["Recipe generation failed"],
+                  inferredFields: []
+                });
+                captureError(resumeError, {
+                  action: "resume_processing_recipe_on_boot",
+                  recipeId: recipe.id,
+                  jobId: recipe.importJobId
+                });
+              });
+          });
       })
       .catch((fetchError) => {
         setRecipesHydrationError(fetchError instanceof Error ? fetchError.message : "Could not load recipes");
@@ -109,7 +145,16 @@ export default function RootLayout() {
           action: "hydrate_books_on_boot"
         });
       });
-  }, [authStatus, loaded, mergeBooks, mergeRecipes, setBooksHydrationError, setRecipesHydrationError]);
+  }, [
+    authStatus,
+    loaded,
+    mergeBooks,
+    mergeRecipes,
+    patchRecipe,
+    setBooksHydrationError,
+    setLastCompletedRecipeId,
+    setRecipesHydrationError
+  ]);
 
   if (!loaded && !error) {
     return null;

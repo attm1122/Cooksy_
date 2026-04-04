@@ -77,6 +77,23 @@ const mapRemoteBook = (row: any): RecipeBook => ({
   recipeIds: (row.recipe_book_items ?? []).map((item: any) => item.recipe_id)
 });
 
+const getCurrentUserId = async () => {
+  if (!supabase) {
+    return undefined;
+  }
+
+  const { data, error } = await supabase.auth.getUser();
+
+  if (error) {
+    captureError(error, {
+      action: "get_current_user_id"
+    });
+    throw error;
+  }
+
+  return data.user?.id;
+};
+
 export const fetchRecentRecipes = async (): Promise<Recipe[]> => {
   if (hasSupabaseConfig && supabase) {
     const { data, error } = await supabase
@@ -155,8 +172,73 @@ export const fetchRecentRecipes = async (): Promise<Recipe[]> => {
 };
 
 export const fetchRecipeById = async (recipeId: string): Promise<Recipe | undefined> => {
-  await sleep(120);
-  return mockRecipes.find((recipe) => recipe.id === recipeId);
+  if (hasSupabaseConfig && supabase) {
+    const { data, error } = await supabase
+      .from("recipes")
+      .select(
+        `
+          id,
+          import_job_id,
+          status,
+          title,
+          description,
+          hero_note,
+          image_label,
+          thumbnail_url,
+          thumbnail_source,
+          thumbnail_fallback_style,
+          servings,
+          prep_time_minutes,
+          cook_time_minutes,
+          total_time_minutes,
+          confidence,
+          confidence_score,
+          confidence_note,
+          inferred_fields,
+          missing_fields,
+          raw_extraction,
+          source_creator,
+          source_url,
+          source_platform,
+          tags,
+          recipe_ingredients (
+            id,
+            position,
+            name,
+            quantity,
+            optional
+          ),
+          recipe_steps (
+            id,
+            position,
+            title,
+            instruction,
+            duration_minutes
+          )
+        `
+      )
+      .eq("id", recipeId)
+      .maybeSingle();
+
+    if (!error && data) {
+      return mapRemoteRecipe(data);
+    }
+
+    if (error) {
+      captureError(error, {
+        action: "fetch_recipe_by_id",
+        recipeId
+      });
+      throw error;
+    }
+  }
+
+  if (shouldUseSeedData) {
+    await sleep(120);
+    return mockRecipes.find((recipe) => recipe.id === recipeId);
+  }
+
+  return undefined;
 };
 
 export const fetchRecipeBooks = async (): Promise<RecipeBook[]> => {
@@ -280,9 +362,11 @@ export const updateRecipeInBackend = async (recipe: Recipe): Promise<Recipe> => 
 
 export const createRecipeBookInBackend = async (input: Pick<RecipeBook, "name" | "description" | "coverTone">): Promise<RecipeBook> => {
   if (hasSupabaseConfig && supabase) {
+    const userId = await getCurrentUserId();
     const { data, error } = await supabase
       .from("recipe_books")
       .insert({
+        user_id: userId,
         name: input.name,
         description: input.description,
         cover_tone: input.coverTone
