@@ -36,6 +36,38 @@ export type RawRecipeContext = {
   comments?: string[] | null;
   metadata?: Record<string, unknown> | null;
   thumbnailUrl?: string | null;
+  signals?: {
+    id: string;
+    type: "transcript" | "caption" | "ocr" | "comment" | "metadata";
+    content: string;
+    weight: number;
+    source: string;
+    timestamp?: number;
+  }[];
+  transcriptSegments?: {
+    id: string;
+    text: string;
+    startSeconds?: number;
+    durationSeconds?: number;
+    sourceSignalId?: string;
+  }[];
+  ocrBlocks?: {
+    id: string;
+    text: string;
+    context?: string | null;
+    timestampSeconds?: number;
+    sourceSignalId?: string;
+  }[];
+  thumbnailCandidates?: string[];
+  creators?: string[];
+  titles?: string[];
+};
+
+export type ConfidenceReport = {
+  score: number;
+  warnings: string[];
+  missingFields: string[];
+  lowConfidenceAreas: string[];
 };
 
 export type Recipe = {
@@ -57,8 +89,11 @@ export type Recipe = {
   confidence: RecipeConfidenceLevel;
   confidenceScore: number;
   confidenceNote: string;
+  confidenceReport?: ConfidenceReport;
   inferredFields: string[];
   missingFields: string[];
+  warnings: string[];
+  editableFields: string[];
   rawExtraction?: RawRecipeContext;
   isSaved: boolean;
   source: RecipeSource;

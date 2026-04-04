@@ -41,8 +41,16 @@ export const buildMockImportedRecipe = async (url: string, importJobId?: string)
     confidence: "medium",
     confidenceScore: 74,
     confidenceNote: "Quantities and simmer timing were inferred from visible pan cues and creator narration.",
+    confidenceReport: {
+      score: 0.74,
+      warnings: ["Review the simmer timing before cooking"],
+      missingFields: ["Oven temperature not provided"],
+      lowConfidenceAreas: ["Step 2", "Simmer timing"]
+    },
     inferredFields: ["Chicken stock quantity inferred", "Simmer timing reconstructed"],
-    missingFields: ["Oven temperature not provided"]
+    missingFields: ["Oven temperature not provided"],
+    warnings: ["Review the simmer timing before cooking"],
+    editableFields: ["Step 2", "Simmer timing"]
   };
 };
 

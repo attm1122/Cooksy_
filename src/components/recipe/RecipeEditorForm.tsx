@@ -30,9 +30,24 @@ export const RecipeEditorForm = ({
       totalTimeMinutes: values.prepTimeMinutes + values.cookTimeMinutes
     })
   );
+  const reviewItems = recipe.editableFields ?? [];
+  const needsIngredientReview = (name: string) => reviewItems.some((item) => item.toLowerCase().includes(name.toLowerCase()) || item.toLowerCase().includes("ingredient"));
+  const needsStepReview = (index: number, instruction: string) =>
+    reviewItems.some(
+      (item) =>
+        item.toLowerCase().includes(`step ${index + 1}`) ||
+        item.toLowerCase().includes(instruction.toLowerCase().slice(0, 18)) ||
+        item.toLowerCase().includes("steps")
+    );
 
   return (
     <View style={{ gap: 14 }}>
+      {reviewItems.length ? (
+        <View className="rounded-[20px] border border-[#F0D96B] bg-brand-yellow-soft px-4 py-3">
+          <Text className="text-[13px] font-bold uppercase tracking-[0.8px] text-ink">Review first</Text>
+          <Text className="mt-1 text-[14px] leading-5 text-soft-ink">{reviewItems.slice(0, 4).join(" · ")}</Text>
+        </View>
+      ) : null}
       <Controller
         control={control}
         name="title"
@@ -129,7 +144,9 @@ export const RecipeEditorForm = ({
                   <TextInput
                     value={value}
                     onChangeText={onChange}
-                    className="flex-1 rounded-[20px] border border-line bg-white px-4 py-3 text-[14px] text-soft-ink"
+                    className={`flex-1 rounded-[20px] border bg-white px-4 py-3 text-[14px] text-soft-ink ${
+                      needsIngredientReview(ingredient.name) ? "border-[#F0D96B]" : "border-line"
+                    }`}
                   />
                 )}
               />
@@ -140,7 +157,9 @@ export const RecipeEditorForm = ({
                   <TextInput
                     value={value}
                     onChangeText={onChange}
-                    className="w-[120px] rounded-[20px] border border-line bg-white px-4 py-3 text-[14px] text-soft-ink"
+                    className={`w-[120px] rounded-[20px] border bg-white px-4 py-3 text-[14px] text-soft-ink ${
+                      needsIngredientReview(ingredient.name) ? "border-[#F0D96B]" : "border-line"
+                    }`}
                   />
                 )}
               />
@@ -161,7 +180,9 @@ export const RecipeEditorForm = ({
                   <TextInput
                     value={value}
                     onChangeText={onChange}
-                    className="rounded-[18px] border border-line bg-white px-4 py-3 text-[14px] font-semibold text-soft-ink"
+                    className={`rounded-[18px] border bg-white px-4 py-3 text-[14px] font-semibold text-soft-ink ${
+                      needsStepReview(index, step.instruction) ? "border-[#F0D96B]" : "border-line"
+                    }`}
                   />
                 )}
               />
@@ -173,7 +194,9 @@ export const RecipeEditorForm = ({
                     multiline
                     value={value}
                     onChangeText={onChange}
-                    className="min-h-[90px] rounded-[22px] border border-line bg-white px-4 py-4 text-[15px] text-soft-ink"
+                    className={`min-h-[90px] rounded-[22px] border bg-white px-4 py-4 text-[15px] text-soft-ink ${
+                      needsStepReview(index, step.instruction) ? "border-[#F0D96B]" : "border-line"
+                    }`}
                   />
                 )}
               />

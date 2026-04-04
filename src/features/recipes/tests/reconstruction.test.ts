@@ -10,6 +10,7 @@ describe("recipe reconstruction service", () => {
     expect(result.ingredients.length).toBeGreaterThan(2);
     expect(result.steps.length).toBeGreaterThan(2);
     expect(result.confidenceScore).toBeGreaterThan(70);
+    expect(result.confidenceReport.score).toBeGreaterThan(0.7);
   });
 
   it("populates inferred fields when source data is incomplete", async () => {
@@ -18,6 +19,7 @@ describe("recipe reconstruction service", () => {
 
     expect(result.inferredFields.length).toBeGreaterThan(0);
     expect(result.missingFields).toContain("Parmesan quantity not provided");
+    expect(result.confidenceReport.lowConfidenceAreas.length).toBeGreaterThan(0);
   });
 
   it("drops confidence when source context is weak", async () => {
@@ -40,6 +42,7 @@ describe("recipe reconstruction service", () => {
 
     expect(result.confidenceScore).toBeLessThan(65);
     expect(result.validationWarnings.length).toBeGreaterThan(0);
+    expect(result.confidenceReport.warnings.length).toBeGreaterThan(0);
   });
 
   it("uses ocr and comment evidence to improve fallback extraction", async () => {

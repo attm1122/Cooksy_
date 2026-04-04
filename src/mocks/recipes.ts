@@ -19,8 +19,16 @@ export const mockRecipes: Recipe[] = [
     confidence: "high",
     confidenceScore: 92,
     confidenceNote: "Sauce thickness and garlic quantity were inferred from similar creator recipes.",
+    confidenceReport: {
+      score: 0.92,
+      warnings: [],
+      missingFields: [],
+      lowConfidenceAreas: []
+    },
     inferredFields: ["Garlic quantity inferred", "Sauce thickness inferred from creator visuals"],
     missingFields: [],
+    warnings: [],
+    editableFields: [],
     rawExtraction: {
       sourceUrl: "https://youtube.com/watch?v=cooksy-garlic-chicken",
       platform: "youtube",
@@ -73,8 +81,16 @@ export const mockRecipes: Recipe[] = [
     confidence: "medium",
     confidenceScore: 73,
     confidenceNote: "Spice level and glaze reduction timing were estimated from the creator's narration.",
+    confidenceReport: {
+      score: 0.73,
+      warnings: ["Some glaze details may need review"],
+      missingFields: ["Exact oven temperature not provided"],
+      lowConfidenceAreas: ["Step 2", "Oven temperature"]
+    },
     inferredFields: ["Glaze reduction timing estimated", "Hot honey ratio inferred"],
     missingFields: ["Exact oven temperature not provided"],
+    warnings: ["Some glaze details may need review"],
+    editableFields: ["Step 2", "Oven temperature"],
     rawExtraction: {
       sourceUrl: "https://tiktok.com/@ninacooks/video/123456789",
       platform: "tiktok",
@@ -127,8 +143,16 @@ export const mockRecipes: Recipe[] = [
     confidence: "high",
     confidenceScore: 88,
     confidenceNote: "Liquid ratio was confidently inferred from the visible pan consistency and cooking time.",
+    confidenceReport: {
+      score: 0.88,
+      warnings: ["Final seasoning may need review"],
+      missingFields: ["Final chilli amount not shown"],
+      lowConfidenceAreas: ["Final seasoning"]
+    },
     inferredFields: ["Liquid ratio inferred from pan consistency"],
     missingFields: ["Final chilli amount not shown"],
+    warnings: ["Final seasoning may need review"],
+    editableFields: ["Final seasoning"],
     rawExtraction: {
       sourceUrl: "https://instagram.com/reel/CooksyTuscanPasta",
       platform: "instagram",

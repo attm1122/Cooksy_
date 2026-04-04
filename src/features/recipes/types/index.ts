@@ -2,6 +2,67 @@ export type SourcePlatform = "youtube" | "tiktok" | "instagram";
 export type ThumbnailSource = SourcePlatform | "generated";
 export type RecipeProcessingStatus = "processing" | "completed" | "failed";
 export type SourceSignalOrigin = "oembed" | "watch-page" | "open-graph" | "json-ld" | "mock-fallback";
+export type EvidenceSignalType = "transcript" | "caption" | "ocr" | "comment" | "metadata";
+
+export type EvidenceSignal = {
+  id: string;
+  type: EvidenceSignalType;
+  content: string;
+  weight: number;
+  source: string;
+  timestamp?: number;
+};
+
+export type RankedTextCandidate = {
+  value: string;
+  weight: number;
+  source: string;
+};
+
+export type TranscriptSegment = {
+  id: string;
+  text: string;
+  startSeconds?: number;
+  durationSeconds?: number;
+  sourceSignalId?: string;
+};
+
+export type OcrBlock = {
+  id: string;
+  text: string;
+  context?: string | null;
+  timestampSeconds?: number;
+  boundingBox?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null;
+  sourceSignalId?: string;
+};
+
+export type IngredientSignal = {
+  id: string;
+  name: string;
+  quantity?: string | null;
+  unit?: string | null;
+  note?: string | null;
+  weight: number;
+  source: string;
+  sourceSignalIds: string[];
+  timestamp?: number;
+};
+
+export type StepSignal = {
+  id: string;
+  instruction: string;
+  action?: string | null;
+  object?: string | null;
+  weight: number;
+  source: string;
+  sourceSignalIds: string[];
+  timestamp?: number;
+};
 
 export type Ingredient = {
   id: string;
@@ -33,6 +94,15 @@ export type RawRecipeContext = {
   comments?: string[] | null;
   metadata?: Record<string, unknown> | null;
   thumbnailUrl?: string | null;
+  signals?: EvidenceSignal[];
+  transcriptSegments?: TranscriptSegment[];
+  ocrBlocks?: OcrBlock[];
+  ingredientSignals?: IngredientSignal[];
+  stepSignals?: StepSignal[];
+  thumbnailCandidates?: string[];
+  creators?: string[];
+  titles?: string[];
+  titleCandidates?: RankedTextCandidate[];
 };
 
 export type SourceSignals = {
@@ -55,6 +125,74 @@ export type SourceEvidence = {
   hasStrongTranscript: boolean;
   hasAnyTextSignals: boolean;
   signalOriginCount: number;
+  lowQualitySignalCount: number;
+  actionVerbCount: number;
+  titles: string[];
+  creators: string[];
+  thumbnailCandidates: string[];
+};
+
+export type CandidateIngredient = {
+  id: string;
+  name: string;
+  quantity?: string | null;
+  unit?: string | null;
+  note?: string | null;
+  confidence: number;
+  uncertain?: boolean;
+  supportingSignals: string[];
+};
+
+export type CandidateStep = {
+  id: string;
+  instruction: string;
+  orderHint?: number | null;
+  actionVerb?: string | null;
+  object?: string | null;
+  durationMinutes?: number | null;
+  timestamp?: number | null;
+  confidence: number;
+  uncertain?: boolean;
+  supportingSignals: string[];
+};
+
+export type CandidateMetadata = {
+  titleCandidates: RankedTextCandidate[];
+  creatorCandidates: RankedTextCandidate[];
+  servings?: {
+    value: number | null;
+    confidence: number;
+    supportingSignals: string[];
+  };
+  prepTimeMinutes?: {
+    value: number | null;
+    confidence: number;
+    supportingSignals: string[];
+  };
+  cookTimeMinutes?: {
+    value: number | null;
+    confidence: number;
+    supportingSignals: string[];
+  };
+  totalTimeMinutes?: {
+    value: number | null;
+    confidence: number;
+    supportingSignals: string[];
+  };
+};
+
+export type AggregatedEvidence = {
+  ingredients: CandidateIngredient[];
+  steps: CandidateStep[];
+  metadata: CandidateMetadata;
+  normalizedSignals: EvidenceSignal[];
+};
+
+export type ConfidenceReport = {
+  score: number;
+  warnings: string[];
+  missingFields: string[];
+  lowConfidenceAreas: string[];
 };
 
 export type Recipe = {
@@ -76,6 +214,7 @@ export type Recipe = {
   thumbnailSource: ThumbnailSource;
   thumbnailFallbackStyle?: string | null;
   confidenceScore: number;
+  confidenceReport: ConfidenceReport;
   inferredFields: string[];
   missingFields: string[];
   validationWarnings: string[];
@@ -100,6 +239,7 @@ export type ReconstructionResult = {
   sourceCreator?: string | null;
   sourceTitle?: string | null;
   confidenceScore: number;
+  confidenceReport: ConfidenceReport;
   inferredFields: string[];
   missingFields: string[];
   validationWarnings: string[];

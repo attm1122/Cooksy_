@@ -215,8 +215,10 @@ export default function RecipeDetailScreen() {
             level={recipe.confidence}
             note={recipe.confidenceNote}
             score={recipe.confidenceScore}
+            warnings={recipe.warnings}
             inferredFields={recipe.inferredFields}
             missingFields={recipe.missingFields}
+            lowConfidenceAreas={recipe.editableFields}
           />
           <SourceEvidenceSummary rawExtraction={recipe.rawExtraction} />
         </View>

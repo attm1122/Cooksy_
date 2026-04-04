@@ -37,8 +37,18 @@ export const recipeSchema = z.object({
   confidence: z.enum(["high", "medium", "low"]),
   confidenceScore: z.number().min(0).max(100),
   confidenceNote: z.string().min(8),
+  confidenceReport: z
+    .object({
+      score: z.number().min(0).max(1),
+      warnings: z.array(z.string()),
+      missingFields: z.array(z.string()),
+      lowConfidenceAreas: z.array(z.string())
+    })
+    .optional(),
   inferredFields: z.array(z.string()).default([]),
   missingFields: z.array(z.string()).default([]),
+  warnings: z.array(z.string()).default([]),
+  editableFields: z.array(z.string()).default([]),
   isSaved: z.boolean(),
   source: z.object({
     creator: z.string().min(2),

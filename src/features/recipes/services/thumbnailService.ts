@@ -31,25 +31,67 @@ const buildInstagramThumbnailUrl = (url: string) => {
 export const generateFallbackThumbnailStyle = (recipeTitle: string, platform: string) =>
   pickFallbackStyle(`${recipeTitle}-${platform}`);
 
+const inferDimensionsFromUrl = (url: string) => {
+  if (/maxresdefault/.test(url)) {
+    return { width: 1280, height: 720 };
+  }
+
+  if (/hqdefault/.test(url)) {
+    return { width: 480, height: 360 };
+  }
+
+  const match = url.match(/\/(\d{3,4})\/(\d{3,4})(?:$|[/?#])/);
+  if (!match) {
+    return null;
+  }
+
+  return {
+    width: Number(match[1]),
+    height: Number(match[2])
+  };
+};
+
+const scoreThumbnailCandidate = (url: string, platform?: SourcePlatform) => {
+  const dimensions = inferDimensionsFromUrl(url);
+  const pixelScore = dimensions ? Math.min(60, (dimensions.width * dimensions.height) / 40000) : 18;
+  const aspectRatio = dimensions ? dimensions.width / dimensions.height : 1.33;
+  const aspectScore = Math.max(0, 24 - Math.abs(aspectRatio - 1.45) * 30);
+  const platformScore =
+    platform && url.toLowerCase().includes(platform === "youtube" ? "ytimg" : platform === "tiktok" ? "tiktok" : "instagram") ? 12 : 0;
+  const canonicalScore = /maxresdefault|hqdefault|cdn\./i.test(url) ? 14 : 0;
+
+  return pixelScore + aspectScore + platformScore + canonicalScore;
+};
+
+export const selectBestThumbnailCandidate = (candidates: string[], platform?: SourcePlatform) => {
+  const uniqueCandidates = Array.from(new Set(candidates.filter(Boolean)));
+
+  if (!uniqueCandidates.length) {
+    return null;
+  }
+
+  return uniqueCandidates.sort((left, right) => scoreThumbnailCandidate(right, platform) - scoreThumbnailCandidate(left, platform))[0] ?? null;
+};
+
 export const getThumbnailFromContext = (context: RawRecipeContext): string | null => {
-  if (context.thumbnailUrl) {
-    return context.thumbnailUrl;
-  }
+  const fallbackCandidates = [
+    context.thumbnailUrl ?? null,
+    ...(context.thumbnailCandidates ?? []),
+    context.platform === "youtube"
+      ? (() => {
+          const parsed = parseYouTubeUrl(context.sourceUrl);
+          return parsed.videoId
+            ? parsed.videoId.length === 11
+              ? `https://img.youtube.com/vi/${parsed.videoId}/hqdefault.jpg`
+              : `https://picsum.photos/seed/youtube-${parsed.videoId}/1280/720`
+            : null;
+        })()
+      : context.platform === "tiktok"
+        ? buildTikTokThumbnailUrl(context.sourceUrl)
+        : buildInstagramThumbnailUrl(context.sourceUrl)
+  ].filter((candidate): candidate is string => Boolean(candidate));
 
-  if (context.platform === "youtube") {
-    const parsed = parseYouTubeUrl(context.sourceUrl);
-    return parsed.videoId
-      ? parsed.videoId.length === 11
-        ? `https://img.youtube.com/vi/${parsed.videoId}/hqdefault.jpg`
-        : `https://picsum.photos/seed/youtube-${parsed.videoId}/1280/720`
-      : null;
-  }
-
-  if (context.platform === "tiktok") {
-    return buildTikTokThumbnailUrl(context.sourceUrl);
-  }
-
-  return buildInstagramThumbnailUrl(context.sourceUrl);
+  return selectBestThumbnailCandidate(fallbackCandidates, context.platform);
 };
 
 const inferPlatform = (url: string): SourcePlatform => {

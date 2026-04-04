@@ -1,5 +1,6 @@
 import { detectPlatformFromUrl, parseInstagramUrl, parseTikTokUrl, parseYouTubeUrl } from "@/features/recipes/lib/platform";
 import { ExtractionFailedError } from "@/features/recipes/lib/errors";
+import { hydrateEvidenceContext } from "@/features/recipes/lib/sourceEvidence";
 import { fetchSocialPageSignals } from "@/features/recipes/lib/socialSignals";
 import { fetchYouTubeOEmbedMetadata, fetchYouTubeWatchPageSignals, getYouTubeThumbnailFromVideoId } from "@/features/recipes/lib/youtube";
 import { getMockContextForUrl } from "@/features/recipes/mocks/sourceContexts";
@@ -16,7 +17,7 @@ export const extractYouTubeContext = async (url: string): Promise<RawRecipeConte
   const mockContext = getMockContextForUrl(url, "youtube");
 
   if (!allowClientSignalFetch) {
-    return {
+    return hydrateEvidenceContext({
       ...mockContext,
       sourceUrl: parsed.normalizedUrl,
       platform: "youtube",
@@ -26,7 +27,7 @@ export const extractYouTubeContext = async (url: string): Promise<RawRecipeConte
         extractionSource: "mock-fallback"
       },
       thumbnailUrl: getYouTubeThumbnailFromVideoId(parsed.normalizedUrl) ?? mockContext.thumbnailUrl ?? getThumbnailFromContext(mockContext)
-    };
+    });
   }
 
   try {
@@ -35,7 +36,7 @@ export const extractYouTubeContext = async (url: string): Promise<RawRecipeConte
       fetchYouTubeWatchPageSignals(parsed.normalizedUrl).catch(() => null)
     ]);
 
-    return {
+    return hydrateEvidenceContext({
       ...mockContext,
       sourceUrl: parsed.normalizedUrl,
       platform: "youtube",
@@ -56,17 +57,17 @@ export const extractYouTubeContext = async (url: string): Promise<RawRecipeConte
               ? "youtube-oembed"
               : watchSignals?.description || watchSignals?.transcript
                 ? "youtube-watch"
-                : "mock-fallback"
+        : "mock-fallback"
       },
       thumbnailUrl: oembed?.thumbnail_url ?? getYouTubeThumbnailFromVideoId(parsed.normalizedUrl) ?? getThumbnailFromContext(mockContext)
-    };
+    });
   } catch {
     if (!parsed.videoId) {
       throw new ExtractionFailedError("Cooksy could not extract a valid YouTube video id from this link");
     }
   }
 
-  return {
+  return hydrateEvidenceContext({
     ...mockContext,
     sourceUrl: parsed.normalizedUrl,
     platform: "youtube",
@@ -76,7 +77,7 @@ export const extractYouTubeContext = async (url: string): Promise<RawRecipeConte
       extractionSource: "mock-fallback"
     },
     thumbnailUrl: getYouTubeThumbnailFromVideoId(parsed.normalizedUrl) ?? mockContext.thumbnailUrl ?? getThumbnailFromContext(mockContext)
-  };
+  });
 };
 
 export const extractTikTokContext = async (url: string): Promise<RawRecipeContext> => {
@@ -91,7 +92,7 @@ export const extractTikTokContext = async (url: string): Promise<RawRecipeContex
       }).catch(() => null)
     : null;
 
-  return {
+  return hydrateEvidenceContext({
     ...context,
     sourceUrl: parsed.normalizedUrl,
     platform: "tiktok",
@@ -107,7 +108,7 @@ export const extractTikTokContext = async (url: string): Promise<RawRecipeContex
       extractionSource: signals?.signalOrigins?.includes("open-graph") || signals?.signalOrigins?.includes("json-ld") ? "social-page" : "mock-fallback"
     },
     thumbnailUrl: signals?.thumbnailUrl ?? context.thumbnailUrl ?? getThumbnailFromContext(context)
-  };
+  });
 };
 
 export const extractInstagramContext = async (url: string): Promise<RawRecipeContext> => {
@@ -121,7 +122,7 @@ export const extractInstagramContext = async (url: string): Promise<RawRecipeCon
       }).catch(() => null)
     : null;
 
-  return {
+  return hydrateEvidenceContext({
     ...context,
     sourceUrl: parsed.normalizedUrl,
     platform: "instagram",
@@ -136,7 +137,7 @@ export const extractInstagramContext = async (url: string): Promise<RawRecipeCon
       extractionSource: signals?.signalOrigins?.includes("open-graph") || signals?.signalOrigins?.includes("json-ld") ? "social-page" : "mock-fallback"
     },
     thumbnailUrl: signals?.thumbnailUrl ?? context.thumbnailUrl ?? getThumbnailFromContext(context)
-  };
+  });
 };
 
 export const extractRecipeContextFromUrl = async (url: string): Promise<RawRecipeContext> => {

@@ -14,14 +14,18 @@ export const ConfidenceBanner = ({
   level,
   note,
   score,
+  warnings,
   inferredFields,
-  missingFields
+  missingFields,
+  lowConfidenceAreas
 }: {
   level: RecipeConfidenceLevel;
   note: string;
   score: number;
+  warnings?: string[];
   inferredFields: string[];
   missingFields: string[];
+  lowConfidenceAreas?: string[];
 }) => {
   const [expanded, setExpanded] = useState(false);
   const Icon = level === "high" ? ShieldCheck : level === "medium" ? ShieldQuestion : ShieldAlert;
@@ -29,8 +33,8 @@ export const ConfidenceBanner = ({
     level === "high"
       ? "High confidence"
       : level === "medium"
-        ? "Some values estimated"
-        : "Recipe reconstructed from partial data";
+        ? "May need review"
+        : "Check ingredients and steps";
 
   return (
     <View className={`mt-4 rounded-[22px] border p-4 ${toneClasses[level]}`} style={{ gap: 12 }}>
@@ -43,14 +47,24 @@ export const ConfidenceBanner = ({
           <Text className="text-[14px] leading-5 text-soft-ink">{note}</Text>
         </View>
       </View>
-      {(inferredFields.length || missingFields.length) ? (
+      {(inferredFields.length || missingFields.length || warnings?.length || lowConfidenceAreas?.length) ? (
         <>
           <Pressable onPress={() => setExpanded((value) => !value)} className="flex-row items-center justify-between">
-            <Text className="text-[14px] font-semibold text-soft-ink">What Cooksy inferred</Text>
+            <Text className="text-[14px] font-semibold text-soft-ink">What to review</Text>
             {expanded ? <ChevronUp size={16} color="#262626" /> : <ChevronDown size={16} color="#262626" />}
           </Pressable>
           {expanded ? (
             <View style={{ gap: 8 }}>
+              {(warnings ?? []).map((warning) => (
+                <Text key={warning} className="text-[14px] text-soft-ink">
+                  {warning}
+                </Text>
+              ))}
+              {(lowConfidenceAreas ?? []).map((area) => (
+                <Text key={area} className="text-[14px] text-soft-ink">
+                  Review: {area}
+                </Text>
+              ))}
               {inferredFields.map((field) => (
                 <Text key={field} className="text-[14px] text-soft-ink">
                   {field}

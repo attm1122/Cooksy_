@@ -54,6 +54,7 @@ export const completeRecipeProcessing = async (recipeId: string, result: Reconst
     thumbnailSource: result.thumbnailSource,
     thumbnailFallbackStyle: result.thumbnailFallbackStyle ?? null,
     confidenceScore: result.confidenceScore,
+    confidenceReport: result.confidenceReport,
     inferredFields: result.inferredFields,
     missingFields: result.missingFields,
     validationWarnings: result.validationWarnings,
@@ -65,6 +66,12 @@ export const completeRecipeProcessing = async (recipeId: string, result: Reconst
 export const failRecipeProcessing = async (recipeId: string, error: Error): Promise<Recipe> => {
   return recipeRepository.update(recipeId, {
     status: "failed",
+    confidenceReport: {
+      score: 0.15,
+      warnings: [error.message],
+      missingFields: [error.message],
+      lowConfidenceAreas: ["Import", "Ingredients", "Steps"]
+    },
     missingFields: [error.message],
     validationWarnings: [error.message]
   });
@@ -130,4 +137,3 @@ export const startRecipeImport = async (
     })
   };
 };
-

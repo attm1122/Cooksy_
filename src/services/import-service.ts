@@ -323,8 +323,16 @@ const buildPendingRecipe = async (sourceUrl: string, recipeId: string, importJob
     confidence: "medium",
     confidenceScore: 0,
     confidenceNote: "Cooksy is still reconstructing the recipe from the source content.",
+    confidenceReport: {
+      score: 0,
+      warnings: [],
+      missingFields: ["Recipe details still generating"],
+      lowConfidenceAreas: ["Ingredients", "Steps"]
+    },
     inferredFields: [],
     missingFields: ["Recipe details still generating"],
+    warnings: [],
+    editableFields: ["Ingredients", "Steps"],
     isSaved: true,
     source: {
       creator: "Saved source",

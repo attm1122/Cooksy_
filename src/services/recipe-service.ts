@@ -33,8 +33,16 @@ const mapRemoteRecipe = (row: any): Recipe => ({
   confidence: row.confidence,
   confidenceScore: row.confidence_score ?? 0,
   confidenceNote: row.confidence_note,
+  confidenceReport: {
+    score: Math.max(0, Math.min(1, (row.confidence_score ?? 0) / 100)),
+    warnings: [],
+    missingFields: row.missing_fields ?? [],
+    lowConfidenceAreas: []
+  },
   inferredFields: row.inferred_fields ?? [],
   missingFields: row.missing_fields ?? [],
+  warnings: [],
+  editableFields: row.missing_fields ?? [],
   rawExtraction: row.raw_extraction ?? undefined,
   isSaved: true,
   source: {

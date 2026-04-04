@@ -66,6 +66,12 @@ export const createEmptyRecipe = ({
     thumbnailSource,
     thumbnailFallbackStyle: thumbnailFallbackStyle ?? null,
     confidenceScore: 0,
+    confidenceReport: {
+      score: 0,
+      warnings: [],
+      missingFields: ["Recipe is still processing"],
+      lowConfidenceAreas: ["Ingredients", "Steps"]
+    },
     inferredFields: [],
     missingFields: ["Recipe is still processing"],
     validationWarnings: [],
@@ -75,4 +81,3 @@ export const createEmptyRecipe = ({
     isSynced: false
   };
 };
-

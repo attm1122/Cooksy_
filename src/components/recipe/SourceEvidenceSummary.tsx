@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { FileText, MessageSquareText, ScanText, Sparkles } from "lucide-react-native";
 import { Text, View } from "react-native";
 
-import { aggregateSourceEvidence } from "@/features/recipes/lib/sourceEvidence";
+import { aggregateEvidence, aggregateSourceEvidence } from "@/features/recipes/lib/sourceEvidence";
 import type { RawRecipeContext } from "@/types/recipe";
 import { colors } from "@/theme/tokens";
 
@@ -47,6 +47,7 @@ export const SourceEvidenceSummary = ({
   }
 
   const evidence = aggregateSourceEvidence(rawExtraction);
+  const aggregated = aggregateEvidence(rawExtraction);
   const signalOrigins = Array.isArray((rawExtraction.metadata as { signalOrigins?: unknown } | null)?.signalOrigins)
     ? ((rawExtraction.metadata as { signalOrigins: unknown[] }).signalOrigins.filter((item): item is string => typeof item === "string"))
     : [];
@@ -109,6 +110,7 @@ export const SourceEvidenceSummary = ({
       <View className="flex-row flex-wrap" style={{ gap: 8 }}>
         <EvidencePill label="Quantity mentions" value={String(evidence.explicitQuantityMentions)} />
         <EvidencePill label="Cooking cues" value={String(evidence.cueMentions.length)} />
+        <EvidencePill label="Ingredient signals" value={String(aggregated.ingredients.length)} />
         <EvidencePill label="Signal sources" value={String(evidence.signalOriginCount || 1)} />
       </View>
 

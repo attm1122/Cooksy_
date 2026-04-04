@@ -36,12 +36,16 @@ export const mapDomainRecipeToUiRecipe = (recipe: DomainRecipe): UiRecipe => ({
   confidence: confidenceLevel(recipe.confidenceScore),
   confidenceScore: recipe.confidenceScore,
   confidenceNote:
+    recipe.confidenceReport.warnings[0] ??
     recipe.validationWarnings[0] ??
     (recipe.inferredFields.length
       ? `${recipe.inferredFields[0]}.`
       : "Cooksy reconstructed this recipe from available source signals."),
+  confidenceReport: recipe.confidenceReport,
   inferredFields: recipe.inferredFields,
   missingFields: recipe.missingFields,
+  warnings: Array.from(new Set([...recipe.validationWarnings, ...recipe.confidenceReport.warnings])),
+  editableFields: Array.from(new Set([...recipe.confidenceReport.lowConfidenceAreas, ...recipe.missingFields])),
   rawExtraction: recipe.rawExtraction,
   isSaved: true,
   source: {

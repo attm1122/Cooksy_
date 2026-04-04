@@ -1,7 +1,8 @@
 import { RecipeReconstructionError } from "@/features/recipes/lib/errors";
-import { aggregateSourceEvidence } from "@/features/recipes/lib/sourceEvidence";
-import { generateFallbackThumbnailStyle, getThumbnailFromContext } from "@/features/recipes/services/thumbnailService";
+import { aggregateEvidence, aggregateSourceEvidence, hydrateEvidenceContext } from "@/features/recipes/lib/sourceEvidence";
+import { generateFallbackThumbnailStyle, getThumbnailFromContext, selectBestThumbnailCandidate } from "@/features/recipes/services/thumbnailService";
 import type {
+  ConfidenceReport,
   Ingredient,
   RawRecipeContext,
   Recipe,
@@ -10,199 +11,153 @@ import type {
   ThumbnailSource
 } from "@/features/recipes/types";
 
-type MetadataHints = {
-  ingredientHints?: Record<string, unknown>[];
-  stepHints?: Record<string, unknown>[];
-  servingsHint?: number;
-  prepTimeMinutesHint?: number;
-  cookTimeMinutesHint?: number;
-};
-
-const readHints = (context: RawRecipeContext): MetadataHints => ((context.metadata ?? {}) as MetadataHints);
+type PartialRecipe = Omit<
+  ReconstructionResult,
+  "confidenceScore" | "confidenceReport" | "validationWarnings" | "inferredFields" | "missingFields"
+>;
 
 const buildId = (prefix: string, index: number) => `${prefix}-${index + 1}`;
 
-export const extractIngredientsFromContext = async (context: RawRecipeContext): Promise<Ingredient[]> => {
-  const hints = readHints(context);
-  const hintedIngredients = hints.ingredientHints ?? [];
+const toTitleCase = (value: string) => value.replace(/\b\w/g, (char) => char.toUpperCase());
 
-  if (hintedIngredients.length) {
-    return hintedIngredients.map((ingredient, index) => ({
-      id: buildId("ingredient", index),
-      name: String(ingredient.name ?? "Ingredient"),
-      quantity: typeof ingredient.quantity === "string" ? ingredient.quantity : ingredient.quantity == null ? null : String(ingredient.quantity),
-      unit: typeof ingredient.unit === "string" ? ingredient.unit : ingredient.unit == null ? null : String(ingredient.unit),
-      note: typeof ingredient.note === "string" ? ingredient.note : null,
-      optional: Boolean(ingredient.optional),
-      inferred: Boolean(ingredient.inferred)
-    }));
+const normalizeInstruction = (value: string) => {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (!normalized) {
+    return "";
   }
 
-  const evidence = aggregateSourceEvidence(context);
-  const ingredients: Ingredient[] = [];
-
-  if (evidence.combinedText.includes("chicken")) {
-    ingredients.push({ id: buildId("ingredient", ingredients.length), name: "Chicken", quantity: null, inferred: true });
-  }
-  if (evidence.combinedText.includes("garlic")) {
-    ingredients.push({ id: buildId("ingredient", ingredients.length), name: "Garlic", quantity: null, inferred: true });
-  }
-  if (evidence.combinedText.includes("cream")) {
-    ingredients.push({ id: buildId("ingredient", ingredients.length), name: "Cream", quantity: null, inferred: true });
-  }
-  if (evidence.combinedText.includes("salmon")) {
-    ingredients.push({ id: buildId("ingredient", ingredients.length), name: "Salmon", quantity: null, inferred: true });
-  }
-  if (evidence.combinedText.includes("rice")) {
-    ingredients.push({ id: buildId("ingredient", ingredients.length), name: "Rice", quantity: null, inferred: true });
-  }
-
-  return ingredients;
+  const withCapital = normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  return /[.!?]$/.test(withCapital) ? withCapital : `${withCapital}.`;
 };
 
+const ensureInstructionObject = (instruction: string, fallbackObject?: string | null) => {
+  if (fallbackObject && !new RegExp(`\\b${fallbackObject.toLowerCase()}\\b`, "i").test(instruction)) {
+    return normalizeInstruction(`${instruction.replace(/[.!?]$/, "")} with ${fallbackObject.toLowerCase()}`);
+  }
+
+  return normalizeInstruction(instruction);
+};
+
+const extractIngredientsFromAggregatedEvidence = async (context: RawRecipeContext): Promise<Ingredient[]> => {
+  const aggregated = aggregateEvidence(context);
+
+  return aggregated.ingredients.map((ingredient, index) => ({
+    id: ingredient.id || buildId("ingredient", index),
+    name: toTitleCase(ingredient.name),
+    quantity: ingredient.quantity ?? null,
+    unit: ingredient.unit ?? null,
+    note: ingredient.note ?? null,
+    inferred: Boolean(ingredient.uncertain)
+  }));
+};
+
+export const extractIngredientsFromContext = async (context: RawRecipeContext): Promise<Ingredient[]> =>
+  extractIngredientsFromAggregatedEvidence(context);
+
 export const extractStepsFromContext = async (context: RawRecipeContext): Promise<RecipeStep[]> => {
-  const hints = readHints(context);
-  const stepHints = hints.stepHints ?? [];
+  const aggregated = aggregateEvidence(context);
+  const uniqueInstructions = new Set<string>();
 
-  if (stepHints.length) {
-    return stepHints.map((step, index) => ({
-      id: buildId("step", index),
-      order: index + 1,
-      instruction: String(step.instruction ?? "Complete this cooking step."),
-      durationMinutes:
-        typeof step.durationMinutes === "number"
-          ? step.durationMinutes
-          : typeof step.duration_minutes === "number"
-            ? step.duration_minutes
-            : null,
-      temperature: typeof step.temperature === "string" ? step.temperature : null,
-      inferred: Boolean(step.inferred)
-    }));
-  }
-
-  const evidence = aggregateSourceEvidence(context);
-
-  if (evidence.cueMentions.length >= 2) {
-    return [
-      {
-        id: "step-1",
-        order: 1,
-        instruction: "Prepare the main ingredients and start cooking the base elements from the original post.",
-        inferred: true
-      },
-      {
-        id: "step-2",
-        order: 2,
-        instruction: "Cook until the core ingredients are tender and the sauce or glaze comes together.",
-        inferred: true
+  return aggregated.steps
+    .map((step, index) => ({
+      ...step,
+      instruction: ensureInstructionObject(step.instruction, step.object)
+    }))
+    .filter((step) => {
+      const key = step.instruction.toLowerCase();
+      if (uniqueInstructions.has(key)) {
+        return false;
       }
-    ];
-  }
 
-  return [
-    {
-      id: "step-1",
-      order: 1,
-      instruction: "Extracted recipe steps were incomplete, so Cooksy created a draft method.",
-      inferred: true
-    }
-  ];
+      uniqueInstructions.add(key);
+      return true;
+    })
+    .map((step, index) => ({
+      id: step.id || buildId("step", index),
+      order: index + 1,
+      instruction: step.instruction,
+      durationMinutes: step.durationMinutes ?? null,
+      temperature: null,
+      inferred: Boolean(step.uncertain)
+    }));
 };
 
 export const extractRecipeMetadata = async (context: RawRecipeContext) => {
-  const hints = readHints(context);
+  const aggregated = aggregateEvidence(context);
   const evidence = aggregateSourceEvidence(context);
-  const title = context.title?.trim() || `${context.platform} recipe import`;
+  const topTitle = aggregated.metadata.titleCandidates[0]?.value ?? context.title?.trim() ?? `${context.platform} recipe import`;
+  const sourceCreator = aggregated.metadata.creatorCandidates[0]?.value ?? context.creator?.trim() ?? null;
   const description =
     context.caption?.trim() ||
-    context.transcript?.slice(0, 160) ||
-    (evidence.commentsText ? evidence.commentsText.slice(0, 160) : null) ||
+    context.transcript?.slice(0, 180) ||
+    (evidence.commentsText ? evidence.commentsText.slice(0, 180) : null) ||
     "Imported from social cooking content.";
-  const servings = hints.servingsHint ?? null;
-  const prepTimeMinutes = hints.prepTimeMinutesHint ?? null;
-  const cookTimeMinutes = hints.cookTimeMinutesHint ?? null;
 
   return {
-    title,
+    title: topTitle,
     description,
-    servings,
-    prepTimeMinutes,
-    cookTimeMinutes,
-    totalTimeMinutes:
-      typeof prepTimeMinutes === "number" && typeof cookTimeMinutes === "number"
-        ? prepTimeMinutes + cookTimeMinutes
-        : null,
-    sourceCreator: context.creator ?? null,
-    sourceTitle: context.title ?? null
+    servings: aggregated.metadata.servings?.value ?? null,
+    prepTimeMinutes: aggregated.metadata.prepTimeMinutes?.value ?? null,
+    cookTimeMinutes: aggregated.metadata.cookTimeMinutes?.value ?? null,
+    totalTimeMinutes: aggregated.metadata.totalTimeMinutes?.value ?? null,
+    sourceCreator,
+    sourceTitle: context.title ?? topTitle
   };
 };
 
-export const inferMissingRecipeFields = async (
-  partialRecipe: Omit<ReconstructionResult, "confidenceScore" | "validationWarnings" | "inferredFields" | "missingFields">,
-  context: RawRecipeContext
-) => {
-  const inferredFields: string[] = [
-    ...partialRecipe.ingredients
-      .filter((ingredient) => ingredient.inferred)
-      .map((ingredient) => `${ingredient.name} inferred from partial source cues`),
-    ...partialRecipe.steps
-      .filter((step) => step.inferred)
-      .map((step) => `Step ${step.order} reconstructed from incomplete source detail`)
-  ];
+export const inferMissingRecipeFields = async (partialRecipe: PartialRecipe, context: RawRecipeContext) => {
+  const evidence = aggregateSourceEvidence(context);
+  const inferredFields: string[] = [];
   const missingFields: string[] = [];
 
   const ingredients = partialRecipe.ingredients.map((ingredient) => {
-    if (!ingredient.quantity) {
-      const inferredQuantity =
-        ingredient.name.toLowerCase().includes("garlic")
-          ? "4"
-          : null;
+    if (ingredient.quantity) {
+      return ingredient;
+    }
 
-      if (!inferredQuantity) {
-        missingFields.push(`${ingredient.name} quantity not provided`);
-        return ingredient;
-      }
-
+    if (/garlic/i.test(ingredient.name)) {
       inferredFields.push(`${ingredient.name} quantity inferred`);
       return {
         ...ingredient,
-        quantity: inferredQuantity,
-        unit: ingredient.unit ?? (ingredient.name.toLowerCase().includes("garlic") ? "cloves" : ingredient.unit),
+        quantity: "4",
+        unit: ingredient.unit ?? "cloves",
         inferred: true
       };
     }
 
+    missingFields.push(`${ingredient.name} quantity not provided`);
     return ingredient;
   });
 
   const steps = partialRecipe.steps.map((step) => {
-    if (!step.temperature && /roast|oven|bake/i.test(step.instruction)) {
+    const nextStep = { ...step };
+    if (!nextStep.durationMinutes && /simmer|roast|bake|cook/i.test(nextStep.instruction)) {
+      nextStep.durationMinutes = /simmer/i.test(nextStep.instruction) ? 12 : /roast|bake/i.test(nextStep.instruction) ? 15 : 8;
+      nextStep.inferred = true;
+      inferredFields.push(`Timing inferred for step ${step.order}`);
+    }
+
+    if (!nextStep.temperature && /oven|bake|roast/i.test(nextStep.instruction)) {
       missingFields.push(`Temperature missing for step ${step.order}`);
     }
 
-    if (!step.durationMinutes) {
-      return step;
-    }
-
-    return step;
+    return nextStep;
   });
 
-  const servings =
-    partialRecipe.servings ??
-    (ingredients.length >= 5 ? 4 : 2);
-
-  if (partialRecipe.servings == null) {
+  const servings = partialRecipe.servings ?? (ingredients.length >= 5 ? 4 : ingredients.length >= 3 ? 2 : null);
+  if (partialRecipe.servings == null && servings != null) {
     inferredFields.push("Serving size inferred");
   }
 
-  const evidence = aggregateSourceEvidence(context);
   const prepTimeMinutes = partialRecipe.prepTimeMinutes ?? (evidence.hasAnyTextSignals ? 12 : null);
-  if (partialRecipe.prepTimeMinutes == null) {
+  if (partialRecipe.prepTimeMinutes == null && prepTimeMinutes != null) {
     inferredFields.push("Prep time inferred");
   }
 
-  const cookTimeMinutes = partialRecipe.cookTimeMinutes ?? (steps.some((step) => step.durationMinutes) ? steps.reduce((sum, step) => sum + (step.durationMinutes ?? 0), 0) : null);
-  if (partialRecipe.cookTimeMinutes == null) {
+  const cookTimeMinutes =
+    partialRecipe.cookTimeMinutes ??
+    (steps.length ? steps.reduce((sum, step) => sum + (step.durationMinutes ?? 0), 0) || null : null);
+  if (partialRecipe.cookTimeMinutes == null && cookTimeMinutes != null) {
     inferredFields.push("Cook time inferred");
   }
 
@@ -211,7 +166,7 @@ export const inferMissingRecipeFields = async (
     (typeof prepTimeMinutes === "number" && typeof cookTimeMinutes === "number" ? prepTimeMinutes + cookTimeMinutes : null);
 
   if (!evidence.hasAnyTextSignals) {
-    missingFields.push("No transcript or caption available");
+    missingFields.push("Very little source text was available");
   }
 
   return {
@@ -222,12 +177,12 @@ export const inferMissingRecipeFields = async (
     prepTimeMinutes,
     cookTimeMinutes,
     totalTimeMinutes,
-    inferredFields,
-    missingFields
+    inferredFields: Array.from(new Set(inferredFields)),
+    missingFields: Array.from(new Set(missingFields))
   };
 };
 
-export const validateRecipe = (recipe: Omit<Recipe, "id" | "status" | "createdAt" | "updatedAt" | "isSynced">) => {
+export const validateRecipe = (recipe: Omit<Recipe, "id" | "status" | "createdAt" | "updatedAt" | "isSynced" | "confidenceReport">) => {
   const warnings: string[] = [];
 
   if (!recipe.title.trim()) {
@@ -246,6 +201,10 @@ export const validateRecipe = (recipe: Omit<Recipe, "id" | "status" | "createdAt
     if (step.order !== index + 1) {
       warnings.push("Recipe steps must stay in sequential order");
     }
+
+    if (!step.instruction.trim()) {
+      warnings.push(`Step ${index + 1} has no usable instruction`);
+    }
   });
 
   const quantifiedIngredients = recipe.ingredients.filter((ingredient) => ingredient.quantity);
@@ -261,73 +220,120 @@ export const validateRecipe = (recipe: Omit<Recipe, "id" | "status" | "createdAt
     warnings.push("Total cook time looks unusually long");
   }
 
-  if (!recipe.steps.some((step) => /garlic|cream|stock|pasta|salmon|chicken/i.test(step.instruction))) {
-    warnings.push("Steps do not reference many of the detected cooking cues");
+  if (!recipe.steps.every((step) => /add|bake|boil|coat|cook|finish|fold|mix|pour|roast|season|sear|serve|simmer|stir|whisk/i.test(step.instruction))) {
+    warnings.push("Some steps are still vague and may need review");
   }
 
-  return warnings;
+  return Array.from(new Set(warnings));
 };
 
 export const scoreRecipeConfidence = (
   recipe: Omit<Recipe, "id" | "status" | "createdAt" | "updatedAt" | "isSynced">,
   context: RawRecipeContext
-) => {
+): ConfidenceReport => {
   const evidence = aggregateSourceEvidence(context);
-  let score = 25;
+  const aggregated = aggregateEvidence(context);
+  const warnings: string[] = [];
+  const lowConfidenceAreas: string[] = [];
+  const missingFields = [...recipe.missingFields];
 
-  if (evidence.hasStrongTranscript) {
-    score += 24;
-  } else if (evidence.captionText) {
-    score += 10;
-  }
-
-  if (recipe.sourceTitle) {
-    score += 10;
-  }
-
-  if (recipe.sourceCreator) {
-    score += 6;
-  }
-
-  if (recipe.thumbnailUrl) {
-    score += 5;
-  }
-
-  score += Math.min(evidence.explicitQuantityMentions * 3, 15);
-  score += Math.min(evidence.cueMentions.length * 2, 10);
-  score += Math.min(evidence.signalOriginCount * 2, 6);
-  score += evidence.ocrText ? 6 : 0;
-  score += evidence.commentsText ? 4 : 0;
-  score += evidence.cueMentions.length >= 3 ? 6 : 0;
-
-  const explicitQuantityRatio = recipe.ingredients.length
+  const transcriptStrength = evidence.hasStrongTranscript ? 0.18 : evidence.hasAnyTextSignals ? 0.08 : 0;
+  const metadataStrength = recipe.sourceTitle ? 0.05 : 0;
+  const creatorStrength = recipe.sourceCreator ? 0.03 : 0;
+  const thumbnailStrength = recipe.thumbnailUrl ? 0.03 : 0;
+  const ingredientAgreement = aggregated.ingredients.length
+    ? aggregated.ingredients.reduce((sum, ingredient) => sum + ingredient.confidence, 0) / aggregated.ingredients.length
+    : 0;
+  const stepClarity = aggregated.steps.length
+    ? aggregated.steps.reduce((sum, step) => sum + step.confidence + (step.actionVerb ? 0.08 : 0), 0) / aggregated.steps.length
+    : 0;
+  const ingredientStrength = ingredientAgreement * 0.14;
+  const stepStrength = Math.min(0.18, stepClarity * 0.16);
+  const explicitQuantityCoverage = recipe.ingredients.length
     ? recipe.ingredients.filter((ingredient) => ingredient.quantity).length / recipe.ingredients.length
     : 0;
-  score += Math.round(explicitQuantityRatio * 20);
+  const explicitQuantityStrength = explicitQuantityCoverage * 0.1;
+  const signalRichness = Math.min(0.08, evidence.signalOriginCount * 0.02 + evidence.actionVerbCount * 0.01);
+  const recoveryStrength =
+    aggregated.ingredients.length >= 3 && aggregated.steps.length >= 2 && (evidence.ocrText || evidence.commentsText) ? 0.08 : 0;
 
-  if (recipe.steps.length >= 3) {
-    score += 10;
+  const lowQualityPenalty = Math.min(0.08, evidence.lowQualitySignalCount * 0.02);
+  const missingPenalty = Math.min(0.12, missingFields.length * 0.02);
+  const inferredPenalty = Math.min(0.08, recipe.inferredFields.length * 0.01);
+  const validationPenalty = Math.min(0.12, recipe.validationWarnings.length * 0.02);
+
+  recipe.validationWarnings.forEach((warning) => {
+    warnings.push(warning);
+  });
+
+  aggregated.ingredients.forEach((ingredient) => {
+    if (ingredient.confidence < 0.56 || ingredient.uncertain) {
+      lowConfidenceAreas.push(`Ingredient: ${ingredient.name}`);
+    }
+  });
+
+  aggregated.steps.forEach((step, index) => {
+    if (step.confidence < 0.6 || !step.actionVerb || !step.object) {
+      lowConfidenceAreas.push(`Step ${index + 1}`);
+    }
+  });
+
+  if (evidence.lowQualitySignalCount > 0) {
+    warnings.push("Some recipe details came from lower-confidence sources like OCR or comments");
   }
 
-  score -= Math.min(recipe.inferredFields.length * 4, 20);
-  score -= Math.min(recipe.missingFields.length * 5, 20);
-  score -= Math.min(recipe.validationWarnings.length * 6, 24);
+  if (!recipe.sourceCreator) {
+    lowConfidenceAreas.push("Source creator");
+  }
 
-  return Math.max(0, Math.min(100, score));
+  if (!recipe.thumbnailUrl) {
+    lowConfidenceAreas.push("Recipe cover");
+  }
+
+  const score = Math.max(
+    0,
+    Math.min(
+      1,
+      0.18 +
+        transcriptStrength +
+        metadataStrength +
+        creatorStrength +
+        thumbnailStrength +
+        ingredientStrength +
+        stepStrength +
+        signalRichness +
+        explicitQuantityStrength +
+        recoveryStrength -
+        lowQualityPenalty -
+        missingPenalty -
+        inferredPenalty -
+        validationPenalty
+    )
+  );
+
+  return {
+    score,
+    warnings: Array.from(new Set(warnings)),
+    missingFields: Array.from(new Set(missingFields)),
+    lowConfidenceAreas: Array.from(new Set(lowConfidenceAreas))
+  };
 };
 
 export const reconstructRecipe = async (context: RawRecipeContext): Promise<ReconstructionResult> => {
-  const ingredients = await extractIngredientsFromContext(context);
-  const steps = await extractStepsFromContext(context);
-  const metadata = await extractRecipeMetadata(context);
+  const hydratedContext = hydrateEvidenceContext(context);
+  const ingredients = await extractIngredientsFromContext(hydratedContext);
+  const steps = await extractStepsFromContext(hydratedContext);
+  const metadata = await extractRecipeMetadata(hydratedContext);
 
   if (ingredients.length < 1 || steps.length < 1) {
     throw new RecipeReconstructionError();
   }
 
-  const thumbnailUrl = getThumbnailFromContext(context);
-  const thumbnailSource = (context.platform ?? "generated") as ThumbnailSource;
-  const thumbnailFallbackStyle = generateFallbackThumbnailStyle(metadata.title, context.platform);
+  const thumbnailUrl =
+    selectBestThumbnailCandidate(hydratedContext.thumbnailCandidates ?? [], hydratedContext.platform) ??
+    getThumbnailFromContext(hydratedContext);
+  const thumbnailSource = (hydratedContext.platform ?? "generated") as ThumbnailSource;
+  const thumbnailFallbackStyle = generateFallbackThumbnailStyle(metadata.title, hydratedContext.platform);
 
   const inferred = await inferMissingRecipeFields(
     {
@@ -344,14 +350,14 @@ export const reconstructRecipe = async (context: RawRecipeContext): Promise<Reco
       thumbnailFallbackStyle,
       sourceCreator: metadata.sourceCreator,
       sourceTitle: metadata.sourceTitle,
-      rawExtraction: context
+      rawExtraction: hydratedContext
     },
-    context
+    hydratedContext
   );
 
   const validationWarnings = validateRecipe({
-    sourceUrl: context.sourceUrl,
-    sourcePlatform: context.platform,
+    sourceUrl: hydratedContext.sourceUrl,
+    sourcePlatform: hydratedContext.platform,
     sourceCreator: inferred.sourceCreator,
     sourceTitle: inferred.sourceTitle,
     title: inferred.title,
@@ -369,13 +375,13 @@ export const reconstructRecipe = async (context: RawRecipeContext): Promise<Reco
     inferredFields: inferred.inferredFields,
     missingFields: inferred.missingFields,
     validationWarnings: [],
-    rawExtraction: context
+    rawExtraction: hydratedContext
   });
 
-  const confidenceScore = scoreRecipeConfidence(
+  const confidenceReport = scoreRecipeConfidence(
     {
-      sourceUrl: context.sourceUrl,
-      sourcePlatform: context.platform,
+      sourceUrl: hydratedContext.sourceUrl,
+      sourcePlatform: hydratedContext.platform,
       sourceCreator: inferred.sourceCreator,
       sourceTitle: inferred.sourceTitle,
       title: inferred.title,
@@ -390,12 +396,18 @@ export const reconstructRecipe = async (context: RawRecipeContext): Promise<Reco
       thumbnailSource: inferred.thumbnailSource,
       thumbnailFallbackStyle: inferred.thumbnailFallbackStyle,
       confidenceScore: 0,
+      confidenceReport: {
+        score: 0,
+        warnings: [],
+        missingFields: [],
+        lowConfidenceAreas: []
+      },
       inferredFields: inferred.inferredFields,
       missingFields: inferred.missingFields,
       validationWarnings,
-      rawExtraction: context
+      rawExtraction: hydratedContext
     },
-    context
+    hydratedContext
   );
 
   return {
@@ -412,10 +424,11 @@ export const reconstructRecipe = async (context: RawRecipeContext): Promise<Reco
     thumbnailFallbackStyle: inferred.thumbnailFallbackStyle,
     sourceCreator: inferred.sourceCreator,
     sourceTitle: inferred.sourceTitle,
-    confidenceScore,
+    confidenceScore: Math.round(confidenceReport.score * 100),
+    confidenceReport,
     inferredFields: inferred.inferredFields,
-    missingFields: inferred.missingFields,
-    validationWarnings,
-    rawExtraction: context
+    missingFields: confidenceReport.missingFields,
+    validationWarnings: Array.from(new Set([...validationWarnings, ...confidenceReport.warnings])),
+    rawExtraction: hydratedContext
   };
 };
