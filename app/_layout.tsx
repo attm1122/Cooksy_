@@ -11,7 +11,9 @@ import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ensureCooksySession, subscribeToCooksyAuth } from "@/lib/auth";
+import { trackEvent } from "@/lib/analytics";
 import { hasSupabaseConfig } from "@/lib/env";
+import { captureError } from "@/lib/monitoring";
 import { queryClient } from "@/lib/query-client";
 import { fetchRecipeBooks, fetchRecentRecipes } from "@/services/recipe-service";
 import { useAuthStore } from "@/store/use-auth-store";
@@ -33,6 +35,10 @@ export default function RootLayout() {
   useEffect(() => {
     if (loaded || error) {
       SplashScreen.hideAsync();
+      trackEvent("app_bootstrapped", {
+        fontsLoaded: loaded,
+        hasFontError: Boolean(error)
+      });
     }
   }, [error, loaded]);
 
@@ -52,6 +58,9 @@ export default function RootLayout() {
 
     setAuthState({ status: "loading", errorMessage: undefined });
     ensureCooksySession().then(({ userId, errorMessage }) => {
+      trackEvent(errorMessage ? "auth_session_failed" : "auth_session_ready", {
+        hasUser: Boolean(userId)
+      });
       setAuthState({
         status: errorMessage ? "error" : "ready",
         userId,
@@ -79,16 +88,20 @@ export default function RootLayout() {
       .then((recipes) => {
         mergeRecipes(recipes);
       })
-      .catch(() => {
-        return;
+      .catch((fetchError) => {
+        captureError(fetchError, {
+          action: "hydrate_recipes_on_boot"
+        });
       });
 
     fetchRecipeBooks()
       .then((books) => {
         mergeBooks(books);
       })
-      .catch(() => {
-        return;
+      .catch((fetchError) => {
+        captureError(fetchError, {
+          action: "hydrate_books_on_boot"
+        });
       });
   }, [authStatus, loaded, mergeBooks, mergeRecipes]);
 

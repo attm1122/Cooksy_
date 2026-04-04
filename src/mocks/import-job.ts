@@ -17,12 +17,13 @@ export const inferPlatformFromUrl = (url: string): SourcePlatform => {
   return "youtube";
 };
 
-export const buildMockImportedRecipe = async (url: string): Promise<Recipe> => {
+export const buildMockImportedRecipe = async (url: string, importJobId?: string): Promise<Recipe> => {
   const thumbnail = await getThumbnailFromUrl(url);
 
   return {
     ...mockRecipes[0],
     id: `imported-${inferPlatformFromUrl(url)}-${Date.now()}`,
+    importJobId,
     status: "ready",
     processingMessage: undefined,
     title: "Cooksy Imported Chicken Orzo",

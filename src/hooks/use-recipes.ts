@@ -2,11 +2,14 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 
 import {
   addRecipeToBookInBackend,
+  beginRecipeImport,
   createRecipeBookInBackend,
   fetchRecipeBooks,
   fetchRecentRecipes,
   importRecipeFromUrl,
+  pollImportJobUntilComplete,
   removeRecipeFromBookInBackend,
+  retryRecipeImport,
   updateRecipeInBackend
 } from "@/services/recipe-service";
 import type { ImportProgress, Recipe, RecipeBook } from "@/types/recipe";
@@ -26,6 +29,21 @@ export const useRecipeBooks = () =>
 export const useImportRecipe = (onProgress?: (progress: ImportProgress) => void) =>
   useMutation({
     mutationFn: (url: string) => importRecipeFromUrl(url, onProgress)
+  });
+
+export const useBeginRecipeImport = () =>
+  useMutation({
+    mutationFn: (url: string) => beginRecipeImport(url)
+  });
+
+export const useCompleteImportJob = (onProgress?: (progress: ImportProgress) => void) =>
+  useMutation({
+    mutationFn: (jobId: string) => pollImportJobUntilComplete(jobId, onProgress)
+  });
+
+export const useRetryRecipeImport = (onProgress?: (progress: ImportProgress) => void) =>
+  useMutation({
+    mutationFn: (recipe: Pick<Recipe, "id" | "source">) => retryRecipeImport(recipe, onProgress)
   });
 
 export const useUpdateRecipe = () =>

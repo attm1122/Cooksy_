@@ -1,4 +1,5 @@
 import { useLocalSearchParams } from "expo-router";
+import { AlertCircle, LoaderCircle } from "lucide-react-native";
 import { Text, View } from "react-native";
 
 import { EmptyState } from "@/components/common/EmptyState";
@@ -40,8 +41,26 @@ export default function BookDetailScreen() {
                 <RecipeThumbnail recipe={recipe} size="compact" timeLabel={formatMinutes(recipe.totalTimeMinutes)} />
                 <Text className="mb-2 text-[18px] font-bold text-ink">{recipe.title}</Text>
                 <Text className="mb-3 text-[14px] text-muted">
-                  {recipe.status === "processing" ? "Generating recipe..." : recipe.description}
+                  {recipe.status === "processing"
+                    ? "Generating recipe..."
+                    : recipe.status === "failed"
+                      ? recipe.processingMessage ?? "This recipe needs another pass."
+                      : recipe.description}
                 </Text>
+                <View className="mb-3 flex-row flex-wrap items-center" style={{ gap: 8 }}>
+                  {recipe.status === "processing" ? (
+                    <View className="flex-row items-center rounded-full bg-brand-yellow-soft px-3 py-1" style={{ gap: 6 }}>
+                      <LoaderCircle size={14} color="#111111" />
+                      <Text className="text-[12px] font-semibold text-soft-ink">Generating</Text>
+                    </View>
+                  ) : null}
+                  {recipe.status === "failed" ? (
+                    <View className="flex-row items-center rounded-full bg-[#FFF1E8] px-3 py-1" style={{ gap: 6 }}>
+                      <AlertCircle size={14} color="#8F4A1D" />
+                      <Text className="text-[12px] font-semibold text-[#8F4A1D]">Import incomplete</Text>
+                    </View>
+                  ) : null}
+                </View>
               </View>
               <Text className="text-[14px] font-semibold text-soft-ink" onPress={() => handleRemove(recipe.id)}>
                 Remove from book

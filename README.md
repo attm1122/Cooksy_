@@ -56,6 +56,7 @@ src/types/              App domain models
 src/utils/              Small formatters and helpers
 tests/                  Schema, component, and store coverage
 assets/                 Brand logo assets and app icon concepts
+docs/                   Deployment and production runbooks
 ```
 
 ## Design system notes
@@ -146,6 +147,19 @@ The Supabase project ref currently wired into this repo is `qirjjbmrgtailifhmakp
 ### Current backend limitation
 
 The remote ingestion path now has a real contract and persistence model, but it still needs a worker that advances queued jobs through extraction, ingredient parsing, and recipe generation. Until that worker exists, keep the app in `mock` mode for local product work.
+
+## Production operations
+
+Cooksy now includes the first operational production layer:
+
+- `src/lib/analytics.ts` for event instrumentation seams
+- `src/lib/monitoring.ts` for error/reporting seams
+- retryable import UX for failed recipe jobs
+- background resumption for processing recipe detail views
+- a Supabase ops health endpoint at `supabase/functions/ops-health`
+- a deployment runbook in `docs/production-readiness.md`
+
+The default analytics and monitoring clients only log locally. Swap them with a provider like PostHog, Segment, Sentry, or Bugsnag before launch.
 
 ## Recommended backend next steps
 

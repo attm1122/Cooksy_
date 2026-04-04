@@ -1,5 +1,7 @@
 import { appEnv, hasSupabaseConfig } from "@/lib/env";
 import { mapImportJobToProgress } from "@/lib/import-jobs";
+import { trackEvent } from "@/lib/analytics";
+import { captureError, captureMessage } from "@/lib/monitoring";
 import { supabase } from "@/lib/supabase";
 import { buildMockImportJob, buildMockImportedRecipe, inferPlatformFromUrl } from "@/mocks/import-job";
 import { getThumbnailFromUrl } from "@/features/recipes/services/thumbnailService";
@@ -26,6 +28,11 @@ const resolveImportMode = (): ImportBackendMode => {
 type ImportGateway = {
   createJob: (payload: CreateImportJobRequest) => Promise<CreateImportJobResponse>;
   getJob: (jobId: string) => Promise<ImportJobStatusResponse>;
+};
+
+type PendingImportResult = {
+  pendingRecipe: Recipe;
+  job: ImportJob;
 };
 
 const mockJobs = new Map<string, { sourceUrl: string; createdAt: number }>();
@@ -181,17 +188,41 @@ export const pollImportJobUntilComplete = async (
 
   while (attempts < 40) {
     const { job } = await gateway.getJob(jobId);
-    onProgress?.(mapImportJobToProgress(job));
+    const mappedProgress = mapImportJobToProgress(job);
+    onProgress?.(mappedProgress);
+    trackEvent("recipe_import_progressed", {
+      jobId,
+      status: job.status,
+      progress: Number(job.progress.toFixed(3))
+    });
 
     if (job.status === "completed") {
       if (job.recipe) {
+        trackEvent("recipe_import_completed", {
+          jobId,
+          sourcePlatform: job.sourcePlatform
+        });
         return job.recipe;
       }
 
-      return buildMockImportedRecipe(job.sourceUrl);
+      trackEvent("recipe_import_completed", {
+        jobId,
+        sourcePlatform: job.sourcePlatform
+      });
+      return buildMockImportedRecipe(job.sourceUrl, job.id);
     }
 
     if (job.status === "failed") {
+      trackEvent("recipe_import_failed", {
+        jobId,
+        sourcePlatform: job.sourcePlatform,
+        reason: job.errorMessage ?? "Recipe import failed"
+      });
+      captureMessage("Recipe import job failed", {
+        jobId,
+        sourcePlatform: job.sourcePlatform,
+        reason: job.errorMessage ?? "Recipe import failed"
+      });
       throw new Error(job.errorMessage ?? "Recipe import failed");
     }
 
@@ -199,27 +230,20 @@ export const pollImportJobUntilComplete = async (
     await sleep(resolveImportMode() === "remote" ? 1500 : 450);
   }
 
+  trackEvent("recipe_import_failed", {
+    jobId,
+    reason: "timeout"
+  });
   throw new Error("Recipe import timed out");
 };
 
-export const importRecipeFromUrl = async (
-  sourceUrl: string,
-  onProgress?: (progress: ImportProgress) => void
-): Promise<Recipe> => {
-  const gateway = getGateway();
-  const { job } = await gateway.createJob({ sourceUrl });
-  onProgress?.(mapImportJobToProgress(job));
-
-  return pollImportJobUntilComplete(job.id, onProgress);
-};
-
-export const createPendingRecipeFromUrl = async (sourceUrl: string, recipeId: string): Promise<Recipe> => {
+const buildPendingRecipe = async (sourceUrl: string, recipeId: string, importJobId: string): Promise<Recipe> => {
   const thumbnail = await getThumbnailFromUrl(sourceUrl);
 
   return {
     id: recipeId,
     status: "processing",
-    importJobId: undefined,
+    importJobId,
     processingMessage: "Generating recipe...",
     title: "Saved recipe in progress",
     description: "Your recipe is being assembled from the original video so you can come back to it when it’s ready.",
@@ -249,7 +273,61 @@ export const createPendingRecipeFromUrl = async (sourceUrl: string, recipeId: st
   };
 };
 
+export const beginRecipeImport = async (sourceUrl: string): Promise<PendingImportResult> => {
+  const gateway = getGateway();
+  const { job } = await gateway.createJob({ sourceUrl });
+  const pendingRecipeId = job.id || createPendingRecipeId();
+  const pendingRecipe = await buildPendingRecipe(sourceUrl, pendingRecipeId, job.id);
+
+  trackEvent("recipe_import_started", {
+    jobId: job.id,
+    sourcePlatform: job.sourcePlatform
+  });
+
+  return {
+    pendingRecipe,
+    job
+  };
+};
+
+export const importRecipeFromUrl = async (
+  sourceUrl: string,
+  onProgress?: (progress: ImportProgress) => void
+): Promise<Recipe> => {
+  const { job } = await beginRecipeImport(sourceUrl);
+  onProgress?.(mapImportJobToProgress(job));
+
+  return pollImportJobUntilComplete(job.id, onProgress);
+};
+
+export const createPendingRecipeFromUrl = async (sourceUrl: string, recipeId: string): Promise<Recipe> => {
+  return buildPendingRecipe(sourceUrl, recipeId, recipeId);
+};
+
 export const createPendingRecipeId = () => {
   localPendingRecipeCounter += 1;
   return `saved-${localPendingRecipeCounter}`;
+};
+
+export const retryRecipeImport = async (
+  recipe: Pick<Recipe, "id" | "source">,
+  onProgress?: (progress: ImportProgress) => void
+): Promise<PendingImportResult> => {
+  try {
+    const result = await beginRecipeImport(recipe.source.url);
+    trackEvent("recipe_import_retried", {
+      oldRecipeId: recipe.id,
+      newJobId: result.job.id,
+      sourcePlatform: result.job.sourcePlatform
+    });
+    onProgress?.(mapImportJobToProgress(result.job));
+    return result;
+  } catch (error) {
+    captureError(error, {
+      recipeId: recipe.id,
+      sourceUrl: recipe.source.url,
+      action: "retry_import"
+    });
+    throw error;
+  }
 };

@@ -15,6 +15,7 @@ type CooksyState = {
   saveRecipe: (recipe: Recipe) => void;
   updateRecipe: (recipe: Recipe) => void;
   patchRecipe: (recipeId: string, patch: Partial<Recipe>) => void;
+  removeRecipe: (recipeId: string) => void;
   mergeRecipes: (recipes: Recipe[]) => void;
   mergeBooks: (books: RecipeBook[]) => void;
   saveBook: (book: RecipeBook) => void;
@@ -68,6 +69,15 @@ export const useCooksyStore = create<CooksyState>((set) => ({
   patchRecipe: (recipeId, patch) =>
     set((state) => ({
       recipes: state.recipes.map((item) => (item.id === recipeId ? { ...item, ...patch } : item))
+    })),
+  removeRecipe: (recipeId) =>
+    set((state) => ({
+      recipes: state.recipes.filter((item) => item.id !== recipeId && item.importJobId !== recipeId),
+      books: state.books.map((book) => ({
+        ...book,
+        recipeIds: book.recipeIds.filter((id) => id !== recipeId)
+      })),
+      selectedRecipeId: state.selectedRecipeId === recipeId ? undefined : state.selectedRecipeId
     })),
   mergeRecipes: (recipes) =>
     set((state) => {

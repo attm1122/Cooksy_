@@ -1,4 +1,5 @@
 import { Link } from "expo-router";
+import { AlertCircle, LoaderCircle } from "lucide-react-native";
 import { useMemo, useState } from "react";
 import { Text, View } from "react-native";
 
@@ -46,9 +47,27 @@ export default function RecipesScreen() {
                   </Text>
                 </View>
                 <View className="flex-row items-center justify-between">
-                  <PlatformBadge platform={recipe.source.platform} />
+                  <View className="flex-row flex-wrap items-center" style={{ gap: 8 }}>
+                    <PlatformBadge platform={recipe.source.platform} />
+                    {recipe.status === "processing" ? (
+                      <View className="flex-row items-center rounded-full bg-brand-yellow-soft px-3 py-1" style={{ gap: 6 }}>
+                        <LoaderCircle size={14} color="#111111" />
+                        <Text className="text-[12px] font-semibold text-soft-ink">Generating</Text>
+                      </View>
+                    ) : null}
+                    {recipe.status === "failed" ? (
+                      <View className="flex-row items-center rounded-full bg-[#FFF1E8] px-3 py-1" style={{ gap: 6 }}>
+                        <AlertCircle size={14} color="#8F4A1D" />
+                        <Text className="text-[12px] font-semibold text-[#8F4A1D]">Retry needed</Text>
+                      </View>
+                    ) : null}
+                  </View>
                   <Text className="text-[13px] font-semibold text-muted">
-                    {recipe.status === "processing" ? "Saved just now" : `${recipe.totalTimeMinutes} min total`}
+                    {recipe.status === "processing"
+                      ? "Saved just now"
+                      : recipe.status === "failed"
+                        ? "Import incomplete"
+                        : `${recipe.totalTimeMinutes} min total`}
                   </Text>
                 </View>
               </View>

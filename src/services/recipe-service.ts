@@ -1,7 +1,14 @@
 import { hasSupabaseConfig } from "@/lib/env";
+import { trackEvent } from "@/lib/analytics";
+import { captureError } from "@/lib/monitoring";
 import { supabase } from "@/lib/supabase";
 import { mockBooks, mockRecipes } from "@/mocks/recipes";
-import { importRecipeFromUrl as runImportRecipe } from "@/services/import-service";
+import {
+  beginRecipeImport as runBeginRecipeImport,
+  importRecipeFromUrl as runImportRecipe,
+  pollImportJobUntilComplete as runPollImportJobUntilComplete,
+  retryRecipeImport as runRetryRecipeImport
+} from "@/services/import-service";
 import type { ImportProgress, Recipe, RecipeBook } from "@/types/recipe";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -109,11 +116,25 @@ export const fetchRecentRecipes = async (): Promise<Recipe[]> => {
       .limit(12);
 
     if (!error && data) {
+      trackEvent("recipes_hydrated", {
+        count: data.length,
+        source: "supabase"
+      });
       return data.map(mapRemoteRecipe);
+    }
+
+    if (error) {
+      captureError(error, {
+        action: "fetch_recent_recipes"
+      });
     }
   }
 
   await sleep(120);
+  trackEvent("recipes_hydrated", {
+    count: mockRecipes.length,
+    source: "mock"
+  });
   return mockRecipes;
 };
 
@@ -140,18 +161,44 @@ export const fetchRecipeBooks = async (): Promise<RecipeBook[]> => {
       .order("created_at", { ascending: false });
 
     if (!error && data) {
+      trackEvent("books_hydrated", {
+        count: data.length,
+        source: "supabase"
+      });
       return data.map(mapRemoteBook);
+    }
+
+    if (error) {
+      captureError(error, {
+        action: "fetch_recipe_books"
+      });
     }
   }
 
   await sleep(120);
+  trackEvent("books_hydrated", {
+    count: mockBooks.length,
+    source: "mock"
+  });
   return mockBooks;
 };
+
+export const beginRecipeImport = async (url: string) => runBeginRecipeImport(url);
 
 export const importRecipeFromUrl = async (
   url: string,
   onProgress?: (progress: ImportProgress) => void
 ): Promise<Recipe> => runImportRecipe(url, onProgress);
+
+export const pollImportJobUntilComplete = async (
+  jobId: string,
+  onProgress?: (progress: ImportProgress) => void
+): Promise<Recipe> => runPollImportJobUntilComplete(jobId, onProgress);
+
+export const retryRecipeImport = async (
+  recipe: Pick<Recipe, "id" | "source">,
+  onProgress?: (progress: ImportProgress) => void
+) => runRetryRecipeImport(recipe, onProgress);
 
 export const updateRecipeInBackend = async (recipe: Recipe): Promise<Recipe> => {
   if (hasSupabaseConfig && supabase) {
@@ -209,6 +256,16 @@ export const updateRecipeInBackend = async (recipe: Recipe): Promise<Recipe> => 
           }))
         );
       }
+
+      trackEvent("recipe_updated", {
+        recipeId: recipe.id,
+        status: recipe.status
+      });
+    } else {
+      captureError(recipeError, {
+        action: "update_recipe",
+        recipeId: recipe.id
+      });
     }
   }
 
@@ -228,6 +285,9 @@ export const createRecipeBookInBackend = async (input: Pick<RecipeBook, "name" |
       .single();
 
     if (!error && data) {
+      trackEvent("recipe_book_created", {
+        bookId: data.id
+      });
       return {
         id: data.id,
         name: data.name,
@@ -235,6 +295,13 @@ export const createRecipeBookInBackend = async (input: Pick<RecipeBook, "name" |
         coverTone: data.cover_tone,
         recipeIds: []
       };
+    }
+
+    if (error) {
+      captureError(error, {
+        action: "create_recipe_book",
+        name: input.name
+      });
     }
   }
 
@@ -249,18 +316,46 @@ export const createRecipeBookInBackend = async (input: Pick<RecipeBook, "name" |
 
 export const addRecipeToBookInBackend = async (recipeId: string, bookId: string): Promise<void> => {
   if (hasSupabaseConfig && supabase) {
-    await supabase.from("recipe_book_items").upsert(
+    const { error } = await supabase.from("recipe_book_items").upsert(
       {
         book_id: bookId,
         recipe_id: recipeId
       },
       { onConflict: "book_id,recipe_id" }
     );
+
+    if (error) {
+      captureError(error, {
+        action: "add_recipe_to_book",
+        recipeId,
+        bookId
+      });
+      return;
+    }
   }
+
+  trackEvent("recipe_added_to_book", {
+    recipeId,
+    bookId
+  });
 };
 
 export const removeRecipeFromBookInBackend = async (recipeId: string, bookId: string): Promise<void> => {
   if (hasSupabaseConfig && supabase) {
-    await supabase.from("recipe_book_items").delete().eq("book_id", bookId).eq("recipe_id", recipeId);
+    const { error } = await supabase.from("recipe_book_items").delete().eq("book_id", bookId).eq("recipe_id", recipeId);
+
+    if (error) {
+      captureError(error, {
+        action: "remove_recipe_from_book",
+        recipeId,
+        bookId
+      });
+      return;
+    }
   }
+
+  trackEvent("recipe_removed_from_book", {
+    recipeId,
+    bookId
+  });
 };
