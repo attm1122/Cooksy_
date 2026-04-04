@@ -9,9 +9,11 @@ import { PrimaryButton } from "@/components/common/Buttons";
 import { CooksyCard } from "@/components/common/CooksyCard";
 import { PlatformBadge } from "@/components/common/PlatformBadge";
 import { ScreenContainer } from "@/components/common/ScreenContainer";
+import { RecipeThumbnail } from "@/components/recipe/RecipeThumbnail";
 import { useRecentRecipes } from "@/hooks/use-recipes";
 import { importRecipeSchema, type ImportRecipeFormValues } from "@/lib/schemas";
 import { useCooksyStore } from "@/store/use-cooksy-store";
+import { formatMinutes } from "@/utils/time";
 
 export default function HomeScreen() {
   const { data: recipes = [] } = useRecentRecipes();
@@ -92,21 +94,24 @@ export default function HomeScreen() {
         {recipes.map((recipe) => (
           <Link key={recipe.id} href={`/recipe/${recipe.id}`} asChild>
             <CooksyCard className="p-4">
-              <View className="flex-row items-center justify-between">
-                <View className="flex-1">
-                  <Text className="mb-1 text-[18px] font-bold text-ink">{recipe.title}</Text>
-                  <Text className="mb-2 text-[14px] text-muted">{recipe.heroNote}</Text>
-                  <PlatformBadge platform={recipe.source.platform} />
+              <View style={{ gap: 14 }}>
+                <RecipeThumbnail recipe={recipe} timeLabel={formatMinutes(recipe.totalTimeMinutes)} />
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-1">
+                    <Text className="mb-1 text-[18px] font-bold text-ink">{recipe.title}</Text>
+                    <Text className="mb-2 text-[14px] text-muted">{recipe.heroNote}</Text>
+                    <PlatformBadge platform={recipe.source.platform} />
+                  </View>
+                  <PrimaryButton
+                    fullWidth={false}
+                    onPress={() => {
+                      setSelectedRecipe(recipe.id);
+                      router.push(`/recipe/${recipe.id}`);
+                    }}
+                  >
+                    Open
+                  </PrimaryButton>
                 </View>
-                <PrimaryButton
-                  fullWidth={false}
-                  onPress={() => {
-                    setSelectedRecipe(recipe.id);
-                    router.push(`/recipe/${recipe.id}`);
-                  }}
-                >
-                  Open
-                </PrimaryButton>
               </View>
             </CooksyCard>
           </Link>

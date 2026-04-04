@@ -9,8 +9,10 @@ import { PlatformBadge } from "@/components/common/PlatformBadge";
 import { RecipeMetaRow } from "@/components/common/RecipeMetaRow";
 import { ScreenContainer } from "@/components/common/ScreenContainer";
 import { IngredientChecklist } from "@/components/recipe/IngredientChecklist";
+import { RecipeThumbnail } from "@/components/recipe/RecipeThumbnail";
 import { StepCard } from "@/components/recipe/StepCard";
 import { useCooksyStore } from "@/store/use-cooksy-store";
+import { formatMinutes } from "@/utils/time";
 
 export default function RecipeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -33,9 +35,13 @@ export default function RecipeDetailScreen() {
       </View>
 
       <CooksyCard className="mb-4 overflow-hidden p-0">
-        <View className="h-[220px] items-center justify-center bg-brand-yellow-soft">
-          <Text className="text-[16px] font-semibold text-soft-ink">{recipe.imageLabel}</Text>
-        </View>
+        <RecipeThumbnail
+          recipe={recipe}
+          size="hero"
+          aspectRatio={16 / 10}
+          timeLabel={formatMinutes(recipe.totalTimeMinutes)}
+          style={{ borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }}
+        />
         <View className="p-5">
           <View className="flex-row items-center justify-between">
             <View>

@@ -36,7 +36,6 @@ const buildMockJobFromElapsed = (jobId: string): ImportJob => {
   }
 
   const elapsed = Date.now() - state.createdAt;
-  const recipe = buildMockImportedRecipe(state.sourceUrl);
   const base = buildMockImportJob(state.sourceUrl);
   const updatedAt = new Date().toISOString();
 
@@ -105,7 +104,6 @@ const buildMockJobFromElapsed = (jobId: string): ImportJob => {
       label: "Completed",
       description: "Recipe is ready"
     },
-    recipe,
     updatedAt
   };
 };
@@ -183,8 +181,12 @@ export const pollImportJobUntilComplete = async (
     const { job } = await gateway.getJob(jobId);
     onProgress?.(mapImportJobToProgress(job));
 
-    if (job.status === "completed" && job.recipe) {
-      return job.recipe;
+    if (job.status === "completed") {
+      if (job.recipe) {
+        return job.recipe;
+      }
+
+      return buildMockImportedRecipe(job.sourceUrl);
     }
 
     if (job.status === "failed") {

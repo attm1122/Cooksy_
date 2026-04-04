@@ -99,8 +99,8 @@ This repo now includes the first real backend seam:
 Copy `.env.example` to `.env` and fill in:
 
 ```bash
-EXPO_PUBLIC_RECIPE_IMPORT_MODE=mock
-EXPO_PUBLIC_SUPABASE_URL=...
+EXPO_PUBLIC_RECIPE_IMPORT_MODE=auto
+EXPO_PUBLIC_SUPABASE_URL=https://qirjjbmrgtailifhmakp.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=...
 ```
 
@@ -109,6 +109,8 @@ Modes:
 - `mock`: always use the local mocked import worker
 - `remote`: call the deployed Supabase edge function
 - `auto`: use remote when configured, otherwise fall back to mock
+
+The Supabase project ref currently wired into this repo is `qirjjbmrgtailifhmakp`.
 
 ### Current backend limitation
 

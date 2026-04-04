@@ -7,7 +7,9 @@ import { CooksyCard } from "@/components/common/CooksyCard";
 import { PlatformBadge } from "@/components/common/PlatformBadge";
 import { ScreenContainer } from "@/components/common/ScreenContainer";
 import { SearchInput } from "@/components/common/SearchInput";
+import { RecipeThumbnail } from "@/components/recipe/RecipeThumbnail";
 import { useRecentRecipes } from "@/hooks/use-recipes";
+import { formatMinutes } from "@/utils/time";
 
 export default function RecipesScreen() {
   const { data: recipes = [] } = useRecentRecipes();
@@ -35,11 +37,16 @@ export default function RecipesScreen() {
         {filteredRecipes.map((recipe) => (
           <Link key={recipe.id} href={`/recipe/${recipe.id}`} asChild>
             <CooksyCard className="p-4">
-              <Text className="mb-1 text-[18px] font-bold text-ink">{recipe.title}</Text>
-              <Text className="mb-3 text-[14px] text-muted">{recipe.description}</Text>
-              <View className="flex-row items-center justify-between">
-                <PlatformBadge platform={recipe.source.platform} />
-                <Text className="text-[13px] font-semibold text-muted">{recipe.totalTimeMinutes} min total</Text>
+              <View style={{ gap: 14 }}>
+                <RecipeThumbnail recipe={recipe} size="compact" timeLabel={formatMinutes(recipe.totalTimeMinutes)} />
+                <View>
+                  <Text className="mb-1 text-[18px] font-bold text-ink">{recipe.title}</Text>
+                  <Text className="mb-3 text-[14px] text-muted">{recipe.description}</Text>
+                </View>
+                <View className="flex-row items-center justify-between">
+                  <PlatformBadge platform={recipe.source.platform} />
+                  <Text className="text-[13px] font-semibold text-muted">{recipe.totalTimeMinutes} min total</Text>
+                </View>
               </View>
             </CooksyCard>
           </Link>

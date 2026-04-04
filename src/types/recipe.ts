@@ -1,4 +1,5 @@
 export type SourcePlatform = "youtube" | "tiktok" | "instagram";
+export type ThumbnailSource = SourcePlatform | "generated";
 
 export type RecipeConfidenceLevel = "high" | "medium" | "low";
 
@@ -29,6 +30,9 @@ export type Recipe = {
   description: string;
   heroNote: string;
   imageLabel: string;
+  thumbnailUrl: string | null;
+  thumbnailSource: ThumbnailSource;
+  thumbnailFallbackStyle?: string;
   servings: number;
   prepTimeMinutes: number;
   cookTimeMinutes: number;

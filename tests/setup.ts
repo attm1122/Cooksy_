@@ -8,3 +8,7 @@ jest.mock("expo-router", () => ({
   },
   useLocalSearchParams: jest.fn(() => ({}))
 }));
+
+jest.mock("expo-linear-gradient", () => ({
+  LinearGradient: "LinearGradient"
+}));
