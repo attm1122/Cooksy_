@@ -43,6 +43,19 @@ export type SourceSignals = {
   signalOrigins: SourceSignalOrigin[];
 };
 
+export type SourceEvidence = {
+  combinedText: string;
+  transcriptText: string;
+  captionText: string;
+  ocrText: string;
+  commentsText: string;
+  explicitQuantityMentions: number;
+  cueMentions: string[];
+  hasStrongTranscript: boolean;
+  hasAnyTextSignals: boolean;
+  signalOriginCount: number;
+};
+
 export type ReconstructionResult = {
   title: string;
   description?: string | null;
@@ -114,7 +127,53 @@ type MetadataHints = {
   cookTimeMinutesHint?: number;
 };
 
+const FOOD_CUES = [
+  "chicken",
+  "garlic",
+  "cream",
+  "parmesan",
+  "spinach",
+  "salmon",
+  "honey",
+  "rice",
+  "pasta",
+  "orzo",
+  "stock",
+  "butter",
+  "tomato"
+] as const;
+
+const QUANTITY_PATTERN =
+  /\b(\d+\s?\/\s?\d+|\d+\.\d+|\d+)\s*(cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons|oz|ounce|ounces|lb|lbs|pound|pounds|clove|cloves|fillet|fillets|piece|pieces|handful|handfuls)\b/gi;
+
 const readHints = (context: RawRecipeContext): MetadataHints => ((context.metadata ?? {}) as MetadataHints);
+const normalizeText = (value: string | null | undefined) => value?.replace(/\s+/g, " ").trim() ?? "";
+
+const aggregateSourceEvidence = (context: RawRecipeContext): SourceEvidence => {
+  const transcriptText = normalizeText(context.transcript);
+  const captionText = normalizeText(context.caption);
+  const ocrText = normalizeText(context.ocrText?.join(" "));
+  const commentsText = normalizeText(context.comments?.join(" "));
+  const combinedText = [captionText, transcriptText, ocrText, commentsText].filter(Boolean).join(" ").toLowerCase();
+  const cueMentions = FOOD_CUES.filter((cue) => combinedText.includes(cue));
+  const explicitQuantityMentions = Array.from(combinedText.matchAll(QUANTITY_PATTERN)).length;
+  const signalOrigins = Array.isArray((context.metadata as { signalOrigins?: unknown } | null)?.signalOrigins)
+    ? ((context.metadata as { signalOrigins: unknown[] }).signalOrigins.filter((item): item is string => typeof item === "string"))
+    : [];
+
+  return {
+    combinedText,
+    transcriptText,
+    captionText,
+    ocrText,
+    commentsText,
+    explicitQuantityMentions,
+    cueMentions,
+    hasStrongTranscript: transcriptText.length > 120,
+    hasAnyTextSignals: Boolean(combinedText),
+    signalOriginCount: signalOrigins.length
+  };
+};
 
 const buildId = (prefix: string, index: number) => `${prefix}-${index + 1}`;
 
@@ -771,17 +830,23 @@ export const extractIngredientsFromContext = async (context: RawRecipeContext): 
     }));
   }
 
-  const transcript = `${context.caption ?? ""} ${context.transcript ?? ""}`.toLowerCase();
+  const evidence = aggregateSourceEvidence(context);
   const ingredients: Ingredient[] = [];
 
-  if (transcript.includes("chicken")) {
+  if (evidence.combinedText.includes("chicken")) {
     ingredients.push({ id: buildId("ingredient", ingredients.length), name: "Chicken", quantity: null, inferred: true });
   }
-  if (transcript.includes("garlic")) {
+  if (evidence.combinedText.includes("garlic")) {
     ingredients.push({ id: buildId("ingredient", ingredients.length), name: "Garlic", quantity: null, inferred: true });
   }
-  if (transcript.includes("cream")) {
+  if (evidence.combinedText.includes("cream")) {
     ingredients.push({ id: buildId("ingredient", ingredients.length), name: "Cream", quantity: null, inferred: true });
+  }
+  if (evidence.combinedText.includes("salmon")) {
+    ingredients.push({ id: buildId("ingredient", ingredients.length), name: "Salmon", quantity: null, inferred: true });
+  }
+  if (evidence.combinedText.includes("rice")) {
+    ingredients.push({ id: buildId("ingredient", ingredients.length), name: "Rice", quantity: null, inferred: true });
   }
 
   return ingredients;
@@ -807,6 +872,25 @@ export const extractStepsFromContext = async (context: RawRecipeContext): Promis
     }));
   }
 
+  const evidence = aggregateSourceEvidence(context);
+
+  if (evidence.cueMentions.length >= 2) {
+    return [
+      {
+        id: "step-1",
+        order: 1,
+        instruction: "Prepare the main ingredients and start cooking the base elements from the original post.",
+        inferred: true
+      },
+      {
+        id: "step-2",
+        order: 2,
+        instruction: "Cook until the core ingredients are tender and the sauce or glaze comes together.",
+        inferred: true
+      }
+    ];
+  }
+
   return [
     {
       id: "step-1",
@@ -819,8 +903,13 @@ export const extractStepsFromContext = async (context: RawRecipeContext): Promis
 
 export const extractRecipeMetadata = async (context: RawRecipeContext) => {
   const hints = readHints(context);
+  const evidence = aggregateSourceEvidence(context);
   const title = context.title?.trim() || `${context.platform} recipe import`;
-  const description = context.caption?.trim() || context.transcript?.slice(0, 160) || "Imported from social cooking content.";
+  const description =
+    context.caption?.trim() ||
+    context.transcript?.slice(0, 160) ||
+    (evidence.commentsText ? evidence.commentsText.slice(0, 160) : null) ||
+    "Imported from social cooking content.";
   const servings = hints.servingsHint ?? null;
   const prepTimeMinutes = hints.prepTimeMinutesHint ?? null;
   const cookTimeMinutes = hints.cookTimeMinutesHint ?? null;
@@ -888,7 +977,8 @@ export const inferMissingRecipeFields = async (
     inferredFields.push("Serving size inferred");
   }
 
-  const prepTimeMinutes = partialRecipe.prepTimeMinutes ?? (context.transcript ? 12 : null);
+  const evidence = aggregateSourceEvidence(context);
+  const prepTimeMinutes = partialRecipe.prepTimeMinutes ?? (evidence.hasAnyTextSignals ? 12 : null);
   if (partialRecipe.prepTimeMinutes == null) {
     inferredFields.push("Prep time inferred");
   }
@@ -904,7 +994,7 @@ export const inferMissingRecipeFields = async (
     partialRecipe.totalTimeMinutes ??
     (typeof prepTimeMinutes === "number" && typeof cookTimeMinutes === "number" ? prepTimeMinutes + cookTimeMinutes : null);
 
-  if (!context.transcript && !context.caption) {
+  if (!evidence.hasAnyTextSignals) {
     missingFields.push("No transcript or caption available");
   }
 
@@ -966,11 +1056,12 @@ export const scoreRecipeConfidence = (
   recipe: Omit<ReconstructionResult, "rawExtraction">,
   context: RawRecipeContext
 ) => {
+  const evidence = aggregateSourceEvidence(context);
   let score = 25;
 
-  if (context.transcript && context.transcript.length > 120) {
+  if (evidence.hasStrongTranscript) {
     score += 24;
-  } else if (context.caption) {
+  } else if (evidence.captionText) {
     score += 10;
   }
 
@@ -985,6 +1076,13 @@ export const scoreRecipeConfidence = (
   if (recipe.thumbnailUrl) {
     score += 5;
   }
+
+  score += Math.min(evidence.explicitQuantityMentions * 3, 15);
+  score += Math.min(evidence.cueMentions.length * 2, 10);
+  score += Math.min(evidence.signalOriginCount * 2, 6);
+  score += evidence.ocrText ? 6 : 0;
+  score += evidence.commentsText ? 4 : 0;
+  score += evidence.cueMentions.length >= 3 ? 6 : 0;
 
   const explicitQuantityRatio = recipe.ingredients.length
     ? recipe.ingredients.filter((ingredient) => ingredient.quantity).length / recipe.ingredients.length

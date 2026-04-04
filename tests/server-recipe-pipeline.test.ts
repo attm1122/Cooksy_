@@ -97,7 +97,7 @@ describe("server recipe pipeline", () => {
     expect(reconstruction.confidenceScore).toBeGreaterThan(60);
     expect(recipe.status).toBe("ready");
     expect(recipe.source.platform).toBe("youtube");
-    expect(recipe.confidence).toBe("medium");
+    expect(recipe.confidence).toBe("high");
     expect(recipe.ingredients[1]?.quantity).toContain("4 cloves");
   });
 
@@ -119,5 +119,28 @@ describe("server recipe pipeline", () => {
     expect(context.caption).toContain("Creamy tuscan pasta");
     expect(context.thumbnailUrl).toBe("https://cdn.example.com/pasta.jpg");
     expect((context.metadata as { extractionSource?: string } | null)?.extractionSource).toBe("social-page");
+  });
+
+  it("uses social evidence to build a stronger fallback recipe", async () => {
+    const reconstruction = await reconstructRecipe({
+      sourceUrl: "https://www.tiktok.com/@cooksy/video/strong456",
+      platform: "tiktok",
+      title: "Salmon Rice Bowl",
+      creator: "Cooksy",
+      caption: null,
+      transcript: null,
+      ocrText: ["2 salmon fillets", "rice bowl", "hot honey"],
+      comments: ["Used garlic butter for the glaze and it worked great."],
+      metadata: {
+        signalOrigins: ["open-graph"],
+        ingredientHints: [],
+        stepHints: []
+      },
+      thumbnailUrl: "https://cdn.example.com/salmon.jpg"
+    });
+
+    expect(reconstruction.ingredients.map((ingredient) => ingredient.name)).toEqual(expect.arrayContaining(["Salmon", "Garlic", "Rice"]));
+    expect(reconstruction.steps.length).toBeGreaterThan(1);
+    expect(reconstruction.confidenceScore).toBeGreaterThan(35);
   });
 });

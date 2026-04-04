@@ -44,6 +44,19 @@ export type SourceSignals = {
   signalOrigins: SourceSignalOrigin[];
 };
 
+export type SourceEvidence = {
+  combinedText: string;
+  transcriptText: string;
+  captionText: string;
+  ocrText: string;
+  commentsText: string;
+  explicitQuantityMentions: number;
+  cueMentions: string[];
+  hasStrongTranscript: boolean;
+  hasAnyTextSignals: boolean;
+  signalOriginCount: number;
+};
+
 export type Recipe = {
   id: string;
   sourceUrl: string;

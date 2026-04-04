@@ -41,5 +41,29 @@ describe("recipe reconstruction service", () => {
     expect(result.confidenceScore).toBeLessThan(65);
     expect(result.validationWarnings.length).toBeGreaterThan(0);
   });
-});
 
+  it("uses ocr and comment evidence to improve fallback extraction", async () => {
+    const context = {
+      sourceUrl: "https://www.tiktok.com/@cooksy/video/strong456",
+      platform: "tiktok" as const,
+      title: "Salmon Rice Bowl",
+      creator: "Cooksy",
+      caption: null,
+      transcript: null,
+      ocrText: ["2 salmon fillets", "rice bowl", "hot honey"],
+      comments: ["Used garlic butter for the glaze and it worked great."],
+      metadata: {
+        signalOrigins: ["open-graph"],
+        ingredientHints: [],
+        stepHints: []
+      },
+      thumbnailUrl: "https://cdn.example.com/salmon.jpg"
+    };
+
+    const result = await reconstructRecipe(context);
+
+    expect(result.ingredients.map((ingredient) => ingredient.name)).toEqual(expect.arrayContaining(["Salmon", "Garlic", "Rice"]));
+    expect(result.steps.length).toBeGreaterThan(1);
+    expect(result.confidenceScore).toBeGreaterThan(35);
+  });
+});
