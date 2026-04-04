@@ -1,4 +1,6 @@
-import type { Recipe, SourcePlatform, ThumbnailSource } from "@/types/recipe";
+import { parseInstagramUrl, parseTikTokUrl, parseYouTubeUrl } from "@/features/recipes/lib/platform";
+import type { RawRecipeContext, Recipe, SourcePlatform, ThumbnailSource } from "@/features/recipes/types";
+import type { Recipe as UiRecipe } from "@/types/recipe";
 
 export type ThumbnailResult = {
   thumbnailUrl: string | null;
@@ -9,18 +11,45 @@ export type ThumbnailResult = {
 
 const fallbackStyles = ["golden-sear", "paprika-glow", "toast-cream", "copper-pan"] as const;
 
-const extractYouTubeVideoId = (url: string) => {
-  const watchMatch = url.match(/[?&]v=([^&]+)/);
-  if (watchMatch?.[1]) {
-    return watchMatch[1];
+const pickFallbackStyle = (seed: string) => {
+  const total = seed.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return fallbackStyles[total % fallbackStyles.length];
+};
+
+const buildTikTokThumbnailUrl = (url: string) => {
+  const parsed = parseTikTokUrl(url);
+  const seed = parsed.videoId ?? parsed.creatorHandle ?? "cooksy";
+  return `https://picsum.photos/seed/tiktok-${seed}/1280/960`;
+};
+
+const buildInstagramThumbnailUrl = (url: string) => {
+  const parsed = parseInstagramUrl(url);
+  const seed = parsed.mediaCode ?? "cooksy";
+  return `https://picsum.photos/seed/instagram-${seed}/1280/960`;
+};
+
+export const generateFallbackThumbnailStyle = (recipeTitle: string, platform: string) =>
+  pickFallbackStyle(`${recipeTitle}-${platform}`);
+
+export const getThumbnailFromContext = (context: RawRecipeContext): string | null => {
+  if (context.thumbnailUrl) {
+    return context.thumbnailUrl;
   }
 
-  const shortMatch = url.match(/youtu\.be\/([^?&/]+)/);
-  if (shortMatch?.[1]) {
-    return shortMatch[1];
+  if (context.platform === "youtube") {
+    const parsed = parseYouTubeUrl(context.sourceUrl);
+    return parsed.videoId
+      ? parsed.videoId.length === 11
+        ? `https://img.youtube.com/vi/${parsed.videoId}/hqdefault.jpg`
+        : `https://picsum.photos/seed/youtube-${parsed.videoId}/1280/720`
+      : null;
   }
 
-  return null;
+  if (context.platform === "tiktok") {
+    return buildTikTokThumbnailUrl(context.sourceUrl);
+  }
+
+  return buildInstagramThumbnailUrl(context.sourceUrl);
 };
 
 const inferPlatform = (url: string): SourcePlatform => {
@@ -35,38 +64,21 @@ const inferPlatform = (url: string): SourcePlatform => {
   return "youtube";
 };
 
-const pickFallbackStyle = (seed: string) => {
-  const total = seed.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  return fallbackStyles[total % fallbackStyles.length];
-};
-
-const buildTikTokThumbnailUrl = (url: string) => {
-  const videoMatch = url.match(/video\/(\d+)/);
-  const creatorMatch = url.match(/@([^/]+)/);
-  const seed = videoMatch?.[1] ?? creatorMatch?.[1] ?? "cooksy";
-
-  return `https://picsum.photos/seed/tiktok-${seed}/1280/960`;
-};
-
-const buildInstagramThumbnailUrl = (url: string) => {
-  const reelMatch = url.match(/reel\/([^/?]+)/);
-  const postMatch = url.match(/p\/([^/?]+)/);
-  const seed = reelMatch?.[1] ?? postMatch?.[1] ?? "cooksy";
-
-  return `https://picsum.photos/seed/instagram-${seed}/1280/960`;
-};
-
-export const generateFallbackThumbnail = (recipe: Recipe) =>
-  recipe.thumbnailFallbackStyle ?? pickFallbackStyle(`${recipe.id}-${recipe.title}-${recipe.source.platform}`);
+export const generateFallbackThumbnail = (recipe: Recipe | UiRecipe) =>
+  recipe.thumbnailFallbackStyle ??
+  generateFallbackThumbnailStyle(
+    recipe.title,
+    "sourcePlatform" in recipe ? recipe.sourcePlatform : recipe.source.platform
+  );
 
 export const getThumbnailFromUrl = async (url: string): Promise<ThumbnailResult> => {
   const platform = inferPlatform(url);
   const fallbackStyle = pickFallbackStyle(url);
 
   if (platform === "youtube") {
-    const videoId = extractYouTubeVideoId(url);
+    const parsed = parseYouTubeUrl(url);
 
-    if (!videoId) {
+    if (!parsed.videoId) {
       return {
         thumbnailUrl: `https://picsum.photos/seed/youtube-fallback-${encodeURIComponent(url)}/1280/720`,
         thumbnailSource: "youtube",
@@ -77,9 +89,9 @@ export const getThumbnailFromUrl = async (url: string): Promise<ThumbnailResult>
 
     return {
       thumbnailUrl:
-        videoId.length === 11
-          ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
-          : `https://picsum.photos/seed/youtube-${videoId}/1280/720`,
+        parsed.videoId.length === 11
+          ? `https://img.youtube.com/vi/${parsed.videoId}/hqdefault.jpg`
+          : `https://picsum.photos/seed/youtube-${parsed.videoId}/1280/720`,
       thumbnailSource: "youtube",
       thumbnailFallbackStyle: fallbackStyle
     };

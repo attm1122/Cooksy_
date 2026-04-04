@@ -3,7 +3,11 @@ import { mapImportJobToProgress } from "@/lib/import-jobs";
 import { trackEvent } from "@/lib/analytics";
 import { captureError, captureMessage } from "@/lib/monitoring";
 import { supabase } from "@/lib/supabase";
-import { buildMockImportJob, buildMockImportedRecipe, inferPlatformFromUrl } from "@/mocks/import-job";
+import { mapDomainRecipeToUiRecipe } from "@/features/recipes/lib/adapters";
+import { detectPlatformFromUrl } from "@/features/recipes/lib/platform";
+import { recipeRepository } from "@/features/recipes/services/recipeRepository";
+import { startRecipeImport } from "@/features/recipes/services/recipeWorkflowService";
+import { buildMockImportJob } from "@/mocks/import-job";
 import { getThumbnailFromUrl } from "@/features/recipes/services/thumbnailService";
 import type {
   CreateImportJobRequest,
@@ -35,105 +39,165 @@ type PendingImportResult = {
   job: ImportJob;
 };
 
-const mockJobs = new Map<string, { sourceUrl: string; createdAt: number }>();
+type MockRuntimeJob = {
+  sourceUrl: string;
+  status: ImportJob["status"];
+  progress: number;
+  detail: ImportJob["detail"];
+  errorMessage?: string;
+};
 
-const buildMockJobFromElapsed = (jobId: string): ImportJob => {
-  const state = mockJobs.get(jobId);
+const mockJobs = new Map<string, MockRuntimeJob>();
 
-  if (!state) {
-    throw new Error("Import job not found");
-  }
+const mockGateway: ImportGateway = {
+  async createJob({ sourceUrl }) {
+    const { processingRecipe, completion } = await startRecipeImport(sourceUrl, {
+      onStageChange: (stage, recipeId) => {
+        const runtime = mockJobs.get(recipeId);
 
-  const elapsed = Date.now() - state.createdAt;
-  const base = buildMockImportJob(state.sourceUrl);
-  const updatedAt = new Date().toISOString();
+        if (!runtime) {
+          return;
+        }
 
-  if (elapsed < 500) {
-    return {
-      ...base,
-      id: jobId,
+        const nextState =
+          stage === "queued"
+            ? {
+                status: "queued" as const,
+                progress: 0.08,
+                detail: {
+                  label: "Queued",
+                  description: "Preparing source ingestion"
+                }
+              }
+            : stage === "extracting"
+              ? {
+                  status: "extracting" as const,
+                  progress: 0.28,
+                  detail: {
+                    label: "Extracting content",
+                    description: "Pulling source metadata, captions, and creator context"
+                  }
+                }
+              : stage === "identifying_ingredients"
+                ? {
+                    status: "identifying_ingredients" as const,
+                    progress: 0.58,
+                    detail: {
+                      label: "Identifying ingredients",
+                      description: "Extracting likely ingredients and explicit quantities"
+                    }
+                  }
+                : stage === "building_steps"
+                  ? {
+                      status: "building_steps" as const,
+                      progress: 0.86,
+                      detail: {
+                        label: "Building steps",
+                        description: "Structuring the cooking method and inferred timings"
+                      }
+                    }
+                  : stage === "completed"
+                    ? {
+                        status: "completed" as const,
+                        progress: 1,
+                        detail: {
+                          label: "Completed",
+                          description: "Recipe is ready"
+                        }
+                      }
+                    : {
+                        status: "failed" as const,
+                        progress: 1,
+                        detail: {
+                          label: "Import failed",
+                          description: "Cooksy could not reconstruct this recipe"
+                        }
+                      };
+
+        mockJobs.set(recipeId, {
+          ...runtime,
+          ...nextState
+        });
+      }
+    });
+
+    const job = buildMockImportJob(sourceUrl);
+    job.id = processingRecipe.id;
+    mockJobs.set(processingRecipe.id, {
+      sourceUrl,
       status: "queued",
       progress: 0.08,
       detail: {
         label: "Queued",
         description: "Preparing source ingestion"
-      },
-      updatedAt
-    };
-  }
+      }
+    });
 
-  if (elapsed < 1400) {
-    return {
-      ...base,
-      id: jobId,
-      status: "extracting",
-      progress: 0.28,
-      detail: {
-        label: "Extracting content",
-        description: "Pulling source metadata, captions, and creator context"
-      },
-      updatedAt
-    };
-  }
+    void completion.then((result) => {
+      const runtime = mockJobs.get(processingRecipe.id);
 
-  if (elapsed < 2400) {
-    return {
-      ...base,
-      id: jobId,
-      status: "identifying_ingredients",
-      progress: 0.58,
-      detail: {
-        label: "Identifying ingredients",
-        description: "Inferring ingredient list and estimated quantities"
-      },
-      updatedAt
-    };
-  }
+      if (!runtime) {
+        return;
+      }
 
-  if (elapsed < 3400) {
-    return {
-      ...base,
-      id: jobId,
-      status: "building_steps",
-      progress: 0.86,
-      detail: {
-        label: "Building steps",
-        description: "Structuring the cooking method and timings"
-      },
-      updatedAt
-    };
-  }
-
-  return {
-    ...base,
-    id: jobId,
-    status: "completed",
-    progress: 1,
-    detail: {
-      label: "Completed",
-      description: "Recipe is ready"
-    },
-    updatedAt
-  };
-};
-
-const mockGateway: ImportGateway = {
-  async createJob({ sourceUrl }) {
-    const job = buildMockImportJob(sourceUrl);
-    mockJobs.set(job.id, {
-      sourceUrl,
-      createdAt: Date.now()
+      mockJobs.set(processingRecipe.id, {
+        ...runtime,
+        status: result.status === "completed" ? "completed" : "failed",
+        progress: 1,
+        detail:
+          result.status === "completed"
+            ? {
+                label: "Completed",
+                description: "Recipe is ready"
+              }
+            : {
+                label: "Import failed",
+                description: result.validationWarnings[0] ?? result.missingFields[0] ?? "Cooksy could not reconstruct this recipe"
+              },
+        errorMessage:
+          result.status === "failed"
+            ? result.validationWarnings[0] ?? result.missingFields[0] ?? "Recipe import failed"
+            : undefined
+      });
     });
 
     return {
-      job
+      job: {
+        ...job,
+        id: processingRecipe.id,
+        sourcePlatform: detectPlatformFromUrl(sourceUrl),
+        status: "queued",
+        progress: 0.08,
+        detail: {
+          label: "Queued",
+          description: "Preparing source ingestion"
+        }
+      }
     };
   },
   async getJob(jobId) {
-    await sleep(350);
+    await sleep(120);
+    const runtime = mockJobs.get(jobId);
+
+    if (!runtime) {
+      throw new Error("Import job not found");
+    }
+
+    const recipe = await recipeRepository.getById(jobId);
 
     return {
-      job: buildMockJobFromElapsed(jobId)
+      job: {
+        id: jobId,
+        sourceUrl: runtime.sourceUrl,
+        sourcePlatform: detectPlatformFromUrl(runtime.sourceUrl),
+        status: runtime.status,
+        progress: runtime.progress,
+        detail: runtime.detail,
+        errorMessage: runtime.errorMessage,
+        recipe: recipe?.status === "completed" ? mapDomainRecipeToUiRecipe(recipe) : undefined,
+        createdAt: recipe?.createdAt ?? new Date().toISOString(),
+        updatedAt: recipe?.updatedAt ?? new Date().toISOString()
+      }
     };
   }
 };
@@ -209,7 +273,7 @@ export const pollImportJobUntilComplete = async (
         jobId,
         sourcePlatform: job.sourcePlatform
       });
-      return buildMockImportedRecipe(job.sourceUrl, job.id);
+      throw new Error("Completed import job did not include a recipe payload");
     }
 
     if (job.status === "failed") {
@@ -265,7 +329,7 @@ const buildPendingRecipe = async (sourceUrl: string, recipeId: string, importJob
     source: {
       creator: "Saved source",
       url: sourceUrl,
-      platform: inferPlatformFromUrl(sourceUrl)
+      platform: detectPlatformFromUrl(sourceUrl)
     },
     ingredients: [],
     steps: [],
