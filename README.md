@@ -17,6 +17,7 @@ Cooksy is a production-minded Expo MVP for a cross-platform recipe app that turn
 
 ```bash
 npm install
+cp .env.example .env
 npm run start
 npm run web
 npm run ios
@@ -84,10 +85,39 @@ The current repo is intentionally frontend-complete but backend-light:
 - Save/edit/book actions are stored locally in Zustand
 - Source extraction and AI inference are represented by service stubs, not real ingestion
 
+## Backend foundation added
+
+This repo now includes the first real backend seam:
+
+- `src/services/import-service.ts` introduces a job-based import pipeline
+- `src/lib/env.ts` and `src/lib/supabase.ts` add environment-aware backend wiring
+- `supabase/migrations/20260404100000_cooksy_core.sql` defines import jobs, recipes, ingredients, steps, books, and join tables
+- `supabase/functions/import-recipe/index.ts` provides the first import edge-function contract for creating and polling jobs
+
+### Environment
+
+Copy `.env.example` to `.env` and fill in:
+
+```bash
+EXPO_PUBLIC_RECIPE_IMPORT_MODE=mock
+EXPO_PUBLIC_SUPABASE_URL=...
+EXPO_PUBLIC_SUPABASE_ANON_KEY=...
+```
+
+Modes:
+
+- `mock`: always use the local mocked import worker
+- `remote`: call the deployed Supabase edge function
+- `auto`: use remote when configured, otherwise fall back to mock
+
+### Current backend limitation
+
+The remote ingestion path now has a real contract and persistence model, but it still needs a worker that advances queued jobs through extraction, ingredient parsing, and recipe generation. Until that worker exists, keep the app in `mock` mode for local product work.
+
 ## Recommended backend next steps
 
-1. Create an ingestion API that accepts social share URLs and normalises creator metadata.
-2. Add platform-specific extractors for YouTube, TikTok, and Instagram transcripts/captions.
-3. Build a structured recipe generation pipeline with confidence scoring and provenance per field.
-4. Persist recipes, books, and user edits in a real backend such as Supabase or Postgres.
-5. Add auth, sync, background import jobs, image extraction, and share extensions.
+1. Add a real background worker that claims queued `recipe_import_jobs` and advances each stage in the database.
+2. Connect platform-specific ingestion adapters for YouTube, TikTok, and Instagram transcript/caption extraction.
+3. Add an LLM normalization step that emits structured recipe JSON plus provenance and per-field confidence.
+4. Persist completed normalized recipes into relational `recipes`, `recipe_ingredients`, and `recipe_steps` rows instead of only `normalized_recipe` JSON.
+5. Add auth, per-user recipe ownership, sync, background retries, and media enrichment.

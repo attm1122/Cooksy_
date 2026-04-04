@@ -24,7 +24,8 @@ type CooksyState = {
 export const initialImportProgress: ImportProgress = {
   url: "",
   stage: "idle",
-  progress: 0
+  progress: 0,
+  detail: "Ready to import"
 };
 
 export const useCooksyStore = create<CooksyState>((set) => ({

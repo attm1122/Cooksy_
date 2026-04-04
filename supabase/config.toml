@@ -1,0 +1,4 @@
+project_id = "cooksy"
+
+[functions.import-recipe]
+verify_jwt = false

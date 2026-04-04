@@ -4,6 +4,7 @@
     "strict": true,
     "baseUrl": ".",
     "types": [
+      "node",
       "nativewind/types",
       "jest"
     ],
@@ -19,5 +20,8 @@
     ".expo/types/**/*.ts",
     "expo-env.d.ts",
     "nativewind-env.d.ts"
+  ],
+  "exclude": [
+    "supabase/**/*"
   ]
 }

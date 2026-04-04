@@ -10,6 +10,7 @@ import { useImportRecipe } from "@/hooks/use-recipes";
 import { useCooksyStore } from "@/store/use-cooksy-store";
 
 const stages = [
+  { key: "queued", label: "Queueing import" },
   { key: "extracting", label: "Extracting video content" },
   { key: "ingredients", label: "Identifying ingredients" },
   { key: "steps", label: "Building cooking steps" }
@@ -29,13 +30,22 @@ export default function ProcessingScreen() {
       return;
     }
 
-    setImportProgress({ url, stage: "extracting", progress: 0.1 });
+    setImportProgress({ url, stage: "queued", progress: 0.08, detail: "Preparing the import job" });
 
     mutation.mutate(url, {
       onSuccess: (recipe) => {
         saveRecipe(recipe);
         setSelectedRecipe(recipe.id);
         router.replace(`/recipe/${recipe.id}`);
+      },
+      onError: (error) => {
+        setImportProgress({
+          url,
+          stage: "error",
+          progress: 1,
+          detail: "Import failed",
+          errorMessage: error instanceof Error ? error.message : "Recipe import failed"
+        });
       }
     });
   }, [mutation, saveRecipe, setImportProgress, setSelectedRecipe, url]);
@@ -53,6 +63,10 @@ export default function ProcessingScreen() {
         <Text className="mb-6 text-[15px] leading-6 text-muted">
           Cooksy is cleaning up the source content, inferring quantities, and structuring the method into a recipe view.
         </Text>
+        <Text className="mb-4 text-[14px] font-semibold text-soft-ink">{importProgress.detail}</Text>
+        {importProgress.errorMessage ? (
+          <Text className="mb-4 text-[14px] leading-6 text-danger">{importProgress.errorMessage}</Text>
+        ) : null}
 
         <View className="mb-6 h-2 overflow-hidden rounded-full bg-surface-alt">
           <View className="h-full rounded-full bg-brand-yellow" style={{ width: `${importProgress.progress * 100}%` }} />
@@ -61,7 +75,7 @@ export default function ProcessingScreen() {
         <View style={{ gap: 12 }}>
           {stages.map((stage, index) => {
             const complete = index < activeIndex || importProgress.stage === "complete";
-            const active = index === activeIndex && importProgress.stage !== "complete";
+            const active = index === activeIndex && !["complete", "error"].includes(importProgress.stage);
 
             return (
               <View

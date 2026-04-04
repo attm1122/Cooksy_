@@ -50,10 +50,13 @@ export type RecipeBook = {
   recipeIds: string[];
 };
 
-export type ImportStage = "idle" | "extracting" | "ingredients" | "steps" | "complete" | "error";
+export type ImportStage = "idle" | "queued" | "extracting" | "ingredients" | "steps" | "complete" | "error";
 
 export type ImportProgress = {
+  jobId?: string;
   url: string;
   stage: ImportStage;
   progress: number;
+  detail?: string;
+  errorMessage?: string;
 };
