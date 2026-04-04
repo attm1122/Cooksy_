@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { processJobToTerminal, scheduleBackgroundJob } from "../_shared/background-jobs.ts";
 import {
   buildPersistedRecipe,
   extractRecipeContextForImport,
@@ -16,6 +17,23 @@ const corsHeaders = {
 
 const MAX_IMPORTS_PER_WINDOW = 8;
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+const importJobSelect = `
+  id,
+  import_source_id,
+  status,
+  progress,
+  stage_label,
+  stage_description,
+  error_message,
+  normalized_recipe,
+  created_at,
+  updated_at,
+  import_sources (
+    source_url,
+    source_platform,
+    raw_payload
+  )
+`;
 
 const buildJobResponse = ({
   id,
@@ -153,6 +171,34 @@ const failImportJob = async ({
       error_message: message
     })
     .eq("id", jobId);
+};
+
+const fetchImportJobRow = async ({
+  supabase,
+  jobId,
+  userId
+}: {
+  supabase: ReturnType<typeof createClient>;
+  jobId: string;
+  userId: string;
+}) => {
+  const { data: row, error } = await supabase
+    .from("recipe_import_jobs")
+    .select(importJobSelect)
+    .eq("id", jobId)
+    .eq("user_id", userId)
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  const source = Array.isArray(row.import_sources) ? row.import_sources[0] : row.import_sources;
+
+  return {
+    row,
+    source
+  };
 };
 
 const advancePipeline = async ({
@@ -360,6 +406,30 @@ const advancePipeline = async ({
   }
 };
 
+const processImportJob = async ({
+  supabase,
+  jobId,
+  userId
+}: {
+  supabase: ReturnType<typeof createClient>;
+  jobId: string;
+  userId: string;
+}) =>
+  processJobToTerminal({
+    fetchJob: async () => fetchImportJobRow({ supabase, jobId, userId }),
+    advanceJob: async ({ row, source }) => ({
+      row: await advancePipeline({
+        supabase,
+        row,
+        source,
+        userId
+      }),
+      source
+    }),
+    isTerminalJob: ({ row }) => row.status === "completed" || row.status === "failed",
+    maxAdvances: 4
+  });
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -455,6 +525,14 @@ Deno.serve(async (request) => {
     }
 
     if (existingJob) {
+      scheduleBackgroundJob(() =>
+        processImportJob({
+          supabase,
+          jobId: existingJob.id,
+          userId: user.id
+        })
+      );
+
       return Response.json(
         buildJobResponse({
           id: existingJob.id,
@@ -519,6 +597,14 @@ Deno.serve(async (request) => {
       return Response.json({ error: jobError.message }, { status: 500, headers: corsHeaders });
     }
 
+    scheduleBackgroundJob(() =>
+      processImportJob({
+        supabase,
+        jobId: job.id,
+        userId: user.id
+      })
+    );
+
     return Response.json(
       buildJobResponse({
         id: job.id,
@@ -537,45 +623,31 @@ Deno.serve(async (request) => {
 
   if (action === "status") {
     const jobId = body.jobId as string;
-    const { data: row, error } = await supabase
-      .from("recipe_import_jobs")
-      .select(
-        `
-          id,
-          import_source_id,
-          status,
-          progress,
-          stage_label,
-          stage_description,
-          error_message,
-          normalized_recipe,
-          created_at,
-          updated_at,
-          import_sources (
-            source_url,
-            source_platform,
-            raw_payload
-          )
-        `
-      )
-      .eq("id", jobId)
-      .eq("user_id", user.id)
-      .single();
+    let current;
 
-    if (error) {
-      return Response.json({ error: error.message }, { status: 404, headers: corsHeaders });
+    try {
+      current = await fetchImportJobRow({
+        supabase,
+        jobId,
+        userId: user.id
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Import job not found";
+      return Response.json({ error: message }, { status: 404, headers: corsHeaders });
     }
 
-    const source = Array.isArray(row.import_sources) ? row.import_sources[0] : row.import_sources;
-    const nextRow =
-      row.status === "completed" || row.status === "failed"
-        ? row
-        : await advancePipeline({
-            supabase,
-            row,
-            source,
-            userId: user.id
-          });
+    if (current.row.status !== "completed" && current.row.status !== "failed") {
+      scheduleBackgroundJob(() =>
+        processImportJob({
+          supabase,
+          jobId,
+          userId: user.id
+        })
+      );
+    }
+
+    const nextRow = current.row;
+    const source = current.source;
 
     const normalizedRecipe =
       nextRow.status === "completed"
@@ -602,6 +674,46 @@ Deno.serve(async (request) => {
       },
       { headers: corsHeaders }
     );
+  }
+
+  if (action === "process") {
+    const jobId = body.jobId as string;
+
+    try {
+      const result = await processImportJob({
+        supabase,
+        jobId,
+        userId: user.id
+      });
+      const normalizedRecipe =
+        result.row.status === "completed"
+          ? result.row.normalized_recipe ?? undefined
+          : undefined;
+
+      return Response.json(
+        {
+          job: {
+            id: result.row.id,
+            sourceUrl: result.source.source_url,
+            sourcePlatform: result.source.source_platform,
+            status: result.row.status,
+            progress: Number(result.row.progress),
+            detail: {
+              label: result.row.stage_label,
+              description: result.row.stage_description
+            },
+            errorMessage: result.row.error_message ?? undefined,
+            recipe: normalizedRecipe,
+            createdAt: result.row.created_at,
+            updatedAt: result.row.updated_at
+          }
+        },
+        { headers: corsHeaders }
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Cooksy could not process this recipe import";
+      return Response.json({ error: message }, { status: 500, headers: corsHeaders });
+    }
   }
 
   return Response.json({ error: "Unsupported action" }, { status: 400, headers: corsHeaders });

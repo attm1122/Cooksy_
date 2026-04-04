@@ -20,6 +20,8 @@ import type { ImportProgress, Recipe } from "@/types/recipe";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 let localPendingRecipeCounter = 0;
+const MAX_IMPORT_POLL_ATTEMPTS = 80;
+const MAX_IMPORT_POLL_ERRORS = 3;
 
 const resolveImportMode = (): ImportBackendMode => {
   if (appEnv.recipeImportMode === "auto") {
@@ -249,49 +251,65 @@ export const pollImportJobUntilComplete = async (
 ): Promise<Recipe> => {
   const gateway = getGateway();
   let attempts = 0;
+  let consecutiveErrors = 0;
 
-  while (attempts < 40) {
-    const { job } = await gateway.getJob(jobId);
-    const mappedProgress = mapImportJobToProgress(job);
-    onProgress?.(mappedProgress);
-    trackEvent("recipe_import_progressed", {
-      jobId,
-      status: job.status,
-      progress: Number(job.progress.toFixed(3))
-    });
+  while (attempts < MAX_IMPORT_POLL_ATTEMPTS) {
+    try {
+      const { job } = await gateway.getJob(jobId);
+      consecutiveErrors = 0;
+      const mappedProgress = mapImportJobToProgress(job);
+      onProgress?.(mappedProgress);
+      trackEvent("recipe_import_progressed", {
+        jobId,
+        status: job.status,
+        progress: Number(job.progress.toFixed(3))
+      });
 
-    if (job.status === "completed") {
-      if (job.recipe) {
+      if (job.status === "completed") {
+        if (job.recipe) {
+          trackEvent("recipe_import_completed", {
+            jobId,
+            sourcePlatform: job.sourcePlatform
+          });
+          return job.recipe;
+        }
+
         trackEvent("recipe_import_completed", {
           jobId,
           sourcePlatform: job.sourcePlatform
         });
-        return job.recipe;
+        throw new Error("Completed import job did not include a recipe payload");
       }
 
-      trackEvent("recipe_import_completed", {
-        jobId,
-        sourcePlatform: job.sourcePlatform
-      });
-      throw new Error("Completed import job did not include a recipe payload");
-    }
+      if (job.status === "failed") {
+        trackEvent("recipe_import_failed", {
+          jobId,
+          sourcePlatform: job.sourcePlatform,
+          reason: job.errorMessage ?? "Recipe import failed"
+        });
+        captureMessage("Recipe import job failed", {
+          jobId,
+          sourcePlatform: job.sourcePlatform,
+          reason: job.errorMessage ?? "Recipe import failed"
+        });
+        throw new Error(job.errorMessage ?? "Recipe import failed");
+      }
+    } catch (error) {
+      consecutiveErrors += 1;
 
-    if (job.status === "failed") {
-      trackEvent("recipe_import_failed", {
-        jobId,
-        sourcePlatform: job.sourcePlatform,
-        reason: job.errorMessage ?? "Recipe import failed"
-      });
-      captureMessage("Recipe import job failed", {
-        jobId,
-        sourcePlatform: job.sourcePlatform,
-        reason: job.errorMessage ?? "Recipe import failed"
-      });
-      throw new Error(job.errorMessage ?? "Recipe import failed");
+      if (consecutiveErrors >= MAX_IMPORT_POLL_ERRORS) {
+        captureError(error, {
+          action: "poll_import_job",
+          jobId,
+          attempts,
+          consecutiveErrors
+        });
+        throw error;
+      }
     }
 
     attempts += 1;
-    await sleep(resolveImportMode() === "remote" ? 1500 : 450);
+    await sleep(resolveImportMode() === "remote" ? 2000 : 450);
   }
 
   trackEvent("recipe_import_failed", {
