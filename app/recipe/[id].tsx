@@ -9,6 +9,7 @@ import { PlatformBadge } from "@/components/common/PlatformBadge";
 import { RecipeMetaRow } from "@/components/common/RecipeMetaRow";
 import { ScreenContainer } from "@/components/common/ScreenContainer";
 import { IngredientChecklist } from "@/components/recipe/IngredientChecklist";
+import { RecipeEditorForm } from "@/components/recipe/RecipeEditorForm";
 import { RecipeThumbnail } from "@/components/recipe/RecipeThumbnail";
 import { StepCard } from "@/components/recipe/StepCard";
 import { useCooksyStore } from "@/store/use-cooksy-store";
@@ -17,6 +18,7 @@ import { formatMinutes } from "@/utils/time";
 export default function RecipeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const recipe = useCooksyStore((state) => state.recipes.find((item) => item.id === id));
+  const updateRecipe = useCooksyStore((state) => state.updateRecipe);
 
   if (!recipe) {
     return (
@@ -31,7 +33,11 @@ export default function RecipeDetailScreen() {
       <View className="mb-5">
         <Text className="mb-3 text-[13px] font-semibold uppercase tracking-[1px] text-muted">Recipe detail</Text>
         <Text className="text-[32px] font-bold leading-[38px] text-ink">{recipe.title}</Text>
-        <Text className="mt-2 text-[15px] leading-6 text-muted">{recipe.heroNote}</Text>
+        <Text className="mt-2 text-[15px] leading-6 text-muted">
+          {recipe.status === "processing"
+            ? "Saved to your library. Cooksy is still building the recipe in the background."
+            : recipe.heroNote}
+        </Text>
       </View>
 
       <CooksyCard className="mb-4 overflow-hidden p-0">
@@ -54,7 +60,13 @@ export default function RecipeDetailScreen() {
             prepTimeMinutes={recipe.prepTimeMinutes}
             cookTimeMinutes={recipe.cookTimeMinutes}
           />
-          <ConfidenceBanner level={recipe.confidence} note={recipe.confidenceNote} />
+          <ConfidenceBanner
+            level={recipe.confidence}
+            note={recipe.confidenceNote}
+            score={recipe.confidenceScore}
+            inferredFields={recipe.inferredFields}
+            missingFields={recipe.missingFields}
+          />
         </View>
       </CooksyCard>
 
@@ -71,40 +83,65 @@ export default function RecipeDetailScreen() {
             <Text className="text-[15px] font-semibold text-soft-ink">Save to Book</Text>
           </View>
         </SecondaryButton>
-        <Link href={`/recipe/${recipe.id}/edit`} asChild>
-          <View>
+        {recipe.status === "ready" ? (
+          <>
             <SecondaryButton fullWidth={false}>
               <View className="flex-row items-center" style={{ gap: 8 }}>
                 <PencilLine size={16} color="#262626" />
-                <Text className="text-[15px] font-semibold text-soft-ink">Edit</Text>
+                <Text className="text-[15px] font-semibold text-soft-ink">Quick Edit Below</Text>
               </View>
             </SecondaryButton>
-          </View>
-        </Link>
-        <Link href={`/recipe/${recipe.id}/cook`} asChild>
-          <View>
-            <SecondaryButton fullWidth={false}>
-              <View className="flex-row items-center" style={{ gap: 8 }}>
-                <Play size={16} color="#262626" />
-                <Text className="text-[15px] font-semibold text-soft-ink">Cooking Mode</Text>
+            <Link href={`/recipe/${recipe.id}/cook`} asChild>
+              <View>
+                <SecondaryButton fullWidth={false}>
+                  <View className="flex-row items-center" style={{ gap: 8 }}>
+                    <Play size={16} color="#262626" />
+                    <Text className="text-[15px] font-semibold text-soft-ink">Cooking Mode</Text>
+                  </View>
+                </SecondaryButton>
               </View>
-            </SecondaryButton>
-          </View>
-        </Link>
+            </Link>
+          </>
+        ) : null}
       </View>
+
+      {recipe.status === "ready" ? (
+        <CooksyCard className="mb-4">
+          <View className="mb-4 flex-row items-center justify-between">
+            <View>
+              <Text className="text-[22px] font-bold text-ink">Quick edit</Text>
+              <Text className="mt-1 text-[14px] text-muted">Fix ingredients, steps, and quantities instantly.</Text>
+            </View>
+            <Link href={`/recipe/${recipe.id}/edit`} asChild>
+              <View>
+                <SecondaryButton fullWidth={false}>Open Full Editor</SecondaryButton>
+              </View>
+            </Link>
+          </View>
+          <RecipeEditorForm recipe={recipe} onSubmit={updateRecipe} submitLabel="Save Edits" compact />
+        </CooksyCard>
+      ) : null}
 
       <CooksyCard className="mb-4">
         <Text className="text-[22px] font-bold text-ink">Ingredients</Text>
-        <IngredientChecklist ingredients={recipe.ingredients} />
+        {recipe.status === "processing" ? (
+          <Text className="mt-4 text-[15px] leading-6 text-muted">Ingredients will appear here as soon as the recipe is ready.</Text>
+        ) : (
+          <IngredientChecklist ingredients={recipe.ingredients} />
+        )}
       </CooksyCard>
 
       <CooksyCard>
         <Text className="mb-4 text-[22px] font-bold text-ink">Method</Text>
-        <View style={{ gap: 12 }}>
-          {recipe.steps.map((step, index) => (
-            <StepCard key={step.id} step={step} index={index} />
-          ))}
-        </View>
+        {recipe.status === "processing" ? (
+          <Text className="text-[15px] leading-6 text-muted">Cooksy is still structuring the method from the original source.</Text>
+        ) : (
+          <View style={{ gap: 12 }}>
+            {recipe.steps.map((step, index) => (
+              <StepCard key={step.id} step={step} index={index} />
+            ))}
+          </View>
+        )}
       </CooksyCard>
     </ScreenContainer>
   );

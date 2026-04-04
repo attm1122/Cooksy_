@@ -18,21 +18,32 @@ export default function CookingModeScreen() {
     return null;
   }
 
+  if (!recipe.steps.length) {
+    return (
+      <ScreenContainer scroll={false}>
+        <View className="flex-1 items-center justify-center">
+          <Text className="text-[22px] font-bold text-ink">Cooking mode will unlock when the recipe is ready.</Text>
+        </View>
+      </ScreenContainer>
+    );
+  }
+
   const activeStep = recipe.steps[stepIndex];
 
   return (
     <ScreenContainer scroll={false}>
-      <View className="flex-1 justify-between py-6">
+      <View className="flex-1 justify-between bg-soft-ink py-6">
         <View>
-          <Text className="mb-2 text-[13px] font-semibold uppercase tracking-[1px] text-muted">Cooking mode</Text>
-          <Text className="mb-6 text-[32px] font-bold leading-[38px] text-ink">{recipe.title}</Text>
+          <Text className="mb-2 text-[13px] font-semibold uppercase tracking-[1px] text-[#DCCFAF]">Cooking mode</Text>
+          <Text className="mb-2 text-[32px] font-bold leading-[38px] text-white">{recipe.title}</Text>
+          <Text className="mb-6 text-[15px] leading-6 text-[#E8DDBE]">One step at a time, built for a real kitchen moment.</Text>
 
-          <View className="rounded-[32px] bg-white px-6 py-8 shadow-card">
+          <View className="rounded-[32px] bg-[#FFF8E5] px-6 py-8 shadow-card">
             <Text className="mb-3 text-[13px] font-semibold uppercase tracking-[1px] text-muted">
               Step {stepIndex + 1} of {recipe.steps.length}
             </Text>
-            <Text className="mb-4 text-[28px] font-bold leading-[34px] text-ink">{activeStep.title}</Text>
-            <Text className="text-[18px] leading-8 text-soft-ink">{activeStep.instruction}</Text>
+            <Text className="mb-5 text-[30px] font-bold leading-[36px] text-ink">{activeStep.title}</Text>
+            <Text className="text-[22px] leading-9 text-soft-ink">{activeStep.instruction}</Text>
           </View>
         </View>
 
@@ -57,6 +68,15 @@ export default function CookingModeScreen() {
                 <ChevronRight size={16} color="#111111" />
               </View>
             </PrimaryButton>
+          </View>
+
+          <View className="mt-3">
+            <SecondaryButton fullWidth>
+              <View className="flex-row items-center" style={{ gap: 8 }}>
+                <TimerReset size={16} color="#262626" />
+                <Text className="text-[15px] font-semibold text-soft-ink">Timer Coming Soon</Text>
+              </View>
+            </SecondaryButton>
           </View>
         </View>
       </View>

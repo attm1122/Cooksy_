@@ -1,5 +1,6 @@
 export type SourcePlatform = "youtube" | "tiktok" | "instagram";
 export type ThumbnailSource = SourcePlatform | "generated";
+export type RecipeStatus = "processing" | "ready" | "failed";
 
 export type RecipeConfidenceLevel = "high" | "medium" | "low";
 
@@ -26,6 +27,9 @@ export type RecipeSource = {
 
 export type Recipe = {
   id: string;
+  status: RecipeStatus;
+  importJobId?: string;
+  processingMessage?: string;
   title: string;
   description: string;
   heroNote: string;
@@ -38,7 +42,10 @@ export type Recipe = {
   cookTimeMinutes: number;
   totalTimeMinutes: number;
   confidence: RecipeConfidenceLevel;
+  confidenceScore: number;
   confidenceNote: string;
+  inferredFields: string[];
+  missingFields: string[];
   isSaved: boolean;
   source: RecipeSource;
   ingredients: RecipeIngredient[];

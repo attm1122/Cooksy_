@@ -14,6 +14,7 @@ type CooksyState = {
   setImportProgress: (progress: Partial<ImportProgress>) => void;
   saveRecipe: (recipe: Recipe) => void;
   updateRecipe: (recipe: Recipe) => void;
+  patchRecipe: (recipeId: string, patch: Partial<Recipe>) => void;
   addRecipeToBook: (recipeId: string, bookId: string) => void;
   removeRecipeFromBook: (recipeId: string, bookId: string) => void;
   startCooking: (recipeId: string) => void;
@@ -60,6 +61,10 @@ export const useCooksyStore = create<CooksyState>((set) => ({
   updateRecipe: (recipe) =>
     set((state) => ({
       recipes: state.recipes.map((item) => (item.id === recipe.id ? recipe : item))
+    })),
+  patchRecipe: (recipeId, patch) =>
+    set((state) => ({
+      recipes: state.recipes.map((item) => (item.id === recipeId ? { ...item, ...patch } : item))
     })),
   addRecipeToBook: (recipeId, bookId) =>
     set((state) => ({

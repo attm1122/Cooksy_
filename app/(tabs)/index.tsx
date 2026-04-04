@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, router } from "expo-router";
-import { Sparkles } from "lucide-react-native";
+import { BookmarkPlus, Sparkles } from "lucide-react-native";
 import { Controller, useForm } from "react-hook-form";
 import { Text, TextInput, View } from "react-native";
 
@@ -10,14 +10,19 @@ import { CooksyCard } from "@/components/common/CooksyCard";
 import { PlatformBadge } from "@/components/common/PlatformBadge";
 import { ScreenContainer } from "@/components/common/ScreenContainer";
 import { RecipeThumbnail } from "@/components/recipe/RecipeThumbnail";
-import { useRecentRecipes } from "@/hooks/use-recipes";
+import { useImportRecipe } from "@/hooks/use-recipes";
 import { importRecipeSchema, type ImportRecipeFormValues } from "@/lib/schemas";
+import { createPendingRecipeFromUrl, createPendingRecipeId } from "@/services/import-service";
 import { useCooksyStore } from "@/store/use-cooksy-store";
 import { formatMinutes } from "@/utils/time";
 
 export default function HomeScreen() {
-  const { data: recipes = [] } = useRecentRecipes();
+  const recipes = useCooksyStore((state) => state.recipes);
   const setSelectedRecipe = useCooksyStore((state) => state.setSelectedRecipe);
+  const saveRecipe = useCooksyStore((state) => state.saveRecipe);
+  const updateRecipe = useCooksyStore((state) => state.updateRecipe);
+  const patchRecipe = useCooksyStore((state) => state.patchRecipe);
+  const mutation = useImportRecipe();
   const {
     control,
     handleSubmit,
@@ -29,10 +34,35 @@ export default function HomeScreen() {
     }
   });
 
-  const onSubmit = handleSubmit(({ sourceUrl }) => {
-    router.push({
-      pathname: "/processing",
-      params: { url: sourceUrl }
+  const onSubmit = handleSubmit(async ({ sourceUrl }) => {
+    const recipeId = createPendingRecipeId();
+    const pendingRecipe = await createPendingRecipeFromUrl(sourceUrl, recipeId);
+
+    saveRecipe(pendingRecipe);
+    setSelectedRecipe(recipeId);
+    router.push(`/recipe/${recipeId}`);
+
+    mutation.mutate(sourceUrl, {
+      onSuccess: (recipe) => {
+        updateRecipe({
+          ...recipe,
+          id: recipeId,
+          status: "ready",
+          processingMessage: undefined,
+          isSaved: true
+        });
+      },
+      onError: (error) => {
+        patchRecipe(recipeId, {
+          status: "failed",
+          processingMessage: error instanceof Error ? error.message : "Recipe generation failed",
+          confidence: "low",
+          confidenceScore: 28,
+          confidenceNote: "Cooksy could not confidently reconstruct this recipe from the source.",
+          missingFields: ["Recipe generation failed"],
+          inferredFields: []
+        });
+      }
     });
   });
 
@@ -41,13 +71,13 @@ export default function HomeScreen() {
       <AppHeader />
 
       <CooksyCard className="mb-5">
-        <View className="mb-5 flex-row items-start justify-between" style={{ gap: 14 }}>
+        <View className="mb-6 flex-row items-start justify-between" style={{ gap: 14 }}>
           <View className="flex-1">
-            <Text className="mb-2 text-[31px] font-bold leading-[38px] text-ink">
-              Turn video cooking links into clean recipes.
+            <Text className="mb-2 text-[34px] font-bold leading-[40px] text-ink">
+              Save the food you discover and actually cook it later.
             </Text>
-            <Text className="text-[15px] leading-6 text-muted">
-              Paste a YouTube, TikTok, or Instagram share link and Cooksy builds a recipe you can actually cook from.
+            <Text className="max-w-[560px] text-[15px] leading-6 text-muted">
+              Drop in a social video link. Cooksy saves it instantly, keeps the original vibe, and turns it into a recipe you can fix and trust.
             </Text>
           </View>
           <View className="h-12 w-12 items-center justify-center rounded-full bg-brand-yellow-soft">
@@ -79,12 +109,20 @@ export default function HomeScreen() {
         </View>
 
         <View className="mt-5">
-          <PrimaryButton onPress={onSubmit}>Generate Recipe</PrimaryButton>
+          <PrimaryButton onPress={onSubmit} loading={mutation.isPending}>
+            <View className="flex-row items-center" style={{ gap: 8 }}>
+              <BookmarkPlus size={16} color="#111111" />
+              <Text className="text-[15px] font-semibold text-ink">Save Recipe</Text>
+            </View>
+          </PrimaryButton>
         </View>
+        <Text className="mt-3 text-[13px] text-muted">
+          Saved recipes keep processing in the background, so you can move on immediately.
+        </Text>
       </CooksyCard>
 
       <View className="mb-3 flex-row items-center justify-between">
-        <Text className="text-[20px] font-bold text-ink">Recent recipes</Text>
+        <Text className="text-[20px] font-bold text-ink">Recently saved</Text>
         <Link href="/recipes" asChild>
           <Text className="text-[14px] font-semibold text-soft-ink">View all</Text>
         </Link>
@@ -99,7 +137,11 @@ export default function HomeScreen() {
                 <View className="flex-row items-center justify-between">
                   <View className="flex-1">
                     <Text className="mb-1 text-[18px] font-bold text-ink">{recipe.title}</Text>
-                    <Text className="mb-2 text-[14px] text-muted">{recipe.heroNote}</Text>
+                    <Text className="mb-2 text-[14px] text-muted">
+                      {recipe.status === "processing"
+                        ? "Saved to your library and still generating."
+                        : recipe.heroNote}
+                    </Text>
                     <PlatformBadge platform={recipe.source.platform} />
                   </View>
                   <PrimaryButton

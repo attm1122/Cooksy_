@@ -4,7 +4,9 @@ import { Text, View } from "react-native";
 import { EmptyState } from "@/components/common/EmptyState";
 import { CooksyCard } from "@/components/common/CooksyCard";
 import { ScreenContainer } from "@/components/common/ScreenContainer";
+import { RecipeThumbnail } from "@/components/recipe/RecipeThumbnail";
 import { useCooksyStore } from "@/store/use-cooksy-store";
+import { formatMinutes } from "@/utils/time";
 
 export default function BookDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -27,8 +29,13 @@ export default function BookDetailScreen() {
         {bookRecipes.length ? (
           bookRecipes.map((recipe) => (
             <CooksyCard key={recipe.id} className="p-4">
-              <Text className="mb-2 text-[18px] font-bold text-ink">{recipe.title}</Text>
-              <Text className="mb-3 text-[14px] text-muted">{recipe.description}</Text>
+              <View style={{ gap: 14 }}>
+                <RecipeThumbnail recipe={recipe} size="compact" timeLabel={formatMinutes(recipe.totalTimeMinutes)} />
+                <Text className="mb-2 text-[18px] font-bold text-ink">{recipe.title}</Text>
+                <Text className="mb-3 text-[14px] text-muted">
+                  {recipe.status === "processing" ? "Generating recipe..." : recipe.description}
+                </Text>
+              </View>
               <Text className="text-[14px] font-semibold text-soft-ink" onPress={() => removeRecipeFromBook(recipe.id, book.id)}>
                 Remove from book
               </Text>

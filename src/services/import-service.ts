@@ -1,7 +1,8 @@
 import { appEnv, hasSupabaseConfig } from "@/lib/env";
 import { mapImportJobToProgress } from "@/lib/import-jobs";
 import { supabase } from "@/lib/supabase";
-import { buildMockImportJob, buildMockImportedRecipe } from "@/mocks/import-job";
+import { buildMockImportJob, buildMockImportedRecipe, inferPlatformFromUrl } from "@/mocks/import-job";
+import { getThumbnailFromUrl } from "@/features/recipes/services/thumbnailService";
 import type {
   CreateImportJobRequest,
   CreateImportJobResponse,
@@ -12,6 +13,7 @@ import type {
 import type { ImportProgress, Recipe } from "@/types/recipe";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+let localPendingRecipeCounter = 0;
 
 const resolveImportMode = (): ImportBackendMode => {
   if (appEnv.recipeImportMode === "auto") {
@@ -209,4 +211,45 @@ export const importRecipeFromUrl = async (
   onProgress?.(mapImportJobToProgress(job));
 
   return pollImportJobUntilComplete(job.id, onProgress);
+};
+
+export const createPendingRecipeFromUrl = async (sourceUrl: string, recipeId: string): Promise<Recipe> => {
+  const thumbnail = await getThumbnailFromUrl(sourceUrl);
+
+  return {
+    id: recipeId,
+    status: "processing",
+    importJobId: undefined,
+    processingMessage: "Generating recipe...",
+    title: "Saved recipe in progress",
+    description: "Your recipe is being assembled from the original video so you can come back to it when it’s ready.",
+    heroNote: "Saved from a link you discovered. Cooksy is turning it into something you can actually cook.",
+    imageLabel: "Imported recipe cover",
+    thumbnailUrl: thumbnail.thumbnailUrl,
+    thumbnailSource: thumbnail.thumbnailSource,
+    thumbnailFallbackStyle: thumbnail.thumbnailFallbackStyle,
+    servings: 2,
+    prepTimeMinutes: 0,
+    cookTimeMinutes: 0,
+    totalTimeMinutes: 0,
+    confidence: "medium",
+    confidenceScore: 0,
+    confidenceNote: "Cooksy is still reconstructing the recipe from the source content.",
+    inferredFields: [],
+    missingFields: ["Recipe details still generating"],
+    isSaved: true,
+    source: {
+      creator: "Saved source",
+      url: sourceUrl,
+      platform: inferPlatformFromUrl(sourceUrl)
+    },
+    ingredients: [],
+    steps: [],
+    tags: ["Processing"]
+  };
+};
+
+export const createPendingRecipeId = () => {
+  localPendingRecipeCounter += 1;
+  return `saved-${localPendingRecipeCounter}`;
 };

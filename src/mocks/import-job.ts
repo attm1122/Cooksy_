@@ -23,6 +23,8 @@ export const buildMockImportedRecipe = async (url: string): Promise<Recipe> => {
   return {
     ...mockRecipes[0],
     id: `imported-${inferPlatformFromUrl(url)}-${Date.now()}`,
+    status: "ready",
+    processingMessage: undefined,
     title: "Cooksy Imported Chicken Orzo",
     description: "A backend-ready mock import showing how Cooksy will ingest short-form cooking links into a polished recipe.",
     heroNote: "Generated from a shared video link with structured ingredients, steps, and inferred timings for home cooks.",
@@ -36,7 +38,10 @@ export const buildMockImportedRecipe = async (url: string): Promise<Recipe> => {
       platform: inferPlatformFromUrl(url)
     },
     confidence: "medium",
-    confidenceNote: "Quantities and simmer timing were inferred from visible pan cues and creator narration."
+    confidenceScore: 74,
+    confidenceNote: "Quantities and simmer timing were inferred from visible pan cues and creator narration.",
+    inferredFields: ["Chicken stock quantity inferred", "Simmer timing reconstructed"],
+    missingFields: ["Oven temperature not provided"]
   };
 };
 

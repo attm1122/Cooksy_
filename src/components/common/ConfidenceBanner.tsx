@@ -1,5 +1,6 @@
-import { AlertCircle } from "lucide-react-native";
-import { Text, View } from "react-native";
+import { ChevronDown, ChevronUp, ShieldAlert, ShieldCheck, ShieldQuestion } from "lucide-react-native";
+import { useState } from "react";
+import { Pressable, Text, View } from "react-native";
 
 import type { RecipeConfidenceLevel } from "@/types/recipe";
 
@@ -11,18 +12,59 @@ const toneClasses: Record<RecipeConfidenceLevel, string> = {
 
 export const ConfidenceBanner = ({
   level,
-  note
+  note,
+  score,
+  inferredFields,
+  missingFields
 }: {
   level: RecipeConfidenceLevel;
   note: string;
-}) => (
-  <View className={`mt-4 flex-row rounded-[22px] border p-4 ${toneClasses[level]}`} style={{ gap: 12 }}>
-    <AlertCircle size={18} color="#111111" />
-    <View className="flex-1">
-      <Text className="mb-1 text-[13px] font-bold uppercase tracking-[0.8px] text-ink">
-        {level} confidence
-      </Text>
-      <Text className="text-[14px] leading-5 text-soft-ink">{note}</Text>
+  score: number;
+  inferredFields: string[];
+  missingFields: string[];
+}) => {
+  const [expanded, setExpanded] = useState(false);
+  const Icon = level === "high" ? ShieldCheck : level === "medium" ? ShieldQuestion : ShieldAlert;
+  const headline =
+    level === "high"
+      ? "High confidence"
+      : level === "medium"
+        ? "Some values estimated"
+        : "Recipe reconstructed from partial data";
+
+  return (
+    <View className={`mt-4 rounded-[22px] border p-4 ${toneClasses[level]}`} style={{ gap: 12 }}>
+      <View className="flex-row" style={{ gap: 12 }}>
+        <Icon size={18} color="#111111" />
+        <View className="flex-1">
+          <Text className="mb-1 text-[13px] font-bold uppercase tracking-[0.8px] text-ink">
+            {headline} · {score}/100
+          </Text>
+          <Text className="text-[14px] leading-5 text-soft-ink">{note}</Text>
+        </View>
+      </View>
+      {(inferredFields.length || missingFields.length) ? (
+        <>
+          <Pressable onPress={() => setExpanded((value) => !value)} className="flex-row items-center justify-between">
+            <Text className="text-[14px] font-semibold text-soft-ink">What Cooksy inferred</Text>
+            {expanded ? <ChevronUp size={16} color="#262626" /> : <ChevronDown size={16} color="#262626" />}
+          </Pressable>
+          {expanded ? (
+            <View style={{ gap: 8 }}>
+              {inferredFields.map((field) => (
+                <Text key={field} className="text-[14px] text-soft-ink">
+                  {field}
+                </Text>
+              ))}
+              {missingFields.map((field) => (
+                <Text key={field} className="text-[14px] text-muted">
+                  {field}
+                </Text>
+              ))}
+            </View>
+          ) : null}
+        </>
+      ) : null}
     </View>
-  </View>
-);
+  );
+};

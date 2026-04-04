@@ -19,6 +19,9 @@ export const recipeStepSchema = z.object({
 
 export const recipeSchema = z.object({
   id: z.string().min(1),
+  status: z.enum(["processing", "ready", "failed"]),
+  importJobId: z.string().optional(),
+  processingMessage: z.string().optional(),
   title: z.string().min(3),
   description: z.string().min(10),
   heroNote: z.string().min(5),
@@ -31,7 +34,10 @@ export const recipeSchema = z.object({
   cookTimeMinutes: z.number().int().nonnegative(),
   totalTimeMinutes: z.number().int().nonnegative(),
   confidence: z.enum(["high", "medium", "low"]),
+  confidenceScore: z.number().min(0).max(100),
   confidenceNote: z.string().min(8),
+  inferredFields: z.array(z.string()).default([]),
+  missingFields: z.array(z.string()).default([]),
   isSaved: z.boolean(),
   source: z.object({
     creator: z.string().min(2),

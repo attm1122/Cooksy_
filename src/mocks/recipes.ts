@@ -3,7 +3,9 @@ import type { Recipe, RecipeBook } from "@/types/recipe";
 export const mockRecipes: Recipe[] = [
   {
     id: "creamy-garlic-chicken",
+    status: "ready",
     title: "Creamy Garlic Chicken",
+    processingMessage: undefined,
     description: "Pan-seared chicken finished in a glossy garlic cream sauce with spinach and parmesan.",
     heroNote: "Comforting skillet dinner with weeknight speed and dinner-party polish.",
     imageLabel: "Creamy garlic chicken skillet",
@@ -15,7 +17,10 @@ export const mockRecipes: Recipe[] = [
     cookTimeMinutes: 25,
     totalTimeMinutes: 40,
     confidence: "high",
+    confidenceScore: 92,
     confidenceNote: "Sauce thickness and garlic quantity were inferred from similar creator recipes.",
+    inferredFields: ["Garlic quantity inferred", "Sauce thickness inferred from creator visuals"],
+    missingFields: [],
     isSaved: true,
     source: {
       creator: "Mila's Kitchen",
@@ -38,7 +43,9 @@ export const mockRecipes: Recipe[] = [
   },
   {
     id: "crispy-hot-honey-salmon",
+    status: "ready",
     title: "Crispy Hot Honey Salmon",
+    processingMessage: undefined,
     description: "Roasted salmon with caramelized edges and a sticky hot honey glaze.",
     heroNote: "Fast, glossy, and strong on flavor without feeling heavy.",
     imageLabel: "Hot honey salmon fillet",
@@ -50,7 +57,10 @@ export const mockRecipes: Recipe[] = [
     cookTimeMinutes: 16,
     totalTimeMinutes: 26,
     confidence: "medium",
+    confidenceScore: 73,
     confidenceNote: "Spice level and glaze reduction timing were estimated from the creator's narration.",
+    inferredFields: ["Glaze reduction timing estimated", "Hot honey ratio inferred"],
+    missingFields: ["Exact oven temperature not provided"],
     isSaved: true,
     source: {
       creator: "Nina Cooks",
@@ -73,7 +83,9 @@ export const mockRecipes: Recipe[] = [
   },
   {
     id: "one-pan-tuscan-pasta",
+    status: "ready",
     title: "One Pan Tuscan Pasta",
+    processingMessage: undefined,
     description: "Creamy sun-dried tomato pasta with spinach, garlic, and a soft chilli finish.",
     heroNote: "Minimal cleanup with a rich, glossy sauce that still feels relaxed.",
     imageLabel: "Tuscan pasta bowl",
@@ -85,7 +97,10 @@ export const mockRecipes: Recipe[] = [
     cookTimeMinutes: 22,
     totalTimeMinutes: 34,
     confidence: "high",
+    confidenceScore: 88,
     confidenceNote: "Liquid ratio was confidently inferred from the visible pan consistency and cooking time.",
+    inferredFields: ["Liquid ratio inferred from pan consistency"],
+    missingFields: ["Final chilli amount not shown"],
     isSaved: false,
     source: {
       creator: "Luca at Home",

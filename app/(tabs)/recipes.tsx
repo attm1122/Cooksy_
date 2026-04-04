@@ -8,11 +8,11 @@ import { PlatformBadge } from "@/components/common/PlatformBadge";
 import { ScreenContainer } from "@/components/common/ScreenContainer";
 import { SearchInput } from "@/components/common/SearchInput";
 import { RecipeThumbnail } from "@/components/recipe/RecipeThumbnail";
-import { useRecentRecipes } from "@/hooks/use-recipes";
+import { useCooksyStore } from "@/store/use-cooksy-store";
 import { formatMinutes } from "@/utils/time";
 
 export default function RecipesScreen() {
-  const { data: recipes = [] } = useRecentRecipes();
+  const recipes = useCooksyStore((state) => state.recipes);
   const [query, setQuery] = useState("");
 
   const filteredRecipes = useMemo(
@@ -41,11 +41,15 @@ export default function RecipesScreen() {
                 <RecipeThumbnail recipe={recipe} size="compact" timeLabel={formatMinutes(recipe.totalTimeMinutes)} />
                 <View>
                   <Text className="mb-1 text-[18px] font-bold text-ink">{recipe.title}</Text>
-                  <Text className="mb-3 text-[14px] text-muted">{recipe.description}</Text>
+                  <Text className="mb-3 text-[14px] text-muted">
+                    {recipe.status === "processing" ? "Generating recipe..." : recipe.description}
+                  </Text>
                 </View>
                 <View className="flex-row items-center justify-between">
                   <PlatformBadge platform={recipe.source.platform} />
-                  <Text className="text-[13px] font-semibold text-muted">{recipe.totalTimeMinutes} min total</Text>
+                  <Text className="text-[13px] font-semibold text-muted">
+                    {recipe.status === "processing" ? "Saved just now" : `${recipe.totalTimeMinutes} min total`}
+                  </Text>
                 </View>
               </View>
             </CooksyCard>

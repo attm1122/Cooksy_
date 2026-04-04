@@ -1,5 +1,5 @@
 import { LinearGradient } from "expo-linear-gradient";
-import { Clock3 } from "lucide-react-native";
+import { Clock3, LoaderCircle } from "lucide-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -158,7 +158,12 @@ export const RecipeThumbnail = ({
       <View className="flex-1 justify-between p-4">
         <View className="flex-row items-start justify-between" style={{ gap: 12 }}>
           <PlatformBadge platform={recipe.source.platform} />
-          {timeLabel ? (
+          {recipe.status === "processing" ? (
+            <View className="flex-row items-center rounded-full bg-white/85 px-3 py-1" style={{ gap: 6 }}>
+              <LoaderCircle size={12} color="#111111" />
+              <Text className="text-[12px] font-semibold text-ink">Generating recipe...</Text>
+            </View>
+          ) : timeLabel ? (
             <View className="flex-row items-center rounded-full bg-white/85 px-3 py-1" style={{ gap: 6 }}>
               <Clock3 size={12} color="#111111" />
               <Text className="text-[12px] font-semibold text-ink">{timeLabel}</Text>
@@ -170,7 +175,9 @@ export const RecipeThumbnail = ({
           {showTitle ? (
             <Text className={`font-bold leading-tight text-white ${sizeMap[size].title}`}>{recipe.title}</Text>
           ) : null}
-          <Text className={`mt-1 font-medium text-[#F4EFE5] ${sizeMap[size].subtitle}`}>@{recipe.source.creator}</Text>
+          <Text className={`mt-1 font-medium text-[#F4EFE5] ${sizeMap[size].subtitle}`}>
+            {recipe.status === "processing" ? recipe.processingMessage ?? "Generating recipe..." : `@${recipe.source.creator}`}
+          </Text>
         </View>
       </View>
     </>
