@@ -16,6 +16,8 @@ type CooksyState = {
   updateRecipe: (recipe: Recipe) => void;
   patchRecipe: (recipeId: string, patch: Partial<Recipe>) => void;
   mergeRecipes: (recipes: Recipe[]) => void;
+  mergeBooks: (books: RecipeBook[]) => void;
+  saveBook: (book: RecipeBook) => void;
   addRecipeToBook: (recipeId: string, bookId: string) => void;
   removeRecipeFromBook: (recipeId: string, bookId: string) => void;
   startCooking: (recipeId: string) => void;
@@ -91,6 +93,35 @@ export const useCooksyStore = create<CooksyState>((set) => ({
       });
 
       return { recipes: next };
+    }),
+  mergeBooks: (books) =>
+    set((state) => {
+      const next = [...state.books];
+
+      books.forEach((incoming) => {
+        const existingIndex = next.findIndex((item) => item.id === incoming.id);
+
+        if (existingIndex >= 0) {
+          next[existingIndex] = incoming;
+          return;
+        }
+
+        next.unshift(incoming);
+      });
+
+      return { books: next };
+    }),
+  saveBook: (book) =>
+    set((state) => {
+      const existing = state.books.find((item) => item.id === book.id);
+
+      if (existing) {
+        return {
+          books: state.books.map((item) => (item.id === book.id ? book : item))
+        };
+      }
+
+      return { books: [book, ...state.books] };
     }),
   addRecipeToBook: (recipeId, bookId) =>
     set((state) => ({

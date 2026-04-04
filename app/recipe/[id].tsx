@@ -12,6 +12,7 @@ import { IngredientChecklist } from "@/components/recipe/IngredientChecklist";
 import { RecipeEditorForm } from "@/components/recipe/RecipeEditorForm";
 import { RecipeThumbnail } from "@/components/recipe/RecipeThumbnail";
 import { StepCard } from "@/components/recipe/StepCard";
+import { useAddRecipeToBook, useUpdateRecipe } from "@/hooks/use-recipes";
 import { useCooksyStore } from "@/store/use-cooksy-store";
 import { formatMinutes } from "@/utils/time";
 
@@ -19,6 +20,10 @@ export default function RecipeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const recipe = useCooksyStore((state) => state.recipes.find((item) => item.id === id));
   const updateRecipe = useCooksyStore((state) => state.updateRecipe);
+  const books = useCooksyStore((state) => state.books);
+  const addRecipeToBook = useCooksyStore((state) => state.addRecipeToBook);
+  const updateRecipeMutation = useUpdateRecipe();
+  const addToBookMutation = useAddRecipeToBook();
 
   if (!recipe) {
     return (
@@ -27,6 +32,21 @@ export default function RecipeDetailScreen() {
       </ScreenContainer>
     );
   }
+
+  const defaultBook = books[0];
+  const handleRecipeUpdate = (nextRecipe: typeof recipe) => {
+    updateRecipe(nextRecipe);
+    updateRecipeMutation.mutate(nextRecipe);
+  };
+
+  const handleSaveToBook = () => {
+    if (!defaultBook) {
+      return;
+    }
+
+    addRecipeToBook(recipe.id, defaultBook.id);
+    addToBookMutation.mutate({ recipeId: recipe.id, bookId: defaultBook.id });
+  };
 
   return (
     <ScreenContainer>
@@ -77,10 +97,12 @@ export default function RecipeDetailScreen() {
             <Text className="text-[15px] font-semibold text-ink">Save Recipe</Text>
           </View>
         </PrimaryButton>
-        <SecondaryButton fullWidth={false}>
+        <SecondaryButton fullWidth={false} onPress={handleSaveToBook} disabled={!defaultBook}>
           <View className="flex-row items-center" style={{ gap: 8 }}>
             <SquareStack size={16} color="#262626" />
-            <Text className="text-[15px] font-semibold text-soft-ink">Save to Book</Text>
+            <Text className="text-[15px] font-semibold text-soft-ink">
+              {defaultBook ? `Save to ${defaultBook.name}` : "Create a Book First"}
+            </Text>
           </View>
         </SecondaryButton>
         {recipe.status === "ready" ? (
@@ -118,7 +140,7 @@ export default function RecipeDetailScreen() {
               </View>
             </Link>
           </View>
-          <RecipeEditorForm recipe={recipe} onSubmit={updateRecipe} submitLabel="Save Edits" compact />
+          <RecipeEditorForm recipe={recipe} onSubmit={handleRecipeUpdate} submitLabel="Save Edits" compact />
         </CooksyCard>
       ) : null}
 

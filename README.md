@@ -104,6 +104,12 @@ The import flow now supports a more realistic persisted lifecycle:
 - the app hydrates recent persisted recipes on startup and merges them into local state
 - save-first imports can now survive beyond a single frontend session once the Supabase migrations and edge function are deployed
 
+The next persistence slice is also in place:
+
+- recipe edits can write through the backend-facing service layer
+- recipe books hydrate on startup
+- book creation and recipe-to-book membership changes can persist through Supabase when configured
+
 ### Environment
 
 Copy `.env.example` to `.env` and fill in:

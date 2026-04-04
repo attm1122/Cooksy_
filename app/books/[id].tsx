@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { CooksyCard } from "@/components/common/CooksyCard";
 import { ScreenContainer } from "@/components/common/ScreenContainer";
 import { RecipeThumbnail } from "@/components/recipe/RecipeThumbnail";
+import { useRemoveRecipeFromBook } from "@/hooks/use-recipes";
 import { useCooksyStore } from "@/store/use-cooksy-store";
 import { formatMinutes } from "@/utils/time";
 
@@ -13,12 +14,18 @@ export default function BookDetailScreen() {
   const book = useCooksyStore((state) => state.books.find((item) => item.id === id));
   const recipes = useCooksyStore((state) => state.recipes);
   const removeRecipeFromBook = useCooksyStore((state) => state.removeRecipeFromBook);
+  const removeMutation = useRemoveRecipeFromBook();
 
   if (!book) {
     return null;
   }
 
   const bookRecipes = recipes.filter((recipe) => book.recipeIds.includes(recipe.id));
+
+  const handleRemove = (recipeId: string) => {
+    removeRecipeFromBook(recipeId, book.id);
+    removeMutation.mutate({ recipeId, bookId: book.id });
+  };
 
   return (
     <ScreenContainer>
@@ -36,7 +43,7 @@ export default function BookDetailScreen() {
                   {recipe.status === "processing" ? "Generating recipe..." : recipe.description}
                 </Text>
               </View>
-              <Text className="text-[14px] font-semibold text-soft-ink" onPress={() => removeRecipeFromBook(recipe.id, book.id)}>
+              <Text className="text-[14px] font-semibold text-soft-ink" onPress={() => handleRemove(recipe.id)}>
                 Remove from book
               </Text>
             </CooksyCard>
