@@ -7,10 +7,12 @@ type CooksyState = {
   recipes: Recipe[];
   books: RecipeBook[];
   selectedRecipeId?: string;
+  lastCompletedRecipeId?: string;
   importProgress: ImportProgress;
   cookingRecipeId?: string;
   cookingStepIndex: number;
   setSelectedRecipe: (recipeId?: string) => void;
+  setLastCompletedRecipeId: (recipeId?: string) => void;
   setImportProgress: (progress: Partial<ImportProgress>) => void;
   saveRecipe: (recipe: Recipe) => void;
   updateRecipe: (recipe: Recipe) => void;
@@ -38,10 +40,12 @@ export const useCooksyStore = create<CooksyState>((set) => ({
   recipes: mockRecipes,
   books: mockBooks,
   selectedRecipeId: mockRecipes[0]?.id,
+  lastCompletedRecipeId: undefined,
   importProgress: initialImportProgress,
   cookingRecipeId: undefined,
   cookingStepIndex: 0,
   setSelectedRecipe: (recipeId) => set({ selectedRecipeId: recipeId }),
+  setLastCompletedRecipeId: (recipeId) => set({ lastCompletedRecipeId: recipeId }),
   setImportProgress: (progress) =>
     set((state) => ({
       importProgress: {

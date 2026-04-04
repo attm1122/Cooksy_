@@ -9,6 +9,7 @@ import { PrimaryButton } from "@/components/common/Buttons";
 import { CooksyCard } from "@/components/common/CooksyCard";
 import { PlatformBadge } from "@/components/common/PlatformBadge";
 import { ScreenContainer } from "@/components/common/ScreenContainer";
+import { RecipeReadyHandoff } from "@/components/recipe/RecipeReadyHandoff";
 import { RecipeThumbnail } from "@/components/recipe/RecipeThumbnail";
 import { useBeginRecipeImport, useCompleteImportJob, useRetryRecipeImport } from "@/hooks/use-recipes";
 import { captureError } from "@/lib/monitoring";
@@ -19,6 +20,8 @@ import { formatMinutes } from "@/utils/time";
 export default function HomeScreen() {
   const recipes = useCooksyStore((state) => state.recipes);
   const setSelectedRecipe = useCooksyStore((state) => state.setSelectedRecipe);
+  const lastCompletedRecipeId = useCooksyStore((state) => state.lastCompletedRecipeId);
+  const setLastCompletedRecipeId = useCooksyStore((state) => state.setLastCompletedRecipeId);
   const saveRecipe = useCooksyStore((state) => state.saveRecipe);
   const mergeRecipes = useCooksyStore((state) => state.mergeRecipes);
   const patchRecipe = useCooksyStore((state) => state.patchRecipe);
@@ -37,6 +40,8 @@ export default function HomeScreen() {
       sourceUrl: "https://youtube.com/watch?v=short-form-cooking-demo"
     }
   });
+
+  const completedRecipe = recipes.find((item) => item.id === lastCompletedRecipeId);
 
   const onSubmit = handleSubmit(async ({ sourceUrl }) => {
     try {
@@ -57,6 +62,7 @@ export default function HomeScreen() {
               isSaved: true
             }
           ]);
+          setLastCompletedRecipeId(recipe.id);
         },
         onError: (error) => {
           patchRecipe(pendingRecipe.id, {
@@ -112,6 +118,7 @@ export default function HomeScreen() {
                 isSaved: true
               }
             ]);
+            setLastCompletedRecipeId(nextRecipe.id);
           },
           onError: (error) => {
             patchRecipe(pendingRecipe.id, {
@@ -206,6 +213,10 @@ export default function HomeScreen() {
           <Text className="text-[14px] font-semibold text-soft-ink">View all</Text>
         </Link>
       </View>
+
+      {completedRecipe ? (
+        <RecipeReadyHandoff recipe={completedRecipe} onDismiss={() => setLastCompletedRecipeId(undefined)} />
+      ) : null}
 
       <View style={{ gap: 14 }}>
         {recipes.map((recipe) => (

@@ -12,6 +12,7 @@ import { ScreenContainer } from "@/components/common/ScreenContainer";
 import { IngredientChecklist } from "@/components/recipe/IngredientChecklist";
 import { RecipeEditorForm } from "@/components/recipe/RecipeEditorForm";
 import { RecipeThumbnail } from "@/components/recipe/RecipeThumbnail";
+import { RecipeReadyHandoff } from "@/components/recipe/RecipeReadyHandoff";
 import { SourceEvidenceSummary } from "@/components/recipe/SourceEvidenceSummary";
 import { StepCard } from "@/components/recipe/StepCard";
 import { useAddRecipeToBook, useCompleteImportJob, useRetryRecipeImport, useUpdateRecipe } from "@/hooks/use-recipes";
@@ -22,6 +23,8 @@ import { formatMinutes } from "@/utils/time";
 export default function RecipeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const recipe = useCooksyStore((state) => state.recipes.find((item) => item.id === id || item.importJobId === id));
+  const lastCompletedRecipeId = useCooksyStore((state) => state.lastCompletedRecipeId);
+  const setLastCompletedRecipeId = useCooksyStore((state) => state.setLastCompletedRecipeId);
   const updateRecipe = useCooksyStore((state) => state.updateRecipe);
   const saveRecipe = useCooksyStore((state) => state.saveRecipe);
   const mergeRecipes = useCooksyStore((state) => state.mergeRecipes);
@@ -50,6 +53,7 @@ export default function RecipeDetailScreen() {
             isSaved: true
           }
         ]);
+        setLastCompletedRecipeId(nextRecipe.id);
       },
       onError: (error) => {
         patchRecipe(recipe.id, {
@@ -68,7 +72,7 @@ export default function RecipeDetailScreen() {
         });
       }
     });
-  }, [completeImportMutation, mergeRecipes, patchRecipe, recipe]);
+  }, [completeImportMutation, mergeRecipes, patchRecipe, recipe, setLastCompletedRecipeId]);
 
   if (!recipe) {
     return (
@@ -111,6 +115,7 @@ export default function RecipeDetailScreen() {
                 isSaved: true
               }
             ]);
+            setLastCompletedRecipeId(nextRecipe.id);
           },
           onError: (error) => {
             patchRecipe(pendingRecipe.id, {
@@ -157,6 +162,10 @@ export default function RecipeDetailScreen() {
               : recipe.heroNote}
         </Text>
       </View>
+
+      {recipe.status === "ready" && lastCompletedRecipeId === recipe.id ? (
+        <RecipeReadyHandoff recipe={recipe} onDismiss={() => setLastCompletedRecipeId(undefined)} />
+      ) : null}
 
       <CooksyCard className="mb-4 overflow-hidden p-0">
         <RecipeThumbnail

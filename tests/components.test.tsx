@@ -2,6 +2,7 @@ import { render } from "@testing-library/react-native";
 
 import { CooksyLogo } from "@/components/common/CooksyLogo";
 import { PlatformBadge } from "@/components/common/PlatformBadge";
+import { RecipeReadyHandoff } from "@/components/recipe/RecipeReadyHandoff";
 import { RecipeThumbnail } from "@/components/recipe/RecipeThumbnail";
 import { SourceEvidenceSummary } from "@/components/recipe/SourceEvidenceSummary";
 import { mockRecipes } from "@/mocks/recipes";
@@ -28,5 +29,12 @@ describe("component smoke tests", () => {
     expect(screen.getByText("Why Cooksy trusts this")).toBeTruthy();
     expect(screen.getByText("Quantity mentions")).toBeTruthy();
     expect(screen.getByText("Source text captured")).toBeTruthy();
+  });
+
+  it("renders the recipe ready handoff actions", () => {
+    const screen = render(<RecipeReadyHandoff recipe={mockRecipes[0]} onDismiss={jest.fn()} />);
+    expect(screen.getByText("Recipe ready")).toBeTruthy();
+    expect(screen.getByText("Start Cooking")).toBeTruthy();
+    expect(screen.getByText("Open Grocery List")).toBeTruthy();
   });
 });
