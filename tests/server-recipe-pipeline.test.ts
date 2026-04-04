@@ -100,4 +100,24 @@ describe("server recipe pipeline", () => {
     expect(recipe.confidence).toBe("medium");
     expect(recipe.ingredients[1]?.quantity).toContain("4 cloves");
   });
+
+  it("hydrates instagram source context from public page signals", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      text: async () =>
+        '<html><head><meta property="og:title" content="One Pan Tuscan Pasta"><meta property="og:description" content="Creamy tuscan pasta with sun-dried tomatoes."><meta property="og:image" content="https://cdn.example.com/pasta.jpg"><script type="application/ld+json">{"author":{"name":"Luca at Home"}}</script></head><body></body></html>'
+    }) as unknown as typeof fetch;
+
+    const context = await extractRecipeContextForImport({
+      sourceUrl: "https://www.instagram.com/reel/CooksyTuscanPasta/",
+      sourcePlatform: "instagram",
+      sourcePayload: null
+    });
+
+    expect(context.title).toBe("One Pan Tuscan Pasta");
+    expect(context.creator).toBe("Luca at Home");
+    expect(context.caption).toContain("Creamy tuscan pasta");
+    expect(context.thumbnailUrl).toBe("https://cdn.example.com/pasta.jpg");
+    expect((context.metadata as { extractionSource?: string } | null)?.extractionSource).toBe("social-page");
+  });
 });

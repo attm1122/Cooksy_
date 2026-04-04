@@ -1,5 +1,6 @@
 import { detectPlatformFromUrl, parseInstagramUrl, parseTikTokUrl, parseYouTubeUrl } from "@/features/recipes/lib/platform";
 import { ExtractionFailedError } from "@/features/recipes/lib/errors";
+import { fetchSocialPageSignals } from "@/features/recipes/lib/socialSignals";
 import { fetchYouTubeOEmbedMetadata, fetchYouTubeWatchPageSignals, getYouTubeThumbnailFromVideoId } from "@/features/recipes/lib/youtube";
 import { getMockContextForUrl } from "@/features/recipes/mocks/sourceContexts";
 import { getThumbnailFromContext } from "@/features/recipes/services/thumbnailService";
@@ -66,18 +67,28 @@ export const extractTikTokContext = async (url: string): Promise<RawRecipeContex
   const parsed = parseTikTokUrl(url);
   await sleep(40);
   const context = getMockContextForUrl(url, "tiktok");
+  const signals = await fetchSocialPageSignals({
+    sourceUrl: parsed.normalizedUrl,
+    platform: "tiktok",
+    creatorHint: parsed.creatorHandle
+  }).catch(() => null);
 
   return {
     ...context,
     sourceUrl: parsed.normalizedUrl,
     platform: "tiktok",
-    creator: context.creator ?? parsed.creatorHandle ?? null,
+    title: signals?.title ?? context.title,
+    creator: signals?.creator ?? context.creator ?? parsed.creatorHandle ?? null,
+    caption: signals?.description ?? context.caption,
+    transcript: signals?.transcript ?? context.transcript,
     metadata: {
       ...(context.metadata ?? {}),
       videoId: parsed.videoId,
-      creatorHandle: parsed.creatorHandle
+      creatorHandle: parsed.creatorHandle,
+      signalOrigins: signals?.signalOrigins ?? ["mock-fallback"],
+      extractionSource: signals?.signalOrigins?.includes("open-graph") || signals?.signalOrigins?.includes("json-ld") ? "social-page" : "mock-fallback"
     },
-    thumbnailUrl: context.thumbnailUrl ?? getThumbnailFromContext(context)
+    thumbnailUrl: signals?.thumbnailUrl ?? context.thumbnailUrl ?? getThumbnailFromContext(context)
   };
 };
 
@@ -85,16 +96,26 @@ export const extractInstagramContext = async (url: string): Promise<RawRecipeCon
   const parsed = parseInstagramUrl(url);
   await sleep(40);
   const context = getMockContextForUrl(url, "instagram");
+  const signals = await fetchSocialPageSignals({
+    sourceUrl: parsed.normalizedUrl,
+    platform: "instagram"
+  }).catch(() => null);
 
   return {
     ...context,
     sourceUrl: parsed.normalizedUrl,
     platform: "instagram",
+    title: signals?.title ?? context.title,
+    creator: signals?.creator ?? context.creator,
+    caption: signals?.description ?? context.caption,
+    transcript: signals?.transcript ?? context.transcript,
     metadata: {
       ...(context.metadata ?? {}),
-      mediaCode: parsed.mediaCode
+      mediaCode: parsed.mediaCode,
+      signalOrigins: signals?.signalOrigins ?? ["mock-fallback"],
+      extractionSource: signals?.signalOrigins?.includes("open-graph") || signals?.signalOrigins?.includes("json-ld") ? "social-page" : "mock-fallback"
     },
-    thumbnailUrl: context.thumbnailUrl ?? getThumbnailFromContext(context)
+    thumbnailUrl: signals?.thumbnailUrl ?? context.thumbnailUrl ?? getThumbnailFromContext(context)
   };
 };
 

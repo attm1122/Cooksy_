@@ -1,6 +1,7 @@
 export type SourcePlatform = "youtube" | "tiktok" | "instagram";
 export type ThumbnailSource = SourcePlatform | "generated";
 export type RecipeProcessingStatus = "processing" | "completed" | "failed";
+export type SourceSignalOrigin = "oembed" | "watch-page" | "open-graph" | "json-ld" | "mock-fallback";
 
 export type Ingredient = {
   id: string;
@@ -32,6 +33,15 @@ export type RawRecipeContext = {
   comments?: string[] | null;
   metadata?: Record<string, unknown> | null;
   thumbnailUrl?: string | null;
+};
+
+export type SourceSignals = {
+  title?: string | null;
+  description?: string | null;
+  creator?: string | null;
+  thumbnailUrl?: string | null;
+  transcript?: string | null;
+  signalOrigins: SourceSignalOrigin[];
 };
 
 export type Recipe = {
@@ -103,4 +113,3 @@ export type ParsedInstagramUrl = {
 };
 
 export type ParsedRecipeUrl = ParsedYouTubeUrl | ParsedTikTokUrl | ParsedInstagramUrl;
-

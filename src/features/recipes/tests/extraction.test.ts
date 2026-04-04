@@ -1,4 +1,9 @@
-import { extractRecipeContextFromUrl, extractYouTubeContext } from "@/features/recipes/services/extractionService";
+import {
+  extractInstagramContext,
+  extractRecipeContextFromUrl,
+  extractTikTokContext,
+  extractYouTubeContext
+} from "@/features/recipes/services/extractionService";
 
 describe("extraction service", () => {
   afterEach(() => {
@@ -46,5 +51,37 @@ describe("extraction service", () => {
 
     expect(context.title).toContain("Creamy Garlic Chicken");
     expect(context.metadata?.extractionSource).toBe("mock-fallback");
+  });
+
+  it("hydrates TikTok context from public page signals when available", async () => {
+    jest.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      text: async () =>
+        '<html><head><meta property="og:title" content="Crispy Hot Honey Salmon"><meta property="og:description" content="Sticky salmon rice bowls for weeknights."><meta property="og:image" content="https://cdn.example.com/salmon.jpg"><script type="application/ld+json">{"author":{"name":"Nina Cooks"}}</script></head><body>@ninacooks</body></html>'
+    } as Response);
+
+    const context = await extractTikTokContext("https://www.tiktok.com/@ninacooks/video/123456789");
+
+    expect(context.title).toBe("Crispy Hot Honey Salmon");
+    expect(context.creator).toBe("Nina Cooks");
+    expect(context.caption).toContain("Sticky salmon");
+    expect(context.thumbnailUrl).toBe("https://cdn.example.com/salmon.jpg");
+    expect(context.metadata?.extractionSource).toBe("social-page");
+  });
+
+  it("hydrates Instagram context from public page signals when available", async () => {
+    jest.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      text: async () =>
+        '<html><head><meta property="og:title" content="One Pan Tuscan Pasta"><meta property="og:description" content="Creamy tuscan pasta with spinach and parmesan."><meta property="og:image" content="https://cdn.example.com/pasta.jpg"><script type="application/ld+json">{"author":{"name":"Luca at Home"}}</script></head><body></body></html>'
+    } as Response);
+
+    const context = await extractInstagramContext("https://www.instagram.com/reel/CooksyTuscanPasta/");
+
+    expect(context.title).toBe("One Pan Tuscan Pasta");
+    expect(context.creator).toBe("Luca at Home");
+    expect(context.caption).toContain("Creamy tuscan pasta");
+    expect(context.thumbnailUrl).toBe("https://cdn.example.com/pasta.jpg");
+    expect(context.metadata?.extractionSource).toBe("social-page");
   });
 });
