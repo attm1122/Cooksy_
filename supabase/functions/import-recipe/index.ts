@@ -1,4 +1,13 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  buildPersistedRecipe,
+  extractRecipeContextForImport,
+  inferPlatformFromUrl,
+  reconstructRecipe,
+  type RawRecipeContext,
+  type ReconstructionResult,
+  type SourcePlatform
+} from "../_shared/recipe-pipeline.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,36 +16,6 @@ const corsHeaders = {
 
 const MAX_IMPORTS_PER_WINDOW = 8;
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
-
-const inferPlatformFromUrl = (value: string) => {
-  try {
-    const url = new URL(value);
-    const host = url.hostname.toLowerCase().replace(/^www\./, "");
-    const path = url.pathname.toLowerCase();
-
-    if (host === "youtu.be" && path.length > 1) {
-      return "youtube";
-    }
-
-    if (["youtube.com", "m.youtube.com"].includes(host)) {
-      if ((path.startsWith("/watch") && url.searchParams.get("v")) || path.startsWith("/shorts/") || path.startsWith("/live/")) {
-        return "youtube";
-      }
-    }
-
-    if (["tiktok.com", "m.tiktok.com", "vm.tiktok.com"].includes(host) && (path.includes("/video/") || path.startsWith("/t/"))) {
-      return "tiktok";
-    }
-
-    if (host === "instagram.com" && (path.startsWith("/reel/") || path.startsWith("/p/") || path.startsWith("/tv/"))) {
-      return "instagram";
-    }
-  } catch {
-    return null;
-  }
-
-  return null;
-};
 
 const buildJobResponse = ({
   id,
@@ -74,108 +53,26 @@ const buildJobResponse = ({
   }
 });
 
-const buildRecipeFromSource = ({
-  sourceUrl,
-  sourcePlatform,
-  importJobId,
-  creatorHandle,
-  titleHint,
-  rawExtraction
-}: {
-  sourceUrl: string;
-  sourcePlatform: string;
-  importJobId: string;
-  creatorHandle: string;
-  titleHint: string;
-  rawExtraction?: Record<string, unknown>;
-}) => ({
-  status: "ready",
-  importJobId,
-  title: titleHint,
-  description: "A staged imported recipe emitted by the backend pipeline and ready for later enrichment.",
-  heroNote: "Generated from a social video URL with extracted source cues, structured ingredients, and drafted cooking steps.",
-  imageLabel: `${titleHint} cover`,
-  thumbnailUrl: `https://picsum.photos/seed/${sourcePlatform}-${titleHint.toLowerCase().replace(/\s+/g, "-")}/1280/960`,
-  thumbnailSource: sourcePlatform,
-  thumbnailFallbackStyle: "golden-sear",
-  servings: 4,
-  prepTimeMinutes: 15,
-  cookTimeMinutes: 25,
-  totalTimeMinutes: 40,
-  confidence: "medium",
-  confidenceScore: 76,
-  confidenceNote: "Ingredient quantities and timings were inferred from extracted creator cues and source visuals.",
-  inferredFields: ["Garlic quantity inferred", "Simmer timing estimated from source pacing"],
-  missingFields: ["Exact oven temperature not provided"],
-  rawExtraction,
-  isSaved: true,
-  source: {
-    creator: creatorHandle,
-    url: sourceUrl,
-    platform: sourcePlatform
-  },
-  ingredients: [
-    { id: "ing-1", name: "Chicken thighs", quantity: "6 boneless" },
-    { id: "ing-2", name: "Garlic cloves", quantity: "5 minced" },
-    { id: "ing-3", name: "Orzo", quantity: "1 cup" }
-  ],
-  steps: [
-    { id: "step-1", title: "Brown the chicken", instruction: "Sear the chicken until golden." },
-    { id: "step-2", title: "Build the base", instruction: "Cook garlic, add orzo, and simmer with liquid." },
-    { id: "step-3", title: "Finish and serve", instruction: "Reduce the sauce and serve warm." }
-  ],
-  tags: ["Imported", "Weeknight"]
-});
-
-const deriveSourceMetadata = (sourceUrl: string, sourcePlatform: string) => {
-  const sourceId = sourceUrl.split("/").filter(Boolean).pop()?.split("?")[0] ?? "imported";
-  const creatorHandle =
-    sourcePlatform === "youtube"
-      ? "Cooksy Creator"
-      : sourcePlatform === "tiktok"
-        ? "@cooksycreator"
-        : "cooksy.kitchen";
-  const titleHint =
-    sourcePlatform === "youtube"
-      ? "Creamy Garlic Chicken Orzo"
-      : sourcePlatform === "tiktok"
-        ? "Hot Honey Salmon Rice Bowl"
-        : "One Pan Tuscan Pasta";
-
-  return {
-    sourceId,
-    creatorHandle,
-    titleHint,
-    caption: `Imported from ${sourcePlatform} source ${sourceId}`,
-    extractedAt: new Date().toISOString()
-  };
-};
-
 const persistCompletedRecipe = async ({
   supabase,
   jobId,
   userId,
   sourceUrl,
   sourcePlatform,
-  sourcePayload
+  reconstruction
 }: {
   supabase: ReturnType<typeof createClient>;
   jobId: string;
   userId: string;
   sourceUrl: string;
-  sourcePlatform: string;
-  sourcePayload?: Record<string, unknown>;
+  sourcePlatform: SourcePlatform;
+  reconstruction: ReconstructionResult;
 }) => {
-  const creatorHandle =
-    typeof sourcePayload?.creatorHandle === "string" ? sourcePayload.creatorHandle : "Imported Creator";
-  const titleHint = typeof sourcePayload?.titleHint === "string" ? sourcePayload.titleHint : "Cooksy Imported Recipe";
-  const mockRecipe = buildRecipeFromSource({
+  const recipe = buildPersistedRecipe({
+    jobId,
     sourceUrl,
     sourcePlatform,
-    importJobId: jobId,
-    creatorHandle,
-    titleHint,
-    rawExtraction: sourcePayload
+    reconstruction
   });
   const { data: existingRecipe } = await supabase
     .from("recipes")
@@ -192,28 +89,28 @@ const persistCompletedRecipe = async ({
       .insert({
         user_id: userId,
         import_job_id: jobId,
-        status: mockRecipe.status,
-        title: mockRecipe.title,
-        description: mockRecipe.description,
-        hero_note: mockRecipe.heroNote,
-        image_label: mockRecipe.imageLabel,
-        thumbnail_url: mockRecipe.thumbnailUrl,
-        thumbnail_source: mockRecipe.thumbnailSource,
-        thumbnail_fallback_style: mockRecipe.thumbnailFallbackStyle,
-        servings: mockRecipe.servings,
-        prep_time_minutes: mockRecipe.prepTimeMinutes,
-        cook_time_minutes: mockRecipe.cookTimeMinutes,
-        total_time_minutes: mockRecipe.totalTimeMinutes,
-        confidence: mockRecipe.confidence,
-        confidence_score: mockRecipe.confidenceScore,
-        confidence_note: mockRecipe.confidenceNote,
-        inferred_fields: mockRecipe.inferredFields,
-        missing_fields: mockRecipe.missingFields,
-        raw_extraction: mockRecipe.rawExtraction ?? null,
-        source_creator: mockRecipe.source.creator,
-        source_url: mockRecipe.source.url,
-        source_platform: mockRecipe.source.platform,
-        tags: mockRecipe.tags
+        status: recipe.status,
+        title: recipe.title,
+        description: recipe.description,
+        hero_note: recipe.heroNote,
+        image_label: recipe.imageLabel,
+        thumbnail_url: recipe.thumbnailUrl,
+        thumbnail_source: recipe.thumbnailSource,
+        thumbnail_fallback_style: recipe.thumbnailFallbackStyle,
+        servings: recipe.servings,
+        prep_time_minutes: recipe.prepTimeMinutes,
+        cook_time_minutes: recipe.cookTimeMinutes,
+        total_time_minutes: recipe.totalTimeMinutes,
+        confidence: recipe.confidence,
+        confidence_score: recipe.confidenceScore,
+        confidence_note: recipe.confidenceNote,
+        inferred_fields: recipe.inferredFields,
+        missing_fields: recipe.missingFields,
+        raw_extraction: recipe.rawExtraction ?? null,
+        source_creator: recipe.source.creator,
+        source_url: recipe.source.url,
+        source_platform: recipe.source.platform,
+        tags: recipe.tags
       })
       .select("id")
       .single();
@@ -224,7 +121,7 @@ const persistCompletedRecipe = async ({
 
     recipeId = createdRecipe.id;
 
-    const ingredientRows = mockRecipe.ingredients.map((ingredient, index) => ({
+    const ingredientRows = recipe.ingredients.map((ingredient, index) => ({
       recipe_id: recipeId,
       position: index,
       name: ingredient.name,
@@ -232,7 +129,7 @@ const persistCompletedRecipe = async ({
       optional: Boolean(ingredient.optional)
     }));
 
-    const stepRows = mockRecipe.steps.map((step, index) => ({
+    const stepRows = recipe.steps.map((step, index) => ({
       recipe_id: recipeId,
       position: index,
       title: step.title,
@@ -251,11 +148,11 @@ const persistCompletedRecipe = async ({
       progress: 1,
       stage_label: "Completed",
       stage_description: "Recipe is ready",
-      normalized_recipe: mockRecipe
+      normalized_recipe: recipe
     })
     .eq("id", jobId);
 
-  return mockRecipe;
+  return recipe;
 };
 
 const failImportJob = async ({
@@ -291,11 +188,181 @@ const advancePipeline = async ({
   userId: string;
 }) => {
   const sourceUrl = source.source_url as string;
-  const sourcePlatform = source.source_platform as string;
+  const sourcePlatform = source.source_platform as SourcePlatform;
   const sourcePayload = (source.raw_payload as Record<string, unknown> | null) ?? {};
 
-  if (sourceUrl.includes("/story/") || sourceUrl.includes("private") || sourceUrl.includes("unavailable")) {
-    const message = "This source looks unavailable or too limited to reconstruct. Try a public video or reel link.";
+  try {
+    if (sourceUrl.includes("/story/") || sourceUrl.includes("private") || sourceUrl.includes("unavailable")) {
+      const message = "This source looks unavailable or too limited to reconstruct. Try a public video or reel link.";
+      await failImportJob({
+        supabase,
+        jobId: row.id,
+        message
+      });
+
+      return {
+        ...row,
+        status: "failed",
+        progress: 1,
+        stage_label: "Import failed",
+        stage_description: message,
+        error_message: message,
+        normalized_recipe: row.normalized_recipe ?? null
+      };
+    }
+
+    if (row.status === "queued") {
+      const context = await extractRecipeContextForImport({
+        sourceUrl,
+        sourcePlatform,
+        sourcePayload
+      });
+
+      await supabase
+        .from("import_sources")
+        .update({
+          creator_handle: context.creator ?? source.creator_handle ?? null,
+          raw_payload: context
+        })
+        .eq("id", row.import_source_id);
+
+      await supabase
+        .from("recipe_import_jobs")
+        .update({
+          status: "extracting",
+          progress: 0.28,
+          stage_label: "Extracting content",
+          stage_description: "Source metadata, creator context, and captions extracted",
+          normalized_recipe: {
+            stage: "extracting",
+            rawExtraction: context,
+            title: context.title ?? null,
+            creator: context.creator ?? null,
+            thumbnailUrl: context.thumbnailUrl ?? null
+          }
+        })
+        .eq("id", row.id);
+
+      return {
+        ...row,
+        status: "extracting",
+        progress: 0.28,
+        stage_label: "Extracting content",
+        stage_description: "Source metadata, creator context, and captions extracted"
+      };
+    }
+
+    if (row.status === "extracting") {
+      const context =
+        ((row.normalized_recipe as { rawExtraction?: RawRecipeContext } | null)?.rawExtraction ??
+          (await extractRecipeContextForImport({
+            sourceUrl,
+            sourcePlatform,
+            sourcePayload
+          }))) as RawRecipeContext;
+      const reconstruction = await reconstructRecipe(context);
+      const draftPayload = {
+        stage: "identifying_ingredients",
+        rawExtraction: context,
+        title: reconstruction.title,
+        description: reconstruction.description ?? null,
+        ingredients: reconstruction.ingredients,
+        thumbnailUrl: reconstruction.thumbnailUrl ?? null,
+        sourceCreator: reconstruction.sourceCreator ?? null
+      };
+
+      await supabase
+        .from("recipe_import_jobs")
+        .update({
+          status: "identifying_ingredients",
+          progress: 0.58,
+          stage_label: "Identifying ingredients",
+          stage_description: "Drafting ingredient list and estimated quantities",
+          normalized_recipe: draftPayload
+        })
+        .eq("id", row.id);
+
+      return {
+        ...row,
+        status: "identifying_ingredients",
+        progress: 0.58,
+        stage_label: "Identifying ingredients",
+        stage_description: "Drafting ingredient list and estimated quantities",
+        normalized_recipe: draftPayload
+      };
+    }
+
+    if (row.status === "identifying_ingredients") {
+      const context =
+        ((row.normalized_recipe as { rawExtraction?: RawRecipeContext } | null)?.rawExtraction ??
+          (await extractRecipeContextForImport({
+            sourceUrl,
+            sourcePlatform,
+            sourcePayload
+          }))) as RawRecipeContext;
+      const reconstruction = await reconstructRecipe(context);
+      const nextPayload = {
+        stage: "building_steps",
+        rawExtraction: context,
+        title: reconstruction.title,
+        ingredients: reconstruction.ingredients,
+        steps: reconstruction.steps,
+        inferredFields: reconstruction.inferredFields,
+        missingFields: reconstruction.missingFields
+      };
+
+      await supabase
+        .from("recipe_import_jobs")
+        .update({
+          status: "building_steps",
+          progress: 0.86,
+          stage_label: "Building steps",
+          stage_description: "Structuring the cooking method and timings",
+          normalized_recipe: nextPayload
+        })
+        .eq("id", row.id);
+
+      return {
+        ...row,
+        status: "building_steps",
+        progress: 0.86,
+        stage_label: "Building steps",
+        stage_description: "Structuring the cooking method and timings",
+        normalized_recipe: nextPayload
+      };
+    }
+
+    if (row.status === "building_steps") {
+      const context =
+        ((row.normalized_recipe as { rawExtraction?: RawRecipeContext } | null)?.rawExtraction ??
+          (await extractRecipeContextForImport({
+            sourceUrl,
+            sourcePlatform,
+            sourcePayload
+          }))) as RawRecipeContext;
+      const reconstruction = await reconstructRecipe(context);
+      const recipe = await persistCompletedRecipe({
+        supabase,
+        jobId: row.id,
+        userId,
+        sourceUrl,
+        sourcePlatform,
+        reconstruction
+      });
+
+      return {
+        ...row,
+        status: "completed",
+        progress: 1,
+        stage_label: "Completed",
+        stage_description: "Recipe is ready",
+        normalized_recipe: recipe
+      };
+    }
+
+    return row;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Cooksy could not process this recipe import";
     await failImportJob({
       supabase,
       jobId: row.id,
@@ -312,131 +379,6 @@ const advancePipeline = async ({
       normalized_recipe: row.normalized_recipe ?? null
     };
   }
-
-  if (row.status === "queued") {
-    const metadata = deriveSourceMetadata(sourceUrl, sourcePlatform);
-
-    await supabase
-      .from("import_sources")
-      .update({
-        creator_handle: metadata.creatorHandle,
-        raw_payload: {
-          ...sourcePayload,
-          metadata
-        }
-      })
-      .eq("id", row.import_source_id);
-
-    await supabase
-      .from("recipe_import_jobs")
-      .update({
-        status: "extracting",
-        progress: 0.28,
-        stage_label: "Extracting content",
-        stage_description: "Source metadata, creator context, and captions extracted"
-      })
-      .eq("id", row.id);
-
-    return {
-      ...row,
-      status: "extracting",
-      progress: 0.28,
-      stage_label: "Extracting content",
-      stage_description: "Source metadata, creator context, and captions extracted"
-    };
-  }
-
-  if (row.status === "extracting") {
-    const draftPayload = {
-      ...sourcePayload,
-      sourceUrl,
-      platform: sourcePlatform,
-      title: typeof sourcePayload?.titleHint === "string" ? sourcePayload.titleHint : undefined,
-      creator: typeof sourcePayload?.creatorHandle === "string" ? sourcePayload.creatorHandle : undefined,
-      thumbnailUrl: null,
-      draftIngredients: [
-        "Chicken thighs",
-        "Garlic cloves",
-        "Orzo"
-      ]
-    };
-
-    await supabase
-      .from("recipe_import_jobs")
-      .update({
-        status: "identifying_ingredients",
-        progress: 0.58,
-        stage_label: "Identifying ingredients",
-        stage_description: "Drafting ingredient list and estimated quantities",
-        normalized_recipe: draftPayload
-      })
-      .eq("id", row.id);
-
-    return {
-      ...row,
-      status: "identifying_ingredients",
-      progress: 0.58,
-      stage_label: "Identifying ingredients",
-      stage_description: "Drafting ingredient list and estimated quantities",
-      normalized_recipe: draftPayload
-    };
-  }
-
-  if (row.status === "identifying_ingredients") {
-    const nextPayload = {
-      ...(row.normalized_recipe ?? {}),
-      draftSteps: [
-        "Brown the protein",
-        "Build the sauce or base",
-        "Finish and serve"
-      ]
-    };
-
-    await supabase
-      .from("recipe_import_jobs")
-      .update({
-        status: "building_steps",
-        progress: 0.86,
-        stage_label: "Building steps",
-        stage_description: "Structuring the cooking method and timings",
-        normalized_recipe: nextPayload
-      })
-      .eq("id", row.id);
-
-    return {
-      ...row,
-      status: "building_steps",
-      progress: 0.86,
-      stage_label: "Building steps",
-      stage_description: "Structuring the cooking method and timings",
-      normalized_recipe: nextPayload
-    };
-  }
-
-  if (row.status === "building_steps") {
-    const recipe = await persistCompletedRecipe({
-      supabase,
-      jobId: row.id,
-      userId,
-      sourceUrl,
-      sourcePlatform,
-      sourcePayload: {
-        ...sourcePayload,
-        ...(row.normalized_recipe ?? {})
-      }
-    });
-
-    return {
-      ...row,
-      status: "completed",
-      progress: 1,
-      stage_label: "Completed",
-      stage_description: "Recipe is ready",
-      normalized_recipe: recipe
-    };
-  }
-
-  return row;
 };
 
 Deno.serve(async (request) => {
