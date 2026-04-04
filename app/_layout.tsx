@@ -126,6 +126,7 @@ export default function RootLayout() {
           <Stack.Screen name="recipe/[id]" />
           <Stack.Screen name="recipe/[id]/edit" />
           <Stack.Screen name="recipe/[id]/cook" options={{ presentation: "fullScreenModal" }} />
+          <Stack.Screen name="recipe/[id]/grocery" />
           <Stack.Screen name="books/[id]" />
         </Stack>
       </QueryClientProvider>

@@ -1,5 +1,5 @@
 import { Link, router, useLocalSearchParams } from "expo-router";
-import { AlertCircle, LoaderCircle, PencilLine, Play, RotateCw, Save, SquareStack } from "lucide-react-native";
+import { AlertCircle, LoaderCircle, PencilLine, Play, RotateCw, Save, ShoppingBasket, SquareStack } from "lucide-react-native";
 import { useEffect } from "react";
 import { Text, View } from "react-native";
 
@@ -204,10 +204,20 @@ export default function RecipeDetailScreen() {
         </SecondaryButton>
         {recipe.status === "ready" ? (
           <>
+            <Link href={`/recipe/${recipe.id}/grocery`} asChild>
+              <View>
+                <PrimaryButton fullWidth={false}>
+                  <View className="flex-row items-center" style={{ gap: 8 }}>
+                    <ShoppingBasket size={16} color="#111111" />
+                    <Text className="text-[15px] font-semibold text-ink">Grocery List</Text>
+                  </View>
+                </PrimaryButton>
+              </View>
+            </Link>
             <SecondaryButton fullWidth={false}>
               <View className="flex-row items-center" style={{ gap: 8 }}>
                 <PencilLine size={16} color="#262626" />
-                <Text className="text-[15px] font-semibold text-soft-ink">Quick Edit Below</Text>
+                <Text className="text-[15px] font-semibold text-soft-ink">Fix Recipe Below</Text>
               </View>
             </SecondaryButton>
             <Link href={`/recipe/${recipe.id}/cook`} asChild>
@@ -260,12 +270,12 @@ export default function RecipeDetailScreen() {
         <CooksyCard className="mb-4">
           <View className="mb-4 flex-row items-center justify-between">
             <View>
-              <Text className="text-[22px] font-bold text-ink">Quick edit</Text>
-              <Text className="mt-1 text-[14px] text-muted">Fix ingredients, steps, and quantities instantly.</Text>
+              <Text className="text-[22px] font-bold text-ink">Fix recipe</Text>
+              <Text className="mt-1 text-[14px] text-muted">Correct ingredients, steps, and time estimates in one pass.</Text>
             </View>
             <Link href={`/recipe/${recipe.id}/edit`} asChild>
               <View>
-                <SecondaryButton fullWidth={false}>Open Full Editor</SecondaryButton>
+                <SecondaryButton fullWidth={false}>Open Fix Flow</SecondaryButton>
               </View>
             </Link>
           </View>
@@ -278,7 +288,10 @@ export default function RecipeDetailScreen() {
         {recipe.status === "processing" ? (
           <Text className="mt-4 text-[15px] leading-6 text-muted">Ingredients will appear here as soon as the recipe is ready.</Text>
         ) : (
-          <IngredientChecklist ingredients={recipe.ingredients} />
+          <IngredientChecklist
+            ingredients={recipe.ingredients}
+            onToggleIngredient={(ingredientId) => useCooksyStore.getState().toggleIngredientChecked(recipe.id, ingredientId)}
+          />
         )}
       </CooksyCard>
 

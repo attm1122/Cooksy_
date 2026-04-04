@@ -21,6 +21,7 @@ type CooksyState = {
   saveBook: (book: RecipeBook) => void;
   addRecipeToBook: (recipeId: string, bookId: string) => void;
   removeRecipeFromBook: (recipeId: string, bookId: string) => void;
+  toggleIngredientChecked: (recipeId: string, ingredientId: string) => void;
   startCooking: (recipeId: string) => void;
   nextCookingStep: (stepCount: number) => void;
   previousCookingStep: () => void;
@@ -145,6 +146,19 @@ export const useCooksyStore = create<CooksyState>((set) => ({
     set((state) => ({
       books: state.books.map((book) =>
         book.id === bookId ? { ...book, recipeIds: book.recipeIds.filter((id) => id !== recipeId) } : book
+      )
+    })),
+  toggleIngredientChecked: (recipeId, ingredientId) =>
+    set((state) => ({
+      recipes: state.recipes.map((recipe) =>
+        recipe.id === recipeId
+          ? {
+              ...recipe,
+              ingredients: recipe.ingredients.map((ingredient) =>
+                ingredient.id === ingredientId ? { ...ingredient, checked: !ingredient.checked } : ingredient
+              )
+            }
+          : recipe
       )
     })),
   startCooking: (recipeId) => set({ cookingRecipeId: recipeId, cookingStepIndex: 0 }),

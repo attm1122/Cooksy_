@@ -29,6 +29,7 @@ export default function CookingModeScreen() {
   }
 
   const activeStep = recipe.steps[stepIndex];
+  const progressRatio = recipe.steps.length ? (stepIndex + 1) / recipe.steps.length : 0;
 
   return (
     <ScreenContainer scroll={false}>
@@ -38,12 +39,16 @@ export default function CookingModeScreen() {
           <Text className="mb-2 text-[32px] font-bold leading-[38px] text-white">{recipe.title}</Text>
           <Text className="mb-6 text-[15px] leading-6 text-[#E8DDBE]">One step at a time, built for a real kitchen moment.</Text>
 
+          <View className="mb-6 h-2 overflow-hidden rounded-full bg-[#4A3A22]">
+            <View className="h-full rounded-full bg-brand-yellow" style={{ width: `${progressRatio * 100}%` }} />
+          </View>
+
           <View className="rounded-[32px] bg-[#FFF8E5] px-6 py-8 shadow-card">
             <Text className="mb-3 text-[13px] font-semibold uppercase tracking-[1px] text-muted">
               Step {stepIndex + 1} of {recipe.steps.length}
             </Text>
             <Text className="mb-5 text-[30px] font-bold leading-[36px] text-ink">{activeStep.title}</Text>
-            <Text className="text-[22px] leading-9 text-soft-ink">{activeStep.instruction}</Text>
+            <Text className="text-[24px] leading-10 text-soft-ink">{activeStep.instruction}</Text>
           </View>
         </View>
 

@@ -24,7 +24,10 @@ export default function EditRecipeScreen() {
   return (
     <ScreenContainer scroll={false}>
       <ScrollView contentContainerClassName="pb-10">
-        <Text className="mb-4 text-[28px] font-bold text-ink">Edit recipe</Text>
+        <Text className="mb-2 text-[28px] font-bold text-ink">Fix recipe</Text>
+        <Text className="mb-4 text-[15px] leading-6 text-muted">
+          Correct the parts Cooksy inferred, tighten the instructions, and make this version the one you actually cook from.
+        </Text>
         <RecipeEditorForm recipe={recipe} onSubmit={handleRecipeUpdate} />
       </ScrollView>
     </ScreenContainer>

@@ -5,6 +5,7 @@ import { Text, View } from "react-native";
 
 import { AppHeader } from "@/components/common/AppHeader";
 import { CooksyCard } from "@/components/common/CooksyCard";
+import { EmptyState } from "@/components/common/EmptyState";
 import { PlatformBadge } from "@/components/common/PlatformBadge";
 import { ScreenContainer } from "@/components/common/ScreenContainer";
 import { SearchInput } from "@/components/common/SearchInput";
@@ -34,47 +35,58 @@ export default function RecipesScreen() {
         <SearchInput value={query} onChangeText={setQuery} placeholder="Search recipes or tags" />
       </View>
 
-      <View style={{ gap: 14 }}>
-        {filteredRecipes.map((recipe) => (
-          <Link key={recipe.id} href={`/recipe/${recipe.id}`} asChild>
-            <CooksyCard className="p-4">
-              <View style={{ gap: 14 }}>
-                <RecipeThumbnail recipe={recipe} size="compact" timeLabel={formatMinutes(recipe.totalTimeMinutes)} />
-                <View>
-                  <Text className="mb-1 text-[18px] font-bold text-ink">{recipe.title}</Text>
-                  <Text className="mb-3 text-[14px] text-muted">
-                    {recipe.status === "processing" ? "Generating recipe..." : recipe.description}
-                  </Text>
-                </View>
-                <View className="flex-row items-center justify-between">
-                  <View className="flex-row flex-wrap items-center" style={{ gap: 8 }}>
-                    <PlatformBadge platform={recipe.source.platform} />
-                    {recipe.status === "processing" ? (
-                      <View className="flex-row items-center rounded-full bg-brand-yellow-soft px-3 py-1" style={{ gap: 6 }}>
-                        <LoaderCircle size={14} color="#111111" />
-                        <Text className="text-[12px] font-semibold text-soft-ink">Generating</Text>
-                      </View>
-                    ) : null}
-                    {recipe.status === "failed" ? (
-                      <View className="flex-row items-center rounded-full bg-[#FFF1E8] px-3 py-1" style={{ gap: 6 }}>
-                        <AlertCircle size={14} color="#8F4A1D" />
-                        <Text className="text-[12px] font-semibold text-[#8F4A1D]">Retry needed</Text>
-                      </View>
-                    ) : null}
+      {filteredRecipes.length ? (
+        <View style={{ gap: 14 }}>
+          {filteredRecipes.map((recipe) => (
+            <Link key={recipe.id} href={`/recipe/${recipe.id}`} asChild>
+              <CooksyCard className="p-4">
+                <View style={{ gap: 14 }}>
+                  <RecipeThumbnail recipe={recipe} size="compact" timeLabel={formatMinutes(recipe.totalTimeMinutes)} />
+                  <View>
+                    <Text className="mb-1 text-[18px] font-bold text-ink">{recipe.title}</Text>
+                    <Text className="mb-3 text-[14px] text-muted">
+                      {recipe.status === "processing" ? "Generating recipe..." : recipe.description}
+                    </Text>
                   </View>
-                  <Text className="text-[13px] font-semibold text-muted">
-                    {recipe.status === "processing"
-                      ? "Saved just now"
-                      : recipe.status === "failed"
-                        ? "Import incomplete"
-                        : `${recipe.totalTimeMinutes} min total`}
-                  </Text>
+                  <View className="flex-row items-center justify-between">
+                    <View className="flex-row flex-wrap items-center" style={{ gap: 8 }}>
+                      <PlatformBadge platform={recipe.source.platform} />
+                      {recipe.status === "processing" ? (
+                        <View className="flex-row items-center rounded-full bg-brand-yellow-soft px-3 py-1" style={{ gap: 6 }}>
+                          <LoaderCircle size={14} color="#111111" />
+                          <Text className="text-[12px] font-semibold text-soft-ink">Generating</Text>
+                        </View>
+                      ) : null}
+                      {recipe.status === "failed" ? (
+                        <View className="flex-row items-center rounded-full bg-[#FFF1E8] px-3 py-1" style={{ gap: 6 }}>
+                          <AlertCircle size={14} color="#8F4A1D" />
+                          <Text className="text-[12px] font-semibold text-[#8F4A1D]">Retry needed</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    <Text className="text-[13px] font-semibold text-muted">
+                      {recipe.status === "processing"
+                        ? "Saved just now"
+                        : recipe.status === "failed"
+                          ? "Import incomplete"
+                          : `${recipe.totalTimeMinutes} min total`}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            </CooksyCard>
-          </Link>
-        ))}
-      </View>
+              </CooksyCard>
+            </Link>
+          ))}
+        </View>
+      ) : (
+        <EmptyState
+          title={query ? "No recipes match that search" : "No saved recipes yet"}
+          description={
+            query
+              ? "Try a different recipe name or clear the search to see everything you’ve saved."
+              : "Paste a TikTok, Instagram Reel, or YouTube link and Cooksy will turn it into something you can cook."
+          }
+        />
+      )}
     </ScreenContainer>
   );
 }
