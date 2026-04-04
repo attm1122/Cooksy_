@@ -10,6 +10,32 @@ describe("recipe workflow service", () => {
     recipeRepository.reset();
   });
 
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  const mockYouTubeFetch = () =>
+    jest
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          title: "Creamy Garlic Chicken Orzo",
+          author_name: "Cooksy Channel",
+          thumbnail_url: "https://img.youtube.com/vi/cooksy-garlic-chicken/hqdefault.jpg"
+        })
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        text: async () =>
+          '<html><head><meta name="title" content="Creamy Garlic Chicken Orzo"></head><body>"shortDescription":"Sear chicken, add garlic, simmer with cream.","captions":{"playerCaptionsTracklistRenderer":{"captionTracks":[{"baseUrl":"https://captions.example/en","languageCode":"en"}]}}</body></html>'
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        text: async () =>
+          '<?xml version="1.0"?><transcript><text start="0" dur="2">Season the chicken</text><text start="2" dur="2">Add garlic and cream</text></transcript>'
+      } as Response);
+
   it("creates a processing recipe immediately", async () => {
     const recipe = await createProcessingRecipe("https://www.youtube.com/watch?v=cooksy123", "youtube");
 
@@ -18,6 +44,7 @@ describe("recipe workflow service", () => {
   });
 
   it("completes recipe processing after reconstruction", async () => {
+    mockYouTubeFetch();
     const result = await importRecipeFromUrl("https://www.youtube.com/watch?v=cooksy-garlic-chicken");
 
     expect(result.status).toBe("completed");
@@ -36,6 +63,7 @@ describe("recipe workflow service", () => {
   });
 
   it("updates a processing recipe in place on completion", async () => {
+    mockYouTubeFetch();
     const processingRecipe = await createProcessingRecipe("https://www.youtube.com/watch?v=cooksy-garlic-chicken", "youtube");
     await recipeRepository.create(processingRecipe);
     const finalRecipe = await importRecipeFromUrl("https://www.youtube.com/watch?v=cooksy-garlic-chicken", {

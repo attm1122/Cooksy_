@@ -98,7 +98,7 @@ describe("server recipe pipeline", () => {
     expect(recipe.status).toBe("ready");
     expect(recipe.source.platform).toBe("youtube");
     expect(recipe.confidence).toBe("high");
-    expect(recipe.ingredients[1]?.quantity).toContain("4 cloves");
+    expect(recipe.ingredients.find((ingredient) => ingredient.name === "Garlic")?.quantity).toContain("4 cloves");
   });
 
   it("hydrates instagram source context from public page signals", async () => {
