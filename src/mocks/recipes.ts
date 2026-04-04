@@ -21,6 +21,20 @@ export const mockRecipes: Recipe[] = [
     confidenceNote: "Sauce thickness and garlic quantity were inferred from similar creator recipes.",
     inferredFields: ["Garlic quantity inferred", "Sauce thickness inferred from creator visuals"],
     missingFields: [],
+    rawExtraction: {
+      sourceUrl: "https://youtube.com/watch?v=cooksy-garlic-chicken",
+      platform: "youtube",
+      title: "Creamy Garlic Chicken",
+      creator: "Mila's Kitchen",
+      caption: "One pan creamy garlic chicken. Sear chicken thighs, add garlic and cream, then finish with spinach and parmesan.",
+      transcript: "Start with six chicken thighs. Sear until golden, add five garlic cloves, one cup of cream, and finish with parmesan and spinach.",
+      ocrText: ["6 chicken thighs", "5 garlic cloves", "1 cup cream"],
+      comments: ["Used extra spinach and it worked.", "Needed the garlic amount and guessed 5 cloves."],
+      metadata: {
+        signalOrigins: ["oembed", "watch-page"]
+      },
+      thumbnailUrl: "https://picsum.photos/seed/youtube-cooksy-garlic-chicken/1280/720"
+    },
     isSaved: true,
     source: {
       creator: "Mila's Kitchen",
@@ -61,6 +75,20 @@ export const mockRecipes: Recipe[] = [
     confidenceNote: "Spice level and glaze reduction timing were estimated from the creator's narration.",
     inferredFields: ["Glaze reduction timing estimated", "Hot honey ratio inferred"],
     missingFields: ["Exact oven temperature not provided"],
+    rawExtraction: {
+      sourceUrl: "https://tiktok.com/@ninacooks/video/123456789",
+      platform: "tiktok",
+      title: "Crispy Hot Honey Salmon",
+      creator: "Nina Cooks",
+      caption: "Sticky salmon rice bowls for weeknights.",
+      transcript: null,
+      ocrText: ["2 salmon fillets", "3 tbsp honey", "rice bowl"],
+      comments: ["I used garlic butter for the glaze.", "What oven temp did you use?"],
+      metadata: {
+        signalOrigins: ["open-graph", "json-ld"]
+      },
+      thumbnailUrl: "https://picsum.photos/seed/tiktok-123456789/1280/960"
+    },
     isSaved: true,
     source: {
       creator: "Nina Cooks",
@@ -101,6 +129,20 @@ export const mockRecipes: Recipe[] = [
     confidenceNote: "Liquid ratio was confidently inferred from the visible pan consistency and cooking time.",
     inferredFields: ["Liquid ratio inferred from pan consistency"],
     missingFields: ["Final chilli amount not shown"],
+    rawExtraction: {
+      sourceUrl: "https://instagram.com/reel/CooksyTuscanPasta",
+      platform: "instagram",
+      title: "One Pan Tuscan Pasta",
+      creator: "Luca at Home",
+      caption: "Creamy tuscan pasta with spinach and parmesan.",
+      transcript: null,
+      ocrText: ["12 oz rigatoni", "3 cups stock", "3/4 cup cream"],
+      comments: ["Need the parmesan amount.", "Looks like 4 servings."],
+      metadata: {
+        signalOrigins: ["open-graph", "json-ld"]
+      },
+      thumbnailUrl: "https://picsum.photos/seed/instagram-CooksyTuscanPasta/1280/960"
+    },
     isSaved: false,
     source: {
       creator: "Luca at Home",

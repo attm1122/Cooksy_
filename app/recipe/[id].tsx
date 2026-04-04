@@ -12,6 +12,7 @@ import { ScreenContainer } from "@/components/common/ScreenContainer";
 import { IngredientChecklist } from "@/components/recipe/IngredientChecklist";
 import { RecipeEditorForm } from "@/components/recipe/RecipeEditorForm";
 import { RecipeThumbnail } from "@/components/recipe/RecipeThumbnail";
+import { SourceEvidenceSummary } from "@/components/recipe/SourceEvidenceSummary";
 import { StepCard } from "@/components/recipe/StepCard";
 import { useAddRecipeToBook, useCompleteImportJob, useRetryRecipeImport, useUpdateRecipe } from "@/hooks/use-recipes";
 import { captureError } from "@/lib/monitoring";
@@ -184,6 +185,7 @@ export default function RecipeDetailScreen() {
             inferredFields={recipe.inferredFields}
             missingFields={recipe.missingFields}
           />
+          <SourceEvidenceSummary rawExtraction={recipe.rawExtraction} />
         </View>
       </CooksyCard>
 
