@@ -22,15 +22,27 @@ describe("server recipe pipeline", () => {
   });
 
   it("hydrates youtube extraction context from oembed when available", async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        title: "Creamy Garlic Chicken Orzo",
-        author_name: "Weeknight Cook",
-        author_url: "https://youtube.com/@weeknightcook",
-        thumbnail_url: "https://i.ytimg.com/vi/abc123def45/hqdefault.jpg"
+    global.fetch = jest
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          title: "Creamy Garlic Chicken Orzo",
+          author_name: "Weeknight Cook",
+          author_url: "https://youtube.com/@weeknightcook",
+          thumbnail_url: "https://i.ytimg.com/vi/abc123def45/hqdefault.jpg"
+        })
       })
-    }) as unknown as typeof fetch;
+      .mockResolvedValueOnce({
+        ok: true,
+        text: async () =>
+          '<html><head><meta name="title" content="Creamy Garlic Chicken Orzo"></head><body>"shortDescription":"One-pan creamy garlic chicken orzo.","captions":{"playerCaptionsTracklistRenderer":{"captionTracks":[{"baseUrl":"https://captions.example/en","languageCode":"en"}]}}</body></html>'
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        text: async () =>
+          '<?xml version="1.0"?><transcript><text start="0" dur="2">Sear the chicken</text><text start="2" dur="2">Simmer the orzo</text></transcript>'
+      }) as unknown as typeof fetch;
 
     const context = await extractRecipeContextForImport({
       sourceUrl: "https://www.youtube.com/watch?v=abc123def45",
@@ -41,7 +53,9 @@ describe("server recipe pipeline", () => {
     expect(context.title).toBe("Creamy Garlic Chicken Orzo");
     expect(context.creator).toBe("Weeknight Cook");
     expect(context.thumbnailUrl).toContain("i.ytimg.com");
-    expect(context.metadata?.extractionSource).toBe("youtube-oembed");
+    expect(context.caption).toContain("One-pan creamy");
+    expect(context.transcript).toContain("Sear the chicken");
+    expect(context.metadata?.extractionSource).toBe("youtube-oembed+watch");
   });
 
   it("reconstructs a trustworthy persisted recipe from raw context", async () => {

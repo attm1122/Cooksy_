@@ -145,6 +145,14 @@ const getYouTubeThumbnailFromVideoId = (sourceUrl: string) => {
   return videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : null;
 };
 
+type YouTubeCaptionTrack = {
+  baseUrl: string;
+  languageCode?: string;
+  name?: {
+    simpleText?: string;
+  };
+};
+
 const fetchYouTubeOEmbedMetadata = async (sourceUrl: string) => {
   const endpoint = new URL("https://www.youtube.com/oembed");
   endpoint.searchParams.set("url", sourceUrl);
@@ -160,6 +168,185 @@ const fetchYouTubeOEmbedMetadata = async (sourceUrl: string) => {
     author_name?: string;
     author_url?: string;
     thumbnail_url?: string;
+  };
+};
+
+const decodeHtmlEntities = (value: string) =>
+  value
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
+
+const collapseWhitespace = (value: string) => value.replace(/\s+/g, " ").trim();
+
+const pickJsonCandidate = (html: string, markers: string[]) => {
+  for (const marker of markers) {
+    const index = html.indexOf(marker);
+
+    if (index === -1) {
+      continue;
+    }
+
+    const start = html.indexOf("{", index);
+    if (start === -1) {
+      continue;
+    }
+
+    let depth = 0;
+    let inString = false;
+    let escaping = false;
+
+    for (let cursor = start; cursor < html.length; cursor += 1) {
+      const char = html[cursor];
+
+      if (escaping) {
+        escaping = false;
+        continue;
+      }
+
+      if (char === "\\") {
+        escaping = true;
+        continue;
+      }
+
+      if (char === '"') {
+        inString = !inString;
+        continue;
+      }
+
+      if (inString) {
+        continue;
+      }
+
+      if (char === "{") {
+        depth += 1;
+      } else if (char === "}") {
+        depth -= 1;
+
+        if (depth === 0) {
+          return html.slice(start, cursor + 1);
+        }
+      }
+    }
+  }
+
+  return null;
+};
+
+const extractCaptionTracksFromWatchHtml = (html: string): YouTubeCaptionTrack[] => {
+  const jsonCandidate = pickJsonCandidate(html, ['"captions":', "ytInitialPlayerResponse ="]);
+
+  if (!jsonCandidate) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(jsonCandidate) as {
+      captions?: {
+        playerCaptionsTracklistRenderer?: {
+          captionTracks?: YouTubeCaptionTrack[];
+        };
+      };
+      playerCaptionsTracklistRenderer?: {
+        captionTracks?: YouTubeCaptionTrack[];
+      };
+    };
+
+    return parsed.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? parsed.playerCaptionsTracklistRenderer?.captionTracks ?? [];
+  } catch {
+    return [];
+  }
+};
+
+const extractDescriptionFromWatchHtml = (html: string) => {
+  const patterns = [/"shortDescription":"([^"]+)"/, /"description":{"simpleText":"([^"]+)"}/];
+
+  for (const pattern of patterns) {
+    const match = html.match(pattern);
+
+    if (match?.[1]) {
+      return collapseWhitespace(decodeHtmlEntities(match[1].replace(/\\n/g, " ")));
+    }
+  }
+
+  return null;
+};
+
+const extractCreatorFromWatchHtml = (html: string) => {
+  const patterns = [/"ownerChannelName":"([^"]+)"/, /"author":"([^"]+)"/];
+
+  for (const pattern of patterns) {
+    const match = html.match(pattern);
+
+    if (match?.[1]) {
+      return collapseWhitespace(decodeHtmlEntities(match[1]));
+    }
+  }
+
+  return null;
+};
+
+const extractTitleFromWatchHtml = (html: string) => {
+  const patterns = [/<meta name="title" content="([^"]+)">/, /"title":"([^"]+)"/];
+
+  for (const pattern of patterns) {
+    const match = html.match(pattern);
+
+    if (match?.[1]) {
+      return collapseWhitespace(decodeHtmlEntities(match[1]));
+    }
+  }
+
+  return null;
+};
+
+const parseYouTubeTranscriptXml = (xml: string) => {
+  const matches = Array.from(xml.matchAll(/<text\b[^>]*>([\s\S]*?)<\/text>/g));
+
+  if (!matches.length) {
+    return null;
+  }
+
+  return collapseWhitespace(
+    decodeHtmlEntities(
+      matches
+        .map((match) => match[1].replace(/<[^>]+>/g, " "))
+        .join(" ")
+    )
+  );
+};
+
+const fetchYouTubeTranscriptFromTrack = async (track: YouTubeCaptionTrack) => {
+  const response = await fetch(track.baseUrl);
+
+  if (!response.ok) {
+    return null;
+  }
+
+  return parseYouTubeTranscriptXml(await response.text());
+};
+
+const fetchYouTubeWatchPageSignals = async (sourceUrl: string) => {
+  const response = await fetch(`https://www.youtube.com/watch?v=${getYouTubeVideoId(sourceUrl) ?? ""}`);
+
+  if (!response.ok) {
+    return {};
+  }
+
+  const html = await response.text();
+  const captionTracks = extractCaptionTracksFromWatchHtml(html);
+  const preferredTrack =
+    captionTracks.find((track) => track.languageCode?.toLowerCase().startsWith("en")) ?? captionTracks[0];
+  const transcript = preferredTrack ? await fetchYouTubeTranscriptFromTrack(preferredTrack) : null;
+
+  return {
+    title: extractTitleFromWatchHtml(html),
+    creator: extractCreatorFromWatchHtml(html),
+    description: extractDescriptionFromWatchHtml(html),
+    transcript,
+    captionTracks
   };
 };
 
@@ -374,20 +561,34 @@ export const extractRecipeContextForImport = async ({
   }
 
   try {
-    const oembed = await fetchYouTubeOEmbedMetadata(sourceUrl);
+    const [oembed, watchSignals] = await Promise.all([
+      fetchYouTubeOEmbedMetadata(sourceUrl),
+      fetchYouTubeWatchPageSignals(sourceUrl).catch(() => null)
+    ]);
 
     return {
       ...baseContext,
       sourceUrl,
       platform: sourcePlatform,
-      title: oembed.title ?? baseContext.title,
-      creator: oembed.author_name ?? baseContext.creator,
+      title: oembed.title ?? watchSignals?.title ?? baseContext.title,
+      creator: oembed.author_name ?? watchSignals?.creator ?? baseContext.creator,
+      caption: watchSignals?.description ?? baseContext.caption,
+      transcript: watchSignals?.transcript ?? baseContext.transcript,
       thumbnailUrl: oembed.thumbnail_url ?? baseContext.thumbnailUrl ?? getThumbnailFromContext(baseContext),
       metadata: {
         ...(baseContext.metadata ?? {}),
         videoId: getYouTubeVideoId(sourceUrl),
         authorUrl: oembed.author_url ?? null,
-        extractionSource: "youtube-oembed"
+        watchSignalsAvailable: Boolean(watchSignals?.description || watchSignals?.transcript),
+        captionTrackCount: watchSignals?.captionTracks?.length ?? 0,
+        extractionSource:
+          oembed && (watchSignals?.description || watchSignals?.transcript)
+            ? "youtube-oembed+watch"
+            : oembed
+              ? "youtube-oembed"
+              : watchSignals?.description || watchSignals?.transcript
+                ? "youtube-watch"
+                : "mock-fallback"
       }
     };
   } catch {

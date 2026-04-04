@@ -1,6 +1,6 @@
 import { detectPlatformFromUrl, parseInstagramUrl, parseTikTokUrl, parseYouTubeUrl } from "@/features/recipes/lib/platform";
 import { ExtractionFailedError } from "@/features/recipes/lib/errors";
-import { fetchYouTubeOEmbedMetadata, getYouTubeThumbnailFromVideoId } from "@/features/recipes/lib/youtube";
+import { fetchYouTubeOEmbedMetadata, fetchYouTubeWatchPageSignals, getYouTubeThumbnailFromVideoId } from "@/features/recipes/lib/youtube";
 import { getMockContextForUrl } from "@/features/recipes/mocks/sourceContexts";
 import { getThumbnailFromContext } from "@/features/recipes/services/thumbnailService";
 import type { RawRecipeContext } from "@/features/recipes/types";
@@ -13,19 +13,33 @@ export const extractYouTubeContext = async (url: string): Promise<RawRecipeConte
   const mockContext = getMockContextForUrl(url, "youtube");
 
   try {
-    const oembed = await fetchYouTubeOEmbedMetadata(parsed.normalizedUrl);
+    const [oembed, watchSignals] = await Promise.all([
+      fetchYouTubeOEmbedMetadata(parsed.normalizedUrl),
+      fetchYouTubeWatchPageSignals(parsed.normalizedUrl).catch(() => null)
+    ]);
 
     return {
       ...mockContext,
       sourceUrl: parsed.normalizedUrl,
       platform: "youtube",
-      title: oembed?.title ?? mockContext.title,
-      creator: oembed?.author_name ?? mockContext.creator,
+      title: oembed?.title ?? watchSignals?.title ?? mockContext.title,
+      creator: oembed?.author_name ?? watchSignals?.creator ?? mockContext.creator,
+      caption: watchSignals?.description ?? mockContext.caption,
+      transcript: watchSignals?.transcript ?? mockContext.transcript,
       metadata: {
         ...(mockContext.metadata ?? {}),
         videoId: parsed.videoId,
         authorUrl: oembed?.author_url ?? null,
-        extractionSource: oembed ? "youtube-oembed" : "mock-fallback"
+        watchSignalsAvailable: Boolean(watchSignals?.description || watchSignals?.transcript),
+        captionTrackCount: watchSignals?.captionTracks?.length ?? 0,
+        extractionSource:
+          oembed && (watchSignals?.description || watchSignals?.transcript)
+            ? "youtube-oembed+watch"
+            : oembed
+              ? "youtube-oembed"
+              : watchSignals?.description || watchSignals?.transcript
+                ? "youtube-watch"
+                : "mock-fallback"
       },
       thumbnailUrl: oembed?.thumbnail_url ?? getYouTubeThumbnailFromVideoId(parsed.normalizedUrl) ?? getThumbnailFromContext(mockContext)
     };
