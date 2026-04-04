@@ -17,7 +17,9 @@ const inferPlatformFromUrl = (url: string) => {
   return "youtube";
 };
 
-const buildMockRecipe = (sourceUrl: string, sourcePlatform: string) => ({
+const buildMockRecipe = (sourceUrl: string, sourcePlatform: string, importJobId: string) => ({
+  status: "ready",
+  importJobId,
   title: "Cooksy Imported Chicken Orzo",
   description: "A starter imported recipe emitted by the first backend pipeline.",
   heroNote: "Generated from a social video URL and ready for later enrichment.",
@@ -30,7 +32,10 @@ const buildMockRecipe = (sourceUrl: string, sourcePlatform: string) => ({
   cookTimeMinutes: 25,
   totalTimeMinutes: 40,
   confidence: "medium",
+  confidenceScore: 74,
   confidenceNote: "Ingredient quantities and timings were inferred from source content.",
+  inferredFields: ["Garlic quantity inferred", "Simmer timing estimated from visuals"],
+  missingFields: ["Oven temperature not provided"],
   isSaved: true,
   source: {
     creator: "Imported Creator",
@@ -49,6 +54,143 @@ const buildMockRecipe = (sourceUrl: string, sourcePlatform: string) => ({
   ],
   tags: ["Imported", "Weeknight"]
 });
+
+const getJobState = (createdAt: string) => {
+  const elapsedMs = Date.now() - new Date(createdAt).getTime();
+
+  if (elapsedMs < 5_000) {
+    return {
+      status: "queued",
+      progress: 0.08,
+      stage_label: "Queued",
+      stage_description: "Import request accepted and waiting to process"
+    };
+  }
+
+  if (elapsedMs < 10_000) {
+    return {
+      status: "extracting",
+      progress: 0.28,
+      stage_label: "Extracting content",
+      stage_description: "Pulling source metadata, captions, and creator context"
+    };
+  }
+
+  if (elapsedMs < 15_000) {
+    return {
+      status: "identifying_ingredients",
+      progress: 0.58,
+      stage_label: "Identifying ingredients",
+      stage_description: "Inferring ingredient list and estimated quantities"
+    };
+  }
+
+  if (elapsedMs < 20_000) {
+    return {
+      status: "building_steps",
+      progress: 0.86,
+      stage_label: "Building steps",
+      stage_description: "Structuring the cooking method and timings"
+    };
+  }
+
+  return {
+    status: "completed",
+    progress: 1,
+    stage_label: "Completed",
+    stage_description: "Recipe is ready"
+  };
+};
+
+const persistCompletedRecipe = async ({
+  supabase,
+  jobId,
+  sourceUrl,
+  sourcePlatform
+}: {
+  supabase: ReturnType<typeof createClient>;
+  jobId: string;
+  sourceUrl: string;
+  sourcePlatform: string;
+}) => {
+  const mockRecipe = buildMockRecipe(sourceUrl, sourcePlatform, jobId);
+  const { data: existingRecipe } = await supabase
+    .from("recipes")
+    .select("id")
+    .eq("import_job_id", jobId)
+    .maybeSingle();
+
+  let recipeId = existingRecipe?.id as string | undefined;
+
+  if (!recipeId) {
+    const { data: createdRecipe, error: recipeError } = await supabase
+      .from("recipes")
+      .insert({
+        import_job_id: jobId,
+        status: mockRecipe.status,
+        title: mockRecipe.title,
+        description: mockRecipe.description,
+        hero_note: mockRecipe.heroNote,
+        image_label: mockRecipe.imageLabel,
+        thumbnail_url: mockRecipe.thumbnailUrl,
+        thumbnail_source: mockRecipe.thumbnailSource,
+        thumbnail_fallback_style: mockRecipe.thumbnailFallbackStyle,
+        servings: mockRecipe.servings,
+        prep_time_minutes: mockRecipe.prepTimeMinutes,
+        cook_time_minutes: mockRecipe.cookTimeMinutes,
+        total_time_minutes: mockRecipe.totalTimeMinutes,
+        confidence: mockRecipe.confidence,
+        confidence_score: mockRecipe.confidenceScore,
+        confidence_note: mockRecipe.confidenceNote,
+        inferred_fields: mockRecipe.inferredFields,
+        missing_fields: mockRecipe.missingFields,
+        source_creator: mockRecipe.source.creator,
+        source_url: mockRecipe.source.url,
+        source_platform: mockRecipe.source.platform,
+        tags: mockRecipe.tags
+      })
+      .select("id")
+      .single();
+
+    if (recipeError) {
+      throw recipeError;
+    }
+
+    recipeId = createdRecipe.id;
+
+    const ingredientRows = mockRecipe.ingredients.map((ingredient, index) => ({
+      recipe_id: recipeId,
+      position: index,
+      name: ingredient.name,
+      quantity: ingredient.quantity,
+      optional: Boolean(ingredient.optional)
+    }));
+
+    const stepRows = mockRecipe.steps.map((step, index) => ({
+      recipe_id: recipeId,
+      position: index,
+      title: step.title,
+      instruction: step.instruction,
+      duration_minutes: step.durationMinutes ?? null
+    }));
+
+    await supabase.from("recipe_ingredients").insert(ingredientRows);
+    await supabase.from("recipe_steps").insert(stepRows);
+  }
+
+  await supabase
+    .from("recipe_import_jobs")
+    .update({
+      status: "completed",
+      progress: 1,
+      stage_label: "Completed",
+      stage_description: "Recipe is ready",
+      normalized_recipe: mockRecipe
+    })
+    .eq("id", jobId);
+
+  return mockRecipe;
+};
 
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") {
@@ -149,11 +291,28 @@ Deno.serve(async (request) => {
     }
 
     const source = Array.isArray(row.import_sources) ? row.import_sources[0] : row.import_sources;
+    const derivedState = row.status === "failed" ? null : getJobState(row.created_at);
+
+    if (derivedState && derivedState.status !== row.status) {
+      await supabase
+        .from("recipe_import_jobs")
+        .update(derivedState)
+        .eq("id", jobId);
+      row.status = derivedState.status;
+      row.progress = derivedState.progress;
+      row.stage_label = derivedState.stage_label;
+      row.stage_description = derivedState.stage_description;
+    }
+
     const normalizedRecipe =
-      row.normalized_recipe ??
-      (row.status === "completed"
-        ? buildMockRecipe(source.source_url, source.source_platform)
-        : undefined);
+      row.status === "completed"
+        ? await persistCompletedRecipe({
+            supabase,
+            jobId,
+            sourceUrl: source.source_url,
+            sourcePlatform: source.source_platform
+          })
+        : row.normalized_recipe ?? undefined;
 
     return Response.json(
       {

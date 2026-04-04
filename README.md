@@ -93,6 +93,16 @@ This repo now includes the first real backend seam:
 - `src/lib/env.ts` and `src/lib/supabase.ts` add environment-aware backend wiring
 - `supabase/migrations/20260404100000_cooksy_core.sql` defines import jobs, recipes, ingredients, steps, books, and join tables
 - `supabase/functions/import-recipe/index.ts` provides the first import edge-function contract for creating and polling jobs
+- `supabase/migrations/20260404223000_recipe_production_fields.sql` adds production-oriented recipe fields and a unique persisted linkage from import jobs to recipes
+
+### Current production-ready backend slice
+
+The import flow now supports a more realistic persisted lifecycle:
+
+- import jobs progress on the backend based on server-side job state
+- completed jobs persist a recipe row plus ingredient and step rows
+- the app hydrates recent persisted recipes on startup and merges them into local state
+- save-first imports can now survive beyond a single frontend session once the Supabase migrations and edge function are deployed
 
 ### Environment
 

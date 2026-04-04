@@ -11,6 +11,8 @@ import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { queryClient } from "@/lib/query-client";
+import { fetchRecentRecipes } from "@/services/recipe-service";
+import { useCooksyStore } from "@/store/use-cooksy-store";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -20,12 +22,27 @@ export default function RootLayout() {
     Inter_600SemiBold,
     Inter_700Bold
   });
+  const mergeRecipes = useCooksyStore((state) => state.mergeRecipes);
 
   useEffect(() => {
     if (loaded || error) {
       SplashScreen.hideAsync();
     }
   }, [error, loaded]);
+
+  useEffect(() => {
+    if (!loaded) {
+      return;
+    }
+
+    fetchRecentRecipes()
+      .then((recipes) => {
+        mergeRecipes(recipes);
+      })
+      .catch(() => {
+        return;
+      });
+  }, [loaded, mergeRecipes]);
 
   if (!loaded && !error) {
     return null;
