@@ -39,6 +39,7 @@ const loadRecipeService = ({
   let recipeService: RecipeServiceModule | undefined;
 
   jest.isolateModules(() => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     recipeService = require("@/services/recipe-service") as RecipeServiceModule;
   });
 
