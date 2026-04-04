@@ -29,6 +29,8 @@ export default function RootLayout() {
   });
   const mergeBooks = useCooksyStore((state) => state.mergeBooks);
   const mergeRecipes = useCooksyStore((state) => state.mergeRecipes);
+  const setRecipesHydrationError = useCooksyStore((state) => state.setRecipesHydrationError);
+  const setBooksHydrationError = useCooksyStore((state) => state.setBooksHydrationError);
   const authStatus = useAuthStore((state) => state.status);
   const setAuthState = useAuthStore((state) => state.setAuthState);
 
@@ -86,9 +88,11 @@ export default function RootLayout() {
 
     fetchRecentRecipes()
       .then((recipes) => {
+        setRecipesHydrationError(undefined);
         mergeRecipes(recipes);
       })
       .catch((fetchError) => {
+        setRecipesHydrationError(fetchError instanceof Error ? fetchError.message : "Could not load recipes");
         captureError(fetchError, {
           action: "hydrate_recipes_on_boot"
         });
@@ -96,14 +100,16 @@ export default function RootLayout() {
 
     fetchRecipeBooks()
       .then((books) => {
+        setBooksHydrationError(undefined);
         mergeBooks(books);
       })
       .catch((fetchError) => {
+        setBooksHydrationError(fetchError instanceof Error ? fetchError.message : "Could not load recipe books");
         captureError(fetchError, {
           action: "hydrate_books_on_boot"
         });
       });
-  }, [authStatus, loaded, mergeBooks, mergeRecipes]);
+  }, [authStatus, loaded, mergeBooks, mergeRecipes, setBooksHydrationError, setRecipesHydrationError]);
 
   if (!loaded && !error) {
     return null;

@@ -15,6 +15,7 @@ import { formatMinutes } from "@/utils/time";
 
 export default function RecipesScreen() {
   const recipes = useCooksyStore((state) => state.recipes);
+  const recipesHydrationError = useCooksyStore((state) => state.recipesHydrationError);
   const [query, setQuery] = useState("");
 
   const filteredRecipes = useMemo(
@@ -77,6 +78,11 @@ export default function RecipesScreen() {
             </Link>
           ))}
         </View>
+      ) : recipesHydrationError ? (
+        <EmptyState
+          title="Could not load your recipes"
+          description="Cooksy couldn't reach your saved recipes right now. Check the connection and try again instead of relying on stale or demo data."
+        />
       ) : (
         <EmptyState
           title={query ? "No recipes match that search" : "No saved recipes yet"}

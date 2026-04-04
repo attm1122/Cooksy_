@@ -1,4 +1,4 @@
-import { hasSupabaseConfig } from "@/lib/env";
+import { appEnv, hasSupabaseConfig } from "@/lib/env";
 import { trackEvent } from "@/lib/analytics";
 import { captureError } from "@/lib/monitoring";
 import { supabase } from "@/lib/supabase";
@@ -12,6 +12,7 @@ import {
 import type { ImportProgress, Recipe, RecipeBook } from "@/types/recipe";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const shouldUseSeedData = appEnv.recipeImportMode === "mock" || !hasSupabaseConfig;
 
 const mapRemoteRecipe = (row: any): Recipe => ({
   id: row.id,
@@ -129,15 +130,20 @@ export const fetchRecentRecipes = async (): Promise<Recipe[]> => {
       captureError(error, {
         action: "fetch_recent_recipes"
       });
+      throw error;
     }
   }
 
-  await sleep(120);
-  trackEvent("recipes_hydrated", {
-    count: mockRecipes.length,
-    source: "mock"
-  });
-  return mockRecipes;
+  if (shouldUseSeedData) {
+    await sleep(120);
+    trackEvent("recipes_hydrated", {
+      count: mockRecipes.length,
+      source: "mock"
+    });
+    return mockRecipes;
+  }
+
+  return [];
 };
 
 export const fetchRecipeById = async (recipeId: string): Promise<Recipe | undefined> => {
@@ -174,15 +180,20 @@ export const fetchRecipeBooks = async (): Promise<RecipeBook[]> => {
       captureError(error, {
         action: "fetch_recipe_books"
       });
+      throw error;
     }
   }
 
-  await sleep(120);
-  trackEvent("books_hydrated", {
-    count: mockBooks.length,
-    source: "mock"
-  });
-  return mockBooks;
+  if (shouldUseSeedData) {
+    await sleep(120);
+    trackEvent("books_hydrated", {
+      count: mockBooks.length,
+      source: "mock"
+    });
+    return mockBooks;
+  }
+
+  return [];
 };
 
 export const beginRecipeImport = async (url: string) => runBeginRecipeImport(url);
@@ -204,71 +215,55 @@ export const retryRecipeImport = async (
 
 export const updateRecipeInBackend = async (recipe: Recipe): Promise<Recipe> => {
   if (hasSupabaseConfig && supabase) {
-    const { error: recipeError } = await supabase
-      .from("recipes")
-      .update({
-        status: recipe.status,
-        title: recipe.title,
-        description: recipe.description,
-        hero_note: recipe.heroNote,
-        image_label: recipe.imageLabel,
-        thumbnail_url: recipe.thumbnailUrl,
-        thumbnail_source: recipe.thumbnailSource,
-        thumbnail_fallback_style: recipe.thumbnailFallbackStyle ?? null,
-        servings: recipe.servings,
-        prep_time_minutes: recipe.prepTimeMinutes,
-        cook_time_minutes: recipe.cookTimeMinutes,
-        total_time_minutes: recipe.totalTimeMinutes,
-        confidence: recipe.confidence,
-        confidence_score: recipe.confidenceScore,
-        confidence_note: recipe.confidenceNote,
-        inferred_fields: recipe.inferredFields,
-        missing_fields: recipe.missingFields,
-        raw_extraction: recipe.rawExtraction ?? null,
-        source_creator: recipe.source.creator,
-        source_url: recipe.source.url,
-        source_platform: recipe.source.platform,
-        tags: recipe.tags
-      })
-      .eq("id", recipe.id);
+    const { error } = await supabase.rpc("save_recipe_graph", {
+      p_recipe_id: recipe.id,
+      p_user_id: null,
+      p_import_job_id: recipe.importJobId ?? null,
+      p_status: recipe.status,
+      p_title: recipe.title,
+      p_description: recipe.description,
+      p_hero_note: recipe.heroNote,
+      p_image_label: recipe.imageLabel,
+      p_thumbnail_url: recipe.thumbnailUrl,
+      p_thumbnail_source: recipe.thumbnailSource,
+      p_thumbnail_fallback_style: recipe.thumbnailFallbackStyle ?? null,
+      p_servings: recipe.servings,
+      p_prep_time_minutes: recipe.prepTimeMinutes,
+      p_cook_time_minutes: recipe.cookTimeMinutes,
+      p_total_time_minutes: recipe.totalTimeMinutes,
+      p_confidence: recipe.confidence,
+      p_confidence_score: recipe.confidenceScore,
+      p_confidence_note: recipe.confidenceNote,
+      p_inferred_fields: recipe.inferredFields,
+      p_missing_fields: recipe.missingFields,
+      p_raw_extraction: recipe.rawExtraction ?? null,
+      p_source_creator: recipe.source.creator,
+      p_source_url: recipe.source.url,
+      p_source_platform: recipe.source.platform,
+      p_tags: recipe.tags,
+      p_ingredients: recipe.ingredients.map((ingredient) => ({
+        name: ingredient.name,
+        quantity: ingredient.quantity,
+        optional: Boolean(ingredient.optional)
+      })),
+      p_steps: recipe.steps.map((step) => ({
+        title: step.title,
+        instruction: step.instruction,
+        duration_minutes: step.durationMinutes ?? null
+      }))
+    });
 
-    if (!recipeError) {
-      await supabase.from("recipe_ingredients").delete().eq("recipe_id", recipe.id);
-      await supabase.from("recipe_steps").delete().eq("recipe_id", recipe.id);
-
-      if (recipe.ingredients.length) {
-        await supabase.from("recipe_ingredients").insert(
-          recipe.ingredients.map((ingredient, index) => ({
-            recipe_id: recipe.id,
-            position: index,
-            name: ingredient.name,
-            quantity: ingredient.quantity,
-            optional: Boolean(ingredient.optional)
-          }))
-        );
-      }
-
-      if (recipe.steps.length) {
-        await supabase.from("recipe_steps").insert(
-          recipe.steps.map((step, index) => ({
-            recipe_id: recipe.id,
-            position: index,
-            title: step.title,
-            instruction: step.instruction,
-            duration_minutes: step.durationMinutes ?? null
-          }))
-        );
-      }
-
+    if (!error) {
       trackEvent("recipe_updated", {
         recipeId: recipe.id,
         status: recipe.status
       });
     } else {
-      captureError(recipeError, {
+      captureError(error, {
         action: "update_recipe",
         recipeId: recipe.id
       });
+      throw error;
     }
   }
 
@@ -305,16 +300,21 @@ export const createRecipeBookInBackend = async (input: Pick<RecipeBook, "name" |
         action: "create_recipe_book",
         name: input.name
       });
+      throw error;
     }
   }
 
-  return {
-    id: `local-book-${Date.now()}`,
-    name: input.name,
-    description: input.description,
-    coverTone: input.coverTone,
-    recipeIds: []
-  };
+  if (shouldUseSeedData) {
+    return {
+      id: `local-book-${Date.now()}`,
+      name: input.name,
+      description: input.description,
+      coverTone: input.coverTone,
+      recipeIds: []
+    };
+  }
+
+  throw new Error("Cooksy could not create this book right now");
 };
 
 export const addRecipeToBookInBackend = async (recipeId: string, bookId: string): Promise<void> => {
@@ -333,7 +333,7 @@ export const addRecipeToBookInBackend = async (recipeId: string, bookId: string)
         recipeId,
         bookId
       });
-      return;
+      throw error;
     }
   }
 
@@ -353,7 +353,7 @@ export const removeRecipeFromBookInBackend = async (recipeId: string, bookId: st
         recipeId,
         bookId
       });
-      return;
+      throw error;
     }
   }
 

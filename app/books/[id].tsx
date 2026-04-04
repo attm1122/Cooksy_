@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from "expo-router";
 import { AlertCircle, LoaderCircle } from "lucide-react-native";
-import { Text, View } from "react-native";
+import { Alert, Text, View } from "react-native";
 
 import { EmptyState } from "@/components/common/EmptyState";
 import { CooksyCard } from "@/components/common/CooksyCard";
@@ -25,7 +25,15 @@ export default function BookDetailScreen() {
 
   const handleRemove = (recipeId: string) => {
     removeRecipeFromBook(recipeId, book.id);
-    removeMutation.mutate({ recipeId, bookId: book.id });
+    removeMutation.mutate(
+      { recipeId, bookId: book.id },
+      {
+        onError: () => {
+          useCooksyStore.getState().addRecipeToBook(recipeId, book.id);
+          Alert.alert("Book not updated", "Cooksy couldn't remove this recipe from the book yet.");
+        }
+      }
+    );
   };
 
   return (

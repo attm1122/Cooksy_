@@ -1,7 +1,7 @@
 import { Link, router, useLocalSearchParams } from "expo-router";
 import { AlertCircle, LoaderCircle, PencilLine, Play, RotateCw, Save, ShoppingBasket, SquareStack } from "lucide-react-native";
 import { useEffect } from "react";
-import { Text, View } from "react-native";
+import { Alert, Text, View } from "react-native";
 
 import { ConfidenceBanner } from "@/components/common/ConfidenceBanner";
 import { PrimaryButton, SecondaryButton } from "@/components/common/Buttons";
@@ -32,6 +32,7 @@ export default function RecipeDetailScreen() {
   const removeRecipe = useCooksyStore((state) => state.removeRecipe);
   const books = useCooksyStore((state) => state.books);
   const addRecipeToBook = useCooksyStore((state) => state.addRecipeToBook);
+  const removeRecipeFromBook = useCooksyStore((state) => state.removeRecipeFromBook);
   const updateRecipeMutation = useUpdateRecipe();
   const addToBookMutation = useAddRecipeToBook();
   const completeImportMutation = useCompleteImportJob();
@@ -84,8 +85,18 @@ export default function RecipeDetailScreen() {
 
   const defaultBook = books[0];
   const handleRecipeUpdate = (nextRecipe: typeof recipe) => {
+    const previousRecipe = recipe;
     updateRecipe(nextRecipe);
-    updateRecipeMutation.mutate(nextRecipe);
+    updateRecipeMutation.mutate(nextRecipe, {
+      onError: (error) => {
+        updateRecipe(previousRecipe);
+        captureError(error, {
+          action: "recipe_edit_persist",
+          recipeId: previousRecipe.id
+        });
+        Alert.alert("Edits not saved", "Cooksy couldn't save those changes yet. Your local edits were rolled back.");
+      }
+    });
   };
 
   const handleSaveToBook = () => {
@@ -94,7 +105,20 @@ export default function RecipeDetailScreen() {
     }
 
     addRecipeToBook(recipe.id, defaultBook.id);
-    addToBookMutation.mutate({ recipeId: recipe.id, bookId: defaultBook.id });
+    addToBookMutation.mutate(
+      { recipeId: recipe.id, bookId: defaultBook.id },
+      {
+        onError: (error) => {
+          removeRecipeFromBook(recipe.id, defaultBook.id);
+          captureError(error, {
+            action: "recipe_save_to_book",
+            recipeId: recipe.id,
+            bookId: defaultBook.id
+          });
+          Alert.alert("Book not updated", "Cooksy couldn't save that book change. Nothing was synced.");
+        }
+      }
+    );
   };
 
   const handleRetry = () => {

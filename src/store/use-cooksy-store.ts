@@ -1,18 +1,25 @@
 import { create } from "zustand";
 
+import { appEnv, hasSupabaseConfig } from "@/lib/env";
 import { mockBooks, mockRecipes } from "@/mocks/recipes";
 import type { ImportProgress, Recipe, RecipeBook } from "@/types/recipe";
+
+const shouldUseSeedData = appEnv.recipeImportMode === "mock" || !hasSupabaseConfig;
 
 type CooksyState = {
   recipes: Recipe[];
   books: RecipeBook[];
   selectedRecipeId?: string;
   lastCompletedRecipeId?: string;
+  recipesHydrationError?: string;
+  booksHydrationError?: string;
   importProgress: ImportProgress;
   cookingRecipeId?: string;
   cookingStepIndex: number;
   setSelectedRecipe: (recipeId?: string) => void;
   setLastCompletedRecipeId: (recipeId?: string) => void;
+  setRecipesHydrationError: (message?: string) => void;
+  setBooksHydrationError: (message?: string) => void;
   setImportProgress: (progress: Partial<ImportProgress>) => void;
   saveRecipe: (recipe: Recipe) => void;
   updateRecipe: (recipe: Recipe) => void;
@@ -37,15 +44,19 @@ export const initialImportProgress: ImportProgress = {
 };
 
 export const useCooksyStore = create<CooksyState>((set) => ({
-  recipes: mockRecipes,
-  books: mockBooks,
-  selectedRecipeId: mockRecipes[0]?.id,
+  recipes: shouldUseSeedData ? mockRecipes : [],
+  books: shouldUseSeedData ? mockBooks : [],
+  selectedRecipeId: shouldUseSeedData ? mockRecipes[0]?.id : undefined,
   lastCompletedRecipeId: undefined,
+  recipesHydrationError: undefined,
+  booksHydrationError: undefined,
   importProgress: initialImportProgress,
   cookingRecipeId: undefined,
   cookingStepIndex: 0,
   setSelectedRecipe: (recipeId) => set({ selectedRecipeId: recipeId }),
   setLastCompletedRecipeId: (recipeId) => set({ lastCompletedRecipeId: recipeId }),
+  setRecipesHydrationError: (message) => set({ recipesHydrationError: message }),
+  setBooksHydrationError: (message) => set({ booksHydrationError: message }),
   setImportProgress: (progress) =>
     set((state) => ({
       importProgress: {

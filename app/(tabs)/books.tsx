@@ -6,24 +6,28 @@ import { Text, TextInput, View } from "react-native";
 import { AppHeader } from "@/components/common/AppHeader";
 import { PrimaryButton, SecondaryButton } from "@/components/common/Buttons";
 import { CooksyCard } from "@/components/common/CooksyCard";
+import { EmptyState } from "@/components/common/EmptyState";
 import { BookCard } from "@/components/recipe/BookCard";
 import { ScreenContainer } from "@/components/common/ScreenContainer";
-import { useCreateRecipeBook, useRecipeBooks } from "@/hooks/use-recipes";
+import { useCreateRecipeBook } from "@/hooks/use-recipes";
 import { useCooksyStore } from "@/store/use-cooksy-store";
 
 export default function BooksScreen() {
-  const { data: books = [] } = useRecipeBooks();
+  const books = useCooksyStore((state) => state.books);
+  const booksHydrationError = useCooksyStore((state) => state.booksHydrationError);
   const saveBook = useCooksyStore((state) => state.saveBook);
   const createBook = useCreateRecipeBook();
   const [creating, setCreating] = useState(false);
   const [bookName, setBookName] = useState("");
   const [bookDescription, setBookDescription] = useState("");
+  const [createError, setCreateError] = useState<string | undefined>();
 
   const handleCreateBook = () => {
     if (!bookName.trim()) {
       return;
     }
 
+    setCreateError(undefined);
     createBook.mutate(
       {
         name: bookName.trim(),
@@ -36,6 +40,9 @@ export default function BooksScreen() {
           setBookName("");
           setBookDescription("");
           setCreating(false);
+        },
+        onError: (error) => {
+          setCreateError(error instanceof Error ? error.message : "Cooksy could not create this book right now");
         }
       }
     );
@@ -75,6 +82,7 @@ export default function BooksScreen() {
               placeholderTextColor="#8A8478"
               className="rounded-[22px] border border-line bg-cream px-4 py-4 text-[15px] text-soft-ink"
             />
+            {createError ? <Text className="text-[13px] text-danger">{createError}</Text> : null}
             <PrimaryButton onPress={handleCreateBook} loading={createBook.isPending}>
               Save Book
             </PrimaryButton>
@@ -82,15 +90,27 @@ export default function BooksScreen() {
         </CooksyCard>
       ) : null}
 
-      <View style={{ gap: 14 }}>
-        {books.map((book) => (
-          <Link key={book.id} href={`/books/${book.id}`} asChild>
-            <View>
-              <BookCard book={book} />
-            </View>
-          </Link>
-        ))}
-      </View>
+      {books.length ? (
+        <View style={{ gap: 14 }}>
+          {books.map((book) => (
+            <Link key={book.id} href={`/books/${book.id}`} asChild>
+              <View>
+                <BookCard book={book} />
+              </View>
+            </Link>
+          ))}
+        </View>
+      ) : booksHydrationError ? (
+        <EmptyState
+          title="Could not load your recipe books"
+          description="Cooksy couldn't reach your saved books right now. Try again once the backend connection is healthy."
+        />
+      ) : (
+        <EmptyState
+          title="No recipe books yet"
+          description="Create a book for weeknight saves, favourites, or anything you want to keep cooking."
+        />
+      )}
     </ScreenContainer>
   );
 }

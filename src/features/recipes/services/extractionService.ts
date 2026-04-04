@@ -4,14 +4,30 @@ import { fetchSocialPageSignals } from "@/features/recipes/lib/socialSignals";
 import { fetchYouTubeOEmbedMetadata, fetchYouTubeWatchPageSignals, getYouTubeThumbnailFromVideoId } from "@/features/recipes/lib/youtube";
 import { getMockContextForUrl } from "@/features/recipes/mocks/sourceContexts";
 import { getThumbnailFromContext } from "@/features/recipes/services/thumbnailService";
+import { appEnv, hasSupabaseConfig } from "@/lib/env";
 import type { RawRecipeContext } from "@/features/recipes/types";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const allowClientSignalFetch = appEnv.recipeImportMode === "mock" || !hasSupabaseConfig;
 
 export const extractYouTubeContext = async (url: string): Promise<RawRecipeContext> => {
   const parsed = parseYouTubeUrl(url);
   await sleep(40);
   const mockContext = getMockContextForUrl(url, "youtube");
+
+  if (!allowClientSignalFetch) {
+    return {
+      ...mockContext,
+      sourceUrl: parsed.normalizedUrl,
+      platform: "youtube",
+      metadata: {
+        ...(mockContext.metadata ?? {}),
+        videoId: parsed.videoId,
+        extractionSource: "mock-fallback"
+      },
+      thumbnailUrl: getYouTubeThumbnailFromVideoId(parsed.normalizedUrl) ?? mockContext.thumbnailUrl ?? getThumbnailFromContext(mockContext)
+    };
+  }
 
   try {
     const [oembed, watchSignals] = await Promise.all([
@@ -67,11 +83,13 @@ export const extractTikTokContext = async (url: string): Promise<RawRecipeContex
   const parsed = parseTikTokUrl(url);
   await sleep(40);
   const context = getMockContextForUrl(url, "tiktok");
-  const signals = await fetchSocialPageSignals({
-    sourceUrl: parsed.normalizedUrl,
-    platform: "tiktok",
-    creatorHint: parsed.creatorHandle
-  }).catch(() => null);
+  const signals = allowClientSignalFetch
+    ? await fetchSocialPageSignals({
+        sourceUrl: parsed.normalizedUrl,
+        platform: "tiktok",
+        creatorHint: parsed.creatorHandle
+      }).catch(() => null)
+    : null;
 
   return {
     ...context,
@@ -96,10 +114,12 @@ export const extractInstagramContext = async (url: string): Promise<RawRecipeCon
   const parsed = parseInstagramUrl(url);
   await sleep(40);
   const context = getMockContextForUrl(url, "instagram");
-  const signals = await fetchSocialPageSignals({
-    sourceUrl: parsed.normalizedUrl,
-    platform: "instagram"
-  }).catch(() => null);
+  const signals = allowClientSignalFetch
+    ? await fetchSocialPageSignals({
+        sourceUrl: parsed.normalizedUrl,
+        platform: "instagram"
+      }).catch(() => null)
+    : null;
 
   return {
     ...context,

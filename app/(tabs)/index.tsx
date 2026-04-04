@@ -7,6 +7,7 @@ import { Text, TextInput, View } from "react-native";
 import { AppHeader } from "@/components/common/AppHeader";
 import { PrimaryButton } from "@/components/common/Buttons";
 import { CooksyCard } from "@/components/common/CooksyCard";
+import { EmptyState } from "@/components/common/EmptyState";
 import { PlatformBadge } from "@/components/common/PlatformBadge";
 import { ScreenContainer } from "@/components/common/ScreenContainer";
 import { RecipeReadyHandoff } from "@/components/recipe/RecipeReadyHandoff";
@@ -19,6 +20,7 @@ import { formatMinutes } from "@/utils/time";
 
 export default function HomeScreen() {
   const recipes = useCooksyStore((state) => state.recipes);
+  const recipesHydrationError = useCooksyStore((state) => state.recipesHydrationError);
   const setSelectedRecipe = useCooksyStore((state) => state.setSelectedRecipe);
   const lastCompletedRecipeId = useCooksyStore((state) => state.lastCompletedRecipeId);
   const setLastCompletedRecipeId = useCooksyStore((state) => state.setLastCompletedRecipeId);
@@ -218,8 +220,9 @@ export default function HomeScreen() {
         <RecipeReadyHandoff recipe={completedRecipe} onDismiss={() => setLastCompletedRecipeId(undefined)} />
       ) : null}
 
-      <View style={{ gap: 14 }}>
-        {recipes.map((recipe) => (
+      {recipes.length ? (
+        <View style={{ gap: 14 }}>
+          {recipes.map((recipe) => (
           <Link key={recipe.id} href={`/recipe/${recipe.id}`} asChild>
             <CooksyCard className="p-4">
               <View style={{ gap: 14 }}>
@@ -269,8 +272,19 @@ export default function HomeScreen() {
               </View>
             </CooksyCard>
           </Link>
-        ))}
-      </View>
+          ))}
+        </View>
+      ) : recipesHydrationError ? (
+        <EmptyState
+          title="Could not load recent saves"
+          description="Cooksy couldn't reach your recipe library right now. Your existing data isn't being replaced with demo content."
+        />
+      ) : (
+        <EmptyState
+          title="No saved recipes yet"
+          description="Paste your first TikTok, Instagram Reel, or YouTube link and Cooksy will save it here as it processes."
+        />
+      )}
     </ScreenContainer>
   );
 }

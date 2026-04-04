@@ -74,71 +74,46 @@ const persistCompletedRecipe = async ({
     sourcePlatform,
     reconstruction
   });
-  const { data: existingRecipe } = await supabase
-    .from("recipes")
-    .select("id")
-    .eq("import_job_id", jobId)
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  let recipeId = existingRecipe?.id as string | undefined;
-
-  if (!recipeId) {
-    const { data: createdRecipe, error: recipeError } = await supabase
-      .from("recipes")
-      .insert({
-        user_id: userId,
-        import_job_id: jobId,
-        status: recipe.status,
-        title: recipe.title,
-        description: recipe.description,
-        hero_note: recipe.heroNote,
-        image_label: recipe.imageLabel,
-        thumbnail_url: recipe.thumbnailUrl,
-        thumbnail_source: recipe.thumbnailSource,
-        thumbnail_fallback_style: recipe.thumbnailFallbackStyle,
-        servings: recipe.servings,
-        prep_time_minutes: recipe.prepTimeMinutes,
-        cook_time_minutes: recipe.cookTimeMinutes,
-        total_time_minutes: recipe.totalTimeMinutes,
-        confidence: recipe.confidence,
-        confidence_score: recipe.confidenceScore,
-        confidence_note: recipe.confidenceNote,
-        inferred_fields: recipe.inferredFields,
-        missing_fields: recipe.missingFields,
-        raw_extraction: recipe.rawExtraction ?? null,
-        source_creator: recipe.source.creator,
-        source_url: recipe.source.url,
-        source_platform: recipe.source.platform,
-        tags: recipe.tags
-      })
-      .select("id")
-      .single();
-
-    if (recipeError) {
-      throw recipeError;
-    }
-
-    recipeId = createdRecipe.id;
-
-    const ingredientRows = recipe.ingredients.map((ingredient, index) => ({
-      recipe_id: recipeId,
-      position: index,
+  const { error: persistError } = await supabase.rpc("save_recipe_graph", {
+    p_recipe_id: null,
+    p_user_id: userId,
+    p_import_job_id: jobId,
+    p_status: recipe.status,
+    p_title: recipe.title,
+    p_description: recipe.description,
+    p_hero_note: recipe.heroNote,
+    p_image_label: recipe.imageLabel,
+    p_thumbnail_url: recipe.thumbnailUrl,
+    p_thumbnail_source: recipe.thumbnailSource,
+    p_thumbnail_fallback_style: recipe.thumbnailFallbackStyle ?? null,
+    p_servings: recipe.servings,
+    p_prep_time_minutes: recipe.prepTimeMinutes,
+    p_cook_time_minutes: recipe.cookTimeMinutes,
+    p_total_time_minutes: recipe.totalTimeMinutes,
+    p_confidence: recipe.confidence,
+    p_confidence_score: recipe.confidenceScore,
+    p_confidence_note: recipe.confidenceNote,
+    p_inferred_fields: recipe.inferredFields,
+    p_missing_fields: recipe.missingFields,
+    p_raw_extraction: recipe.rawExtraction ?? null,
+    p_source_creator: recipe.source.creator,
+    p_source_url: recipe.source.url,
+    p_source_platform: recipe.source.platform,
+    p_tags: recipe.tags,
+    p_ingredients: recipe.ingredients.map((ingredient) => ({
       name: ingredient.name,
       quantity: ingredient.quantity,
       optional: Boolean(ingredient.optional)
-    }));
-
-    const stepRows = recipe.steps.map((step, index) => ({
-      recipe_id: recipeId,
-      position: index,
+    })),
+    p_steps: recipe.steps.map((step) => ({
       title: step.title,
       instruction: step.instruction,
       duration_minutes: step.durationMinutes ?? null
-    }));
+    }))
+  });
 
-    await supabase.from("recipe_ingredients").insert(ingredientRows);
-    await supabase.from("recipe_steps").insert(stepRows);
+  if (persistError) {
+    throw persistError;
   }
 
   await supabase
