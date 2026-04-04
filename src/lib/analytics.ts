@@ -12,7 +12,10 @@ type AnalyticsEventName =
   | "recipe_updated"
   | "recipe_book_created"
   | "recipe_added_to_book"
-  | "recipe_removed_from_book";
+  | "recipe_removed_from_book"
+  // Extraction events
+  | "extraction_succeeded"
+  | "extraction_failed";
 
 type AnalyticsPayload = Record<string, string | number | boolean | null | undefined>;
 
