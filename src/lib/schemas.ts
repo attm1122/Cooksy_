@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isSupportedSourceUrl } from "@/utils/source-url";
 
 export const sourcePlatformSchema = z.enum(["youtube", "tiktok", "instagram"]);
 
@@ -58,7 +59,10 @@ export const recipeBookSchema = z.object({
 });
 
 export const importRecipeSchema = z.object({
-  sourceUrl: z.string().url("Please paste a valid share link")
+  sourceUrl: z
+    .string()
+    .url("Please paste a valid share link")
+    .refine(isSupportedSourceUrl, "Cooksy currently supports YouTube, TikTok, and Instagram recipe links")
 });
 
 export type RecipeFormValues = z.infer<typeof recipeSchema>;

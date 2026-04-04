@@ -41,6 +41,8 @@ Run these checks after every schema or function deploy:
 6. Create a book, add a recipe to it, reload, and confirm the relationship remains.
 7. Visit the recipe detail screen for a processing recipe and confirm it resumes polling.
 8. Fail an import intentionally and confirm the UI exposes a retry path instead of a dead end.
+9. Try an unsupported URL and confirm the user gets a clear validation error before or during import creation.
+10. Trigger repeated imports and confirm duplicate in-flight jobs are reused and the rate limit returns a clear error once exceeded.
 
 ## Ops health endpoint
 
@@ -88,6 +90,7 @@ Recommended first alerts:
 
 - import function failure rate
 - import timeout rate
+- import rate-limit frequency
 - auth bootstrap failure
 - recipe persistence failure
 

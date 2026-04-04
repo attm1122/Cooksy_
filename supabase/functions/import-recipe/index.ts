@@ -5,17 +5,74 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type"
 };
 
-const inferPlatformFromUrl = (url: string) => {
-  if (url.includes("tiktok")) {
-    return "tiktok";
+const MAX_IMPORTS_PER_WINDOW = 8;
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+
+const inferPlatformFromUrl = (value: string) => {
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    const path = url.pathname.toLowerCase();
+
+    if (host === "youtu.be" && path.length > 1) {
+      return "youtube";
+    }
+
+    if (["youtube.com", "m.youtube.com"].includes(host)) {
+      if ((path.startsWith("/watch") && url.searchParams.get("v")) || path.startsWith("/shorts/") || path.startsWith("/live/")) {
+        return "youtube";
+      }
+    }
+
+    if (["tiktok.com", "m.tiktok.com", "vm.tiktok.com"].includes(host) && (path.includes("/video/") || path.startsWith("/t/"))) {
+      return "tiktok";
+    }
+
+    if (host === "instagram.com" && (path.startsWith("/reel/") || path.startsWith("/p/") || path.startsWith("/tv/"))) {
+      return "instagram";
+    }
+  } catch {
+    return null;
   }
 
-  if (url.includes("instagram")) {
-    return "instagram";
-  }
-
-  return "youtube";
+  return null;
 };
+
+const buildJobResponse = ({
+  id,
+  sourceUrl,
+  sourcePlatform,
+  status,
+  progress,
+  stageLabel,
+  stageDescription,
+  createdAt,
+  updatedAt
+}: {
+  id: string;
+  sourceUrl: string;
+  sourcePlatform: string;
+  status: string;
+  progress: number;
+  stageLabel: string;
+  stageDescription: string;
+  createdAt: string;
+  updatedAt: string;
+}) => ({
+  job: {
+    id,
+    sourceUrl,
+    sourcePlatform,
+    status,
+    progress,
+    detail: {
+      label: stageLabel,
+      description: stageDescription
+    },
+    createdAt,
+    updatedAt
+  }
+});
 
 const buildMockRecipe = (sourceUrl: string, sourcePlatform: string, importJobId: string) => ({
   status: "ready",
@@ -228,6 +285,35 @@ Deno.serve(async (request) => {
     const sourceUrl = body.sourceUrl as string;
     const sourcePlatform = inferPlatformFromUrl(sourceUrl);
 
+    if (!sourcePlatform) {
+      return Response.json(
+        {
+          error: "Cooksy currently supports YouTube, TikTok, and Instagram recipe links"
+        },
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
+    const rateLimitWindowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
+    const { count: recentImportCount, error: rateLimitError } = await supabase
+      .from("recipe_import_jobs")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .gte("created_at", rateLimitWindowStart);
+
+    if (rateLimitError) {
+      return Response.json({ error: rateLimitError.message }, { status: 500, headers: corsHeaders });
+    }
+
+    if ((recentImportCount ?? 0) >= MAX_IMPORTS_PER_WINDOW) {
+      return Response.json(
+        {
+          error: "You have reached the current import limit. Please wait a few minutes before trying again."
+        },
+        { status: 429, headers: corsHeaders }
+      );
+    }
+
     const { data: importSource, error: importSourceError } = await supabase
       .from("import_sources")
       .upsert(
@@ -245,6 +331,37 @@ Deno.serve(async (request) => {
 
     if (importSourceError) {
       return Response.json({ error: importSourceError.message }, { status: 500, headers: corsHeaders });
+    }
+
+    const { data: existingJob, error: existingJobError } = await supabase
+      .from("recipe_import_jobs")
+      .select("id, status, progress, stage_label, stage_description, created_at, updated_at")
+      .eq("user_id", user.id)
+      .eq("import_source_id", importSource.id)
+      .in("status", ["queued", "extracting", "identifying_ingredients", "building_steps"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existingJobError) {
+      return Response.json({ error: existingJobError.message }, { status: 500, headers: corsHeaders });
+    }
+
+    if (existingJob) {
+      return Response.json(
+        buildJobResponse({
+          id: existingJob.id,
+          sourceUrl,
+          sourcePlatform,
+          status: existingJob.status,
+          progress: Number(existingJob.progress),
+          stageLabel: existingJob.stage_label,
+          stageDescription: existingJob.stage_description,
+          createdAt: existingJob.created_at,
+          updatedAt: existingJob.updated_at
+        }),
+        { headers: corsHeaders }
+      );
     }
 
     const { data: job, error: jobError } = await supabase
@@ -265,21 +382,17 @@ Deno.serve(async (request) => {
     }
 
     return Response.json(
-      {
-        job: {
-          id: job.id,
-          sourceUrl,
-          sourcePlatform,
-          status: "queued",
-          progress: 0.08,
-          detail: {
-            label: "Queued",
-            description: "Import request accepted and waiting to process"
-          },
-          createdAt: job.created_at,
-          updatedAt: job.updated_at
-        }
-      },
+      buildJobResponse({
+        id: job.id,
+        sourceUrl,
+        sourcePlatform,
+        status: "queued",
+        progress: 0.08,
+        stageLabel: "Queued",
+        stageDescription: "Import request accepted and waiting to process",
+        createdAt: job.created_at,
+        updatedAt: job.updated_at
+      }),
       { headers: corsHeaders }
     );
   }

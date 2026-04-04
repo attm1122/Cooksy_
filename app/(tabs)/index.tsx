@@ -29,6 +29,7 @@ export default function HomeScreen() {
   const {
     control,
     handleSubmit,
+    setError,
     formState: { errors }
   } = useForm<ImportRecipeFormValues>({
     resolver: zodResolver(importRecipeSchema),
@@ -38,42 +39,52 @@ export default function HomeScreen() {
   });
 
   const onSubmit = handleSubmit(async ({ sourceUrl }) => {
-    const { pendingRecipe, job } = await beginImportMutation.mutateAsync(sourceUrl);
+    try {
+      const { pendingRecipe, job } = await beginImportMutation.mutateAsync(sourceUrl);
 
-    saveRecipe(pendingRecipe);
-    setSelectedRecipe(pendingRecipe.id);
-    router.push(`/recipe/${pendingRecipe.id}`);
+      saveRecipe(pendingRecipe);
+      setSelectedRecipe(pendingRecipe.id);
+      router.push(`/recipe/${pendingRecipe.id}`);
 
-    completeImportMutation.mutate(job.id, {
-      onSuccess: (recipe) => {
-        mergeRecipes([
-          {
-            ...recipe,
-            importJobId: recipe.importJobId ?? job.id,
-            status: "ready",
-            processingMessage: undefined,
-            isSaved: true
-          }
-        ]);
-      },
-      onError: (error) => {
-        patchRecipe(pendingRecipe.id, {
-          status: "failed",
-          importJobId: job.id,
-          processingMessage: error instanceof Error ? error.message : "Recipe generation failed",
-          confidence: "low",
-          confidenceScore: 28,
-          confidenceNote: "Cooksy could not confidently reconstruct this recipe from the source.",
-          missingFields: ["Recipe generation failed"],
-          inferredFields: []
-        });
-        captureError(error, {
-          action: "home_import_completion",
-          recipeId: pendingRecipe.id,
-          jobId: job.id
-        });
-      }
-    });
+      completeImportMutation.mutate(job.id, {
+        onSuccess: (recipe) => {
+          mergeRecipes([
+            {
+              ...recipe,
+              importJobId: recipe.importJobId ?? job.id,
+              status: "ready",
+              processingMessage: undefined,
+              isSaved: true
+            }
+          ]);
+        },
+        onError: (error) => {
+          patchRecipe(pendingRecipe.id, {
+            status: "failed",
+            importJobId: job.id,
+            processingMessage: error instanceof Error ? error.message : "Recipe generation failed",
+            confidence: "low",
+            confidenceScore: 28,
+            confidenceNote: "Cooksy could not confidently reconstruct this recipe from the source.",
+            missingFields: ["Recipe generation failed"],
+            inferredFields: []
+          });
+          captureError(error, {
+            action: "home_import_completion",
+            recipeId: pendingRecipe.id,
+            jobId: job.id
+          });
+        }
+      });
+    } catch (error) {
+      setError("sourceUrl", {
+        type: "manual",
+        message: error instanceof Error ? error.message : "Cooksy could not start this import"
+      });
+      captureError(error, {
+        action: "home_import_create"
+      });
+    }
   });
 
   const handleRetry = (recipeId: string) => {
@@ -119,6 +130,16 @@ export default function HomeScreen() {
               jobId: job.id
             });
           }
+        });
+      },
+      onError: (error) => {
+        patchRecipe(recipe.id, {
+          status: "failed",
+          processingMessage: error instanceof Error ? error.message : "Cooksy could not retry this import"
+        });
+        captureError(error, {
+          action: "retry_import_create",
+          recipeId: recipe.id
         });
       }
     });

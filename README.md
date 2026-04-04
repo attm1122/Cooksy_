@@ -40,6 +40,12 @@ This MVP includes:
 - Cooking mode
 - Profile/settings shell
 
+Supported import links:
+
+- YouTube watch, shorts, and `youtu.be` share links
+- TikTok video share links
+- Instagram reel/post share links
+
 ## Architecture
 
 ```text
@@ -160,6 +166,8 @@ Cooksy now includes the first operational production layer:
 - a deployment runbook in `docs/production-readiness.md`
 
 The default analytics and monitoring clients only log locally. Swap them with a provider like PostHog, Segment, Sentry, or Bugsnag before launch.
+
+The backend now also rejects unsupported source URLs and applies a lightweight per-user import limit to reduce duplicate or abusive import creation before a fuller queueing system is in place.
 
 ## Recommended backend next steps
 

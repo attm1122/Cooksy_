@@ -129,6 +129,16 @@ export default function RecipeDetailScreen() {
             });
           }
         });
+      },
+      onError: (error) => {
+        patchRecipe(recipe.id, {
+          status: "failed",
+          processingMessage: error instanceof Error ? error.message : "Cooksy could not retry this import"
+        });
+        captureError(error, {
+          action: "recipe_detail_retry_create",
+          recipeId: recipe.id
+        });
       }
     });
   };
