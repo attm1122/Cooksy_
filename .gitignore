@@ -1,6 +1,7 @@
 node_modules
 .expo
 .expo-shared
+.vercel
 .env
 .env.local
 dist
