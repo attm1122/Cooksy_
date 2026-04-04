@@ -34,6 +34,7 @@ const mapRemoteRecipe = (row: any): Recipe => ({
   confidenceNote: row.confidence_note,
   inferredFields: row.inferred_fields ?? [],
   missingFields: row.missing_fields ?? [],
+  rawExtraction: row.raw_extraction ?? undefined,
   isSaved: true,
   source: {
     creator: row.source_creator,
@@ -92,6 +93,7 @@ export const fetchRecentRecipes = async (): Promise<Recipe[]> => {
           confidence_note,
           inferred_fields,
           missing_fields,
+          raw_extraction,
           source_creator,
           source_url,
           source_platform,
@@ -222,6 +224,7 @@ export const updateRecipeInBackend = async (recipe: Recipe): Promise<Recipe> => 
         confidence_note: recipe.confidenceNote,
         inferred_fields: recipe.inferredFields,
         missing_fields: recipe.missingFields,
+        raw_extraction: recipe.rawExtraction ?? null,
         source_creator: recipe.source.creator,
         source_url: recipe.source.url,
         source_platform: recipe.source.platform,

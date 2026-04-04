@@ -79,13 +79,15 @@ const buildRecipeFromSource = ({
   sourcePlatform,
   importJobId,
   creatorHandle,
-  titleHint
+  titleHint,
+  rawExtraction
 }: {
   sourceUrl: string;
   sourcePlatform: string;
   importJobId: string;
   creatorHandle: string;
   titleHint: string;
+  rawExtraction?: Record<string, unknown>;
 }) => ({
   status: "ready",
   importJobId,
@@ -105,6 +107,7 @@ const buildRecipeFromSource = ({
   confidenceNote: "Ingredient quantities and timings were inferred from extracted creator cues and source visuals.",
   inferredFields: ["Garlic quantity inferred", "Simmer timing estimated from source pacing"],
   missingFields: ["Exact oven temperature not provided"],
+  rawExtraction,
   isSaved: true,
   source: {
     creator: creatorHandle,
@@ -171,7 +174,8 @@ const persistCompletedRecipe = async ({
     sourcePlatform,
     importJobId: jobId,
     creatorHandle,
-    titleHint
+    titleHint,
+    rawExtraction: sourcePayload
   });
   const { data: existingRecipe } = await supabase
     .from("recipes")
@@ -205,6 +209,7 @@ const persistCompletedRecipe = async ({
         confidence_note: mockRecipe.confidenceNote,
         inferred_fields: mockRecipe.inferredFields,
         missing_fields: mockRecipe.missingFields,
+        raw_extraction: mockRecipe.rawExtraction ?? null,
         source_creator: mockRecipe.source.creator,
         source_url: mockRecipe.source.url,
         source_platform: mockRecipe.source.platform,
@@ -344,6 +349,11 @@ const advancePipeline = async ({
   if (row.status === "extracting") {
     const draftPayload = {
       ...sourcePayload,
+      sourceUrl,
+      platform: sourcePlatform,
+      title: typeof sourcePayload?.titleHint === "string" ? sourcePayload.titleHint : undefined,
+      creator: typeof sourcePayload?.creatorHandle === "string" ? sourcePayload.creatorHandle : undefined,
+      thumbnailUrl: null,
       draftIngredients: [
         "Chicken thighs",
         "Garlic cloves",

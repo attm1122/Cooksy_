@@ -25,6 +25,19 @@ export type RecipeSource = {
   platform: SourcePlatform;
 };
 
+export type RawRecipeContext = {
+  sourceUrl: string;
+  platform: SourcePlatform;
+  title?: string | null;
+  creator?: string | null;
+  caption?: string | null;
+  transcript?: string | null;
+  ocrText?: string[] | null;
+  comments?: string[] | null;
+  metadata?: Record<string, unknown> | null;
+  thumbnailUrl?: string | null;
+};
+
 export type Recipe = {
   id: string;
   status: RecipeStatus;
@@ -46,6 +59,7 @@ export type Recipe = {
   confidenceNote: string;
   inferredFields: string[];
   missingFields: string[];
+  rawExtraction?: RawRecipeContext;
   isSaved: boolean;
   source: RecipeSource;
   ingredients: RecipeIngredient[];

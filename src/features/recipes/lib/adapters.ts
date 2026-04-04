@@ -42,6 +42,7 @@ export const mapDomainRecipeToUiRecipe = (recipe: DomainRecipe): UiRecipe => ({
       : "Cooksy reconstructed this recipe from available source signals."),
   inferredFields: recipe.inferredFields,
   missingFields: recipe.missingFields,
+  rawExtraction: recipe.rawExtraction,
   isSaved: true,
   source: {
     creator: recipe.sourceCreator ?? "Imported Creator",
@@ -65,4 +66,3 @@ export const mapDomainRecipeToUiRecipe = (recipe: DomainRecipe): UiRecipe => ({
     recipe.sourcePlatform === "youtube" ? "Video" : recipe.sourcePlatform === "tiktok" ? "Short Form" : "Social Save"
   ]
 });
-
