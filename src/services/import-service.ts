@@ -5,11 +5,12 @@ import { trackEvent } from "@/lib/analytics";
 import { captureError, captureMessage } from "@/lib/monitoring";
 import { supabase } from "@/lib/supabase";
 import { mapDomainRecipeToUiRecipe } from "@/features/recipes/lib/adapters";
-import { detectPlatformFromUrl } from "@/features/recipes/lib/platform";
+import { detectPlatformFromUrl, type VideoPlatform } from "@/features/recipes/lib/platform";
 import { recipeRepository } from "@/features/recipes/services/recipeRepository";
 import { startRecipeImport } from "@/features/recipes/services/recipeWorkflowService";
 import { buildMockImportJob } from "@/mocks/import-job";
 import { getThumbnailFromUrl } from "@/features/recipes/services/thumbnailService";
+import { canUpload, trackUpload } from "@/src/lib/subscription";
 import type {
   CreateImportJobRequest,
   CreateImportJobResponse,
@@ -365,6 +366,31 @@ const buildPendingRecipe = async (sourceUrl: string, recipeId: string, importJob
 };
 
 export const beginRecipeImport = async (sourceUrl: string): Promise<PendingImportResult> => {
+  // Detect platform first
+  const platform = detectPlatformFromUrl(sourceUrl);
+  
+  // Check subscription - upload limit
+  const uploadCheck = await canUpload();
+  if (!uploadCheck.allowed) {
+    trackEvent("recipe_import_failed", {
+      sourceUrl,
+      reason: uploadCheck.reason || "Upload limit reached",
+      requiresUpgrade: true
+    });
+    throw new Error(uploadCheck.reason || "Upload limit reached. Upgrade to Premium for unlimited imports.");
+  }
+  
+  // Check subscription - platform restrictions (free = YouTube only)
+  if (!uploadCheck.remaining === -1 && platform !== 'youtube') {
+    trackEvent("recipe_import_failed", {
+      sourceUrl,
+      platform,
+      reason: "Platform restricted to Premium",
+      requiresUpgrade: true
+    });
+    throw new Error(`${platform} imports require Premium. YouTube imports are free!`);
+  }
+
   // Check content moderation
   const moderationResult = moderateUrl(sourceUrl);
   if (!moderationResult.allowed) {
@@ -382,6 +408,9 @@ export const beginRecipeImport = async (sourceUrl: string): Promise<PendingImpor
   }
 
   const gateway = getGateway();
+  
+  // Track upload for free tier users
+  await trackUpload();
   const { job } = await gateway.createJob({ sourceUrl });
   const pendingRecipeId = job.id || createPendingRecipeId();
   const pendingRecipe = await buildPendingRecipe(sourceUrl, pendingRecipeId, job.id);
