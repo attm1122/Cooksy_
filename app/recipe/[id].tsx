@@ -1,10 +1,11 @@
 import { Link, router, useLocalSearchParams } from "expo-router";
+import { ArrowLeft } from "lucide-react-native";
 import { AlertCircle, LoaderCircle, PencilLine, Play, RotateCw, Save, ShoppingBasket, SquareStack } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Alert, Text, View } from "react-native";
 
 import { ConfidenceBanner } from "@/components/common/ConfidenceBanner";
-import { PrimaryButton, SecondaryButton } from "@/components/common/Buttons";
+import { PrimaryButton, SecondaryButton, TertiaryButton } from "@/components/common/Buttons";
 import { CooksyCard } from "@/components/common/CooksyCard";
 import { PlatformBadge } from "@/components/common/PlatformBadge";
 import { RecipeMetaRow } from "@/components/common/RecipeMetaRow";
@@ -13,6 +14,7 @@ import { IngredientChecklist } from "@/components/recipe/IngredientChecklist";
 import { RecipeEditorForm } from "@/components/recipe/RecipeEditorForm";
 import { RecipeThumbnail } from "@/components/recipe/RecipeThumbnail";
 import { RecipeReadyHandoff } from "@/components/recipe/RecipeReadyHandoff";
+import { ReportContentButton } from "@/components/recipe/ReportContentButton";
 import { SourceEvidenceSummary } from "@/components/recipe/SourceEvidenceSummary";
 import { StepCard } from "@/components/recipe/StepCard";
 import { useAddRecipeToBook, useCompleteImportJob, useRetryRecipeImport, useUpdateRecipe } from "@/hooks/use-recipes";
@@ -39,6 +41,7 @@ export default function RecipeDetailScreen() {
   const completeImportMutation = useCompleteImportJob();
   const retryImportMutation = useRetryRecipeImport();
   const [recipeLoadState, setRecipeLoadState] = useState<{ recipeId?: string; message?: string }>({});
+  const resumedImportJobIdRef = useRef<string | undefined>(undefined);
   const recipeLoadError = recipeLoadState.recipeId === id ? recipeLoadState.message : undefined;
   const isHydratingRecipe = Boolean(id && !recipe && !recipeLoadError);
 
@@ -76,10 +79,17 @@ export default function RecipeDetailScreen() {
   }, [id, mergeRecipes, recipe]);
 
   useEffect(() => {
-    if (!recipe || recipe.status !== "processing" || !recipe.importJobId || completeImportMutation.isPending) {
+    if (
+      !recipe ||
+      recipe.status !== "processing" ||
+      !recipe.importJobId ||
+      completeImportMutation.isPending ||
+      resumedImportJobIdRef.current === recipe.importJobId
+    ) {
       return;
     }
 
+    resumedImportJobIdRef.current = recipe.importJobId;
     completeImportMutation.mutate(recipe.importJobId, {
       onSuccess: (nextRecipe) => {
         mergeRecipes([
@@ -273,10 +283,16 @@ export default function RecipeDetailScreen() {
       </CooksyCard>
 
       <View className="mb-4 flex-row flex-wrap" style={{ gap: 12 }}>
-        <PrimaryButton fullWidth={false}>
+        <TertiaryButton onPress={() => router.back()}>
+          <View className="flex-row items-center" style={{ gap: 8 }}>
+            <ArrowLeft size={16} color="#262626" />
+            <Text className="text-[15px] font-semibold text-soft-ink">Back</Text>
+          </View>
+        </TertiaryButton>
+        <PrimaryButton fullWidth={false} disabled={recipe.isSaved}>
           <View className="flex-row items-center" style={{ gap: 8 }}>
             <Save size={16} color="#111111" />
-            <Text className="text-[15px] font-semibold text-ink">Save Recipe</Text>
+            <Text className="text-[15px] font-semibold text-ink">{recipe.isSaved ? "Saved" : "Save Recipe"}</Text>
           </View>
         </PrimaryButton>
         <SecondaryButton fullWidth={false} onPress={handleSaveToBook} disabled={!defaultBook}>
@@ -392,6 +408,13 @@ export default function RecipeDetailScreen() {
           </View>
         )}
       </CooksyCard>
+
+      <View className="mt-4 flex-row items-center justify-between">
+        <Text className="text-[13px] text-muted">
+          Something wrong with this recipe?
+        </Text>
+        <ReportContentButton recipeId={recipe.id} />
+      </View>
     </ScreenContainer>
   );
 }

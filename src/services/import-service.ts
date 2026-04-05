@@ -1,5 +1,6 @@
 import { appEnv, hasSupabaseConfig } from "@/lib/env";
 import { mapImportJobToProgress } from "@/lib/import-jobs";
+import { moderateUrl } from "@/lib/moderation";
 import { trackEvent } from "@/lib/analytics";
 import { captureError, captureMessage } from "@/lib/monitoring";
 import { supabase } from "@/lib/supabase";
@@ -364,6 +365,22 @@ const buildPendingRecipe = async (sourceUrl: string, recipeId: string, importJob
 };
 
 export const beginRecipeImport = async (sourceUrl: string): Promise<PendingImportResult> => {
+  // Check content moderation
+  const moderationResult = moderateUrl(sourceUrl);
+  if (!moderationResult.allowed) {
+    trackEvent("recipe_import_failed", {
+      sourceUrl,
+      reason: moderationResult.reason,
+      moderationSeverity: moderationResult.severity
+    });
+    captureMessage("Import blocked by moderation", {
+      sourceUrl,
+      reason: moderationResult.reason,
+      severity: moderationResult.severity
+    });
+    throw new Error(moderationResult.reason || "This source cannot be imported");
+  }
+
   const gateway = getGateway();
   const { job } = await gateway.createJob({ sourceUrl });
   const pendingRecipeId = job.id || createPendingRecipeId();

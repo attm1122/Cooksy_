@@ -239,6 +239,7 @@ export type ReconstructionResult = {
   sourceCreator?: string | null;
   sourceTitle?: string | null;
   confidenceScore: number;
+  confidenceNote: string;
   confidenceReport: ConfidenceReport;
   inferredFields: string[];
   missingFields: string[];

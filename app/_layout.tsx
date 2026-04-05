@@ -2,6 +2,8 @@ import "@/../global.css";
 import "react-native-gesture-handler";
 import "react-native-url-polyfill/auto";
 
+import { Platform } from "react-native";
+
 import { Inter_500Medium, Inter_600SemiBold, Inter_700Bold, useFonts } from "@expo-google-fonts/inter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
@@ -11,13 +13,14 @@ import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ensureCooksySession, subscribeToCooksyAuth } from "@/lib/auth";
-import { trackEvent } from "@/lib/analytics";
+import { identifyUser, trackEvent } from "@/lib/analytics";
 import { hasSupabaseConfig } from "@/lib/env";
-import { captureError } from "@/lib/monitoring";
+import { addBreadcrumb, captureError, setMonitoringUser } from "@/lib/monitoring";
 import { queryClient } from "@/lib/query-client";
-import { fetchRecipeBooks, fetchRecentRecipes, pollImportJobUntilComplete } from "@/services/recipe-service";
+import { fetchPendingImportJobs, fetchRecipeBooks, fetchRecentRecipes, pollImportJobUntilComplete } from "@/services/recipe-service";
 import { useAuthStore } from "@/store/use-auth-store";
 import { useCooksyStore } from "@/store/use-cooksy-store";
+import type { Recipe, ThumbnailSource, SourcePlatform } from "@/types/recipe";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -34,8 +37,10 @@ export default function RootLayout() {
   const setBooksHydrationError = useCooksyStore((state) => state.setBooksHydrationError);
   const setLastCompletedRecipeId = useCooksyStore((state) => state.setLastCompletedRecipeId);
   const authStatus = useAuthStore((state) => state.status);
+  const authUserId = useAuthStore((state) => state.userId);
   const setAuthState = useAuthStore((state) => state.setAuthState);
 
+  // Hide splash screen when fonts are loaded
   useEffect(() => {
     if (loaded || error) {
       SplashScreen.hideAsync();
@@ -46,6 +51,7 @@ export default function RootLayout() {
     }
   }, [error, loaded]);
 
+  // Initialize auth session
   useEffect(() => {
     if (!loaded) {
       return;
@@ -83,21 +89,54 @@ export default function RootLayout() {
     return unsubscribe;
   }, [loaded, setAuthState]);
 
+  // Identify user for analytics/monitoring when auth is ready
   useEffect(() => {
-    if (!loaded || authStatus === "loading") {
+    if (authStatus === "ready" && authUserId) {
+      identifyUser(authUserId);
+      setMonitoringUser(authUserId);
+      addBreadcrumb("User identified", "auth", { userId: authUserId });
+    }
+  }, [authStatus, authUserId]);
+
+  // Hydrate data ONLY when auth is confirmed ready
+  useEffect(() => {
+    // Gate data hydration on confirmed auth readiness
+    if (!loaded || authStatus !== "ready") {
       return;
     }
 
-    fetchRecentRecipes()
-      .then((recipes) => {
+    let isCancelled = false;
+
+    const hydrateData = async () => {
+      addBreadcrumb("Starting data hydration", "hydration");
+
+      try {
+        // Fetch recipes (including pending/processing ones)
+        const recipes = await fetchRecentRecipes();
+        
+        if (isCancelled) return;
+        
         setRecipesHydrationError(undefined);
         mergeRecipes(recipes);
+        
+        trackEvent("recipes_hydrated", {
+          count: recipes.length,
+          processingCount: recipes.filter((r) => r.status === "processing").length
+        });
 
+        // Resume polling for any processing recipes
         recipes
           .filter((recipe) => recipe.status === "processing" && recipe.importJobId)
           .forEach((recipe) => {
+            addBreadcrumb("Resuming recipe polling", "hydration", {
+              recipeId: recipe.id,
+              jobId: recipe.importJobId
+            });
+
             void pollImportJobUntilComplete(recipe.importJobId!)
               .then((completedRecipe) => {
+                if (isCancelled) return;
+                
                 mergeRecipes([
                   {
                     ...completedRecipe,
@@ -108,8 +147,15 @@ export default function RootLayout() {
                   }
                 ]);
                 setLastCompletedRecipeId(completedRecipe.id);
+                
+                trackEvent("recipe_import_resumed_completed", {
+                  recipeId: completedRecipe.id,
+                  jobId: recipe.importJobId
+                });
               })
               .catch((resumeError) => {
+                if (isCancelled) return;
+                
                 patchRecipe(recipe.id, {
                   status: "failed",
                   processingMessage: resumeError instanceof Error ? resumeError.message : "Recipe generation failed",
@@ -119,6 +165,7 @@ export default function RootLayout() {
                   missingFields: ["Recipe generation failed"],
                   inferredFields: []
                 });
+                
                 captureError(resumeError, {
                   action: "resume_processing_recipe_on_boot",
                   recipeId: recipe.id,
@@ -126,25 +173,130 @@ export default function RootLayout() {
                 });
               });
           });
-      })
-      .catch((fetchError) => {
+      } catch (fetchError) {
+        if (isCancelled) return;
+        
         setRecipesHydrationError(fetchError instanceof Error ? fetchError.message : "Could not load recipes");
         captureError(fetchError, {
           action: "hydrate_recipes_on_boot"
         });
-      });
+      }
 
-    fetchRecipeBooks()
-      .then((books) => {
+      // Fetch pending import jobs (not just completed recipes)
+      try {
+        const pendingJobs = await fetchPendingImportJobs();
+        
+        if (isCancelled) return;
+        
+        if (pendingJobs.length > 0) {
+          addBreadcrumb("Found pending import jobs", "hydration", {
+            count: pendingJobs.length
+          });
+
+          // Create placeholder recipes for pending jobs
+          const pendingRecipes: Recipe[] = pendingJobs.map((job) => ({
+            id: `pending-${job.id}`,
+            status: "processing" as const,
+            importJobId: job.id,
+            processingMessage: job.stage_description || "Generating recipe...",
+            title: "Recipe in progress",
+            description: "Your recipe is being assembled from the source video.",
+            heroNote: "Saved from a link you discovered. Cooksy is turning it into something you can actually cook.",
+            imageLabel: "Imported recipe cover",
+            thumbnailUrl: null,
+            thumbnailSource: (job.source_platform as ThumbnailSource) || "generated",
+            servings: 2,
+            prepTimeMinutes: 0,
+            cookTimeMinutes: 0,
+            totalTimeMinutes: 0,
+            confidence: "medium",
+            confidenceScore: 0,
+            confidenceNote: "Cooksy is still reconstructing the recipe from the source content.",
+            inferredFields: [],
+            missingFields: ["Recipe details still generating"],
+            warnings: [],
+            editableFields: [],
+            isSaved: true,
+            source: {
+              creator: job.source_creator || "Saved source",
+              url: job.source_url,
+              platform: (job.source_platform as SourcePlatform) || "youtube"
+            },
+            ingredients: [],
+            steps: [],
+            tags: ["Processing"]
+          }));
+
+          mergeRecipes(pendingRecipes);
+
+          // Start polling for each pending job
+          pendingJobs.forEach((job) => {
+            void pollImportJobUntilComplete(job.id)
+              .then((completedRecipe) => {
+                if (isCancelled) return;
+                
+                // Remove placeholder and add completed recipe
+                mergeRecipes([
+                  {
+                    ...completedRecipe,
+                    importJobId: job.id,
+                    status: "ready",
+                    processingMessage: undefined,
+                    isSaved: true
+                  }
+                ]);
+                setLastCompletedRecipeId(completedRecipe.id);
+              })
+              .catch((pollError) => {
+                if (isCancelled) return;
+                
+                captureError(pollError, {
+                  action: "poll_pending_job_on_boot",
+                  jobId: job.id
+                });
+              });
+          });
+
+          trackEvent("pending_imports_hydrated", {
+            count: pendingJobs.length
+          });
+        }
+      } catch (pendingError) {
+        // Non-critical error - just log it
+        captureError(pendingError, {
+          action: "hydrate_pending_imports"
+        });
+      }
+
+      // Fetch recipe books
+      try {
+        const books = await fetchRecipeBooks();
+        
+        if (isCancelled) return;
+        
         setBooksHydrationError(undefined);
         mergeBooks(books);
-      })
-      .catch((fetchError) => {
+        
+        trackEvent("books_hydrated", {
+          count: books.length
+        });
+      } catch (fetchError) {
+        if (isCancelled) return;
+        
         setBooksHydrationError(fetchError instanceof Error ? fetchError.message : "Could not load recipe books");
         captureError(fetchError, {
           action: "hydrate_books_on_boot"
         });
-      });
+      }
+
+      addBreadcrumb("Data hydration complete", "hydration");
+    };
+
+    void hydrateData();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [
     authStatus,
     loaded,
@@ -169,16 +321,58 @@ export default function RootLayout() {
             headerShown: false,
             contentStyle: {
               backgroundColor: "#FFFDF7"
-            }
+            },
+            // Enable gestures for iOS back navigation
+            gestureEnabled: true,
+            gestureDirection: "horizontal",
+            // Platform-specific animation settings
+            animation: Platform.OS === "ios" ? "default" : "fade_from_bottom"
           }}
         >
           <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="processing" options={{ presentation: "card" }} />
-          <Stack.Screen name="recipe/[id]" />
-          <Stack.Screen name="recipe/[id]/edit" />
-          <Stack.Screen name="recipe/[id]/cook" options={{ presentation: "fullScreenModal" }} />
-          <Stack.Screen name="recipe/[id]/grocery" />
-          <Stack.Screen name="books/[id]" />
+          <Stack.Screen 
+            name="processing" 
+            options={{ 
+              presentation: "card",
+              // Prevent swipe to dismiss during processing
+              gestureEnabled: false 
+            }} 
+          />
+          <Stack.Screen 
+            name="recipe/[id]" 
+            options={{
+              // Enable swipe back on iOS
+              gestureEnabled: true
+            }}
+          />
+          <Stack.Screen 
+            name="recipe/[id]/edit" 
+            options={{
+              presentation: Platform.OS === "ios" ? "modal" : "card",
+              gestureEnabled: true
+            }}
+          />
+          <Stack.Screen 
+            name="recipe/[id]/cook" 
+            options={{ 
+              presentation: "fullScreenModal",
+              // Disable swipe to dismiss in cooking mode (must use exit button)
+              gestureEnabled: false 
+            }} 
+          />
+          <Stack.Screen 
+            name="recipe/[id]/grocery" 
+            options={{
+              presentation: Platform.OS === "ios" ? "modal" : "card",
+              gestureEnabled: true
+            }}
+          />
+          <Stack.Screen 
+            name="books/[id]" 
+            options={{
+              gestureEnabled: true
+            }}
+          />
         </Stack>
       </QueryClientProvider>
     </SafeAreaProvider>

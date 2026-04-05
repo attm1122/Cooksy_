@@ -1,8 +1,8 @@
-import { useLocalSearchParams } from "expo-router";
-import { ChevronLeft, ChevronRight, TimerReset } from "lucide-react-native";
+import { router, useLocalSearchParams } from "expo-router";
+import { ArrowLeft, ChevronLeft, ChevronRight, TimerReset, X } from "lucide-react-native";
 import { Text, View } from "react-native";
 
-import { PrimaryButton, SecondaryButton } from "@/components/common/Buttons";
+import { PrimaryButton, SecondaryButton, TertiaryButton } from "@/components/common/Buttons";
 import { ScreenContainer } from "@/components/common/ScreenContainer";
 import { useCooksyStore } from "@/store/use-cooksy-store";
 
@@ -15,7 +15,19 @@ export default function CookingModeScreen() {
   const previousCookingStep = useCooksyStore((state) => state.previousCookingStep);
 
   if (!recipe) {
-    return null;
+    return (
+      <ScreenContainer scroll={false}>
+        <View className="flex-1 items-center justify-center">
+          <Text className="text-[18px] text-muted">Recipe not found</Text>
+          <TertiaryButton onPress={() => router.back()}>
+            <View className="flex-row items-center" style={{ gap: 8 }}>
+              <ArrowLeft size={16} color="#262626" />
+              <Text>Go Back</Text>
+            </View>
+          </TertiaryButton>
+        </View>
+      </ScreenContainer>
+    );
   }
 
   if (!recipe.steps.length) {
@@ -35,7 +47,14 @@ export default function CookingModeScreen() {
     <ScreenContainer scroll={false}>
       <View className="flex-1 justify-between bg-soft-ink py-6">
         <View>
-          <Text className="mb-2 text-[13px] font-semibold uppercase tracking-[1px] text-[#DCCFAF]">Cooking mode</Text>
+          <View className="mb-4 flex-row items-center justify-between">
+            <Text className="text-[13px] font-semibold uppercase tracking-[1px] text-[#DCCFAF]">Cooking mode</Text>
+            <TertiaryButton onPress={() => router.back()} fullWidth={false}>
+              <View className="h-8 w-8 items-center justify-center rounded-full bg-white/10">
+                <X size={18} color="#E8DDBE" />
+              </View>
+            </TertiaryButton>
+          </View>
           <Text className="mb-2 text-[32px] font-bold leading-[38px] text-white">{recipe.title}</Text>
           <Text className="mb-6 text-[15px] leading-6 text-[#E8DDBE]">One step at a time, built for a real kitchen moment.</Text>
 

@@ -26,9 +26,9 @@ describe("component smoke tests", () => {
 
   it("renders a readable source evidence summary", () => {
     const screen = render(<SourceEvidenceSummary rawExtraction={mockRecipes[0].rawExtraction} />);
-    expect(screen.getByText("Why Cooksy trusts this")).toBeTruthy();
-    expect(screen.getByText("Quantity mentions")).toBeTruthy();
-    expect(screen.getByText("Source text captured")).toBeTruthy();
+    expect(screen.getByText("Evidence Behind Score")).toBeTruthy();
+    expect(screen.getByText(/quantities/)).toBeTruthy();
+    expect(screen.getByText(/ingredient signals/)).toBeTruthy();
   });
 
   it("renders the recipe ready handoff actions", () => {

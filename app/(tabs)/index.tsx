@@ -4,7 +4,6 @@ import { AlertCircle, BookmarkPlus, LoaderCircle, Sparkles } from "lucide-react-
 import { Controller, useForm } from "react-hook-form";
 import { Text, TextInput, View } from "react-native";
 
-import { AppHeader } from "@/components/common/AppHeader";
 import { PrimaryButton } from "@/components/common/Buttons";
 import { CooksyCard } from "@/components/common/CooksyCard";
 import { EmptyState } from "@/components/common/EmptyState";
@@ -156,8 +155,6 @@ export default function HomeScreen() {
 
   return (
     <ScreenContainer>
-      <AppHeader />
-
       <CooksyCard className="mb-5">
         <View className="mb-6 flex-row items-start justify-between" style={{ gap: 14 }}>
           <View className="flex-1">

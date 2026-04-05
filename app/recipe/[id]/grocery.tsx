@@ -1,10 +1,11 @@
-import { useLocalSearchParams } from "expo-router";
-import { ShoppingBasket } from "lucide-react-native";
+import { router, useLocalSearchParams } from "expo-router";
+import { ArrowLeft, ShoppingBasket } from "lucide-react-native";
 import { Text, View } from "react-native";
 
 import { CooksyCard } from "@/components/common/CooksyCard";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ScreenContainer } from "@/components/common/ScreenContainer";
+import { TertiaryButton } from "@/components/common/Buttons";
 import { IngredientChecklist } from "@/components/recipe/IngredientChecklist";
 import { useCooksyStore } from "@/store/use-cooksy-store";
 
@@ -14,14 +15,32 @@ export default function GroceryListScreen() {
   const toggleIngredientChecked = useCooksyStore((state) => state.toggleIngredientChecked);
 
   if (!recipe) {
-    return null;
+    return (
+      <ScreenContainer>
+        <View className="flex-1 items-center justify-center">
+          <Text className="mb-4 text-[18px] text-muted">Recipe not found</Text>
+          <TertiaryButton onPress={() => router.back()}>
+            <View className="flex-row items-center" style={{ gap: 8 }}>
+              <ArrowLeft size={16} color="#262626" />
+              <Text>Go Back</Text>
+            </View>
+          </TertiaryButton>
+        </View>
+      </ScreenContainer>
+    );
   }
 
   const checkedCount = recipe.ingredients.filter((ingredient) => ingredient.checked).length;
 
   return (
     <ScreenContainer>
-      <View className="mb-5 flex-row items-start justify-between" style={{ gap: 14 }}>
+      <TertiaryButton onPress={() => router.back()} fullWidth={false}>
+        <View className="flex-row items-center" style={{ gap: 8 }}>
+          <ArrowLeft size={16} color="#262626" />
+          <Text>Back to recipe</Text>
+        </View>
+      </TertiaryButton>
+      <View className="mb-5 mt-4 flex-row items-start justify-between" style={{ gap: 14 }}>
         <View className="flex-1">
           <Text className="mb-2 text-[13px] font-semibold uppercase tracking-[1px] text-muted">Grocery list</Text>
           <Text className="text-[30px] font-bold leading-[36px] text-ink">{recipe.title}</Text>

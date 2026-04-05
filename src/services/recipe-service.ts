@@ -303,6 +303,49 @@ export const retryRecipeImport = async (
   onProgress?: (progress: ImportProgress) => void
 ) => runRetryRecipeImport(recipe, onProgress);
 
+export const fetchPendingImportJobs = async (): Promise<Array<{
+  id: string;
+  source_url: string;
+  source_platform: string;
+  source_creator?: string;
+  stage_description?: string;
+}>> => {
+  if (hasSupabaseConfig && supabase) {
+    const { data, error } = await supabase
+      .from("recipe_import_jobs")
+      .select(`
+        id,
+        stage_description,
+        import_sources!inner(
+          source_url,
+          source_platform,
+          creator_handle
+        )
+      `)
+      .in("status", ["queued", "extracting", "identifying_ingredients", "building_steps"])
+      .order("created_at", { ascending: false });
+
+    if (!error && data) {
+      return data.map((job: any) => ({
+        id: job.id,
+        source_url: job.import_sources?.source_url || "",
+        source_platform: job.import_sources?.source_platform || "youtube",
+        source_creator: job.import_sources?.creator_handle,
+        stage_description: job.stage_description
+      }));
+    }
+
+    if (error) {
+      captureError(error, {
+        action: "fetch_pending_import_jobs"
+      });
+      throw error;
+    }
+  }
+
+  return [];
+};
+
 export const updateRecipeInBackend = async (recipe: Recipe): Promise<Recipe> => {
   if (hasSupabaseConfig && supabase) {
     const { error } = await supabase.rpc("save_recipe_graph", {

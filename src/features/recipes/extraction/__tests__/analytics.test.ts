@@ -29,7 +29,7 @@ describe("extraction analytics", () => {
         platform: "tiktok" as SourcePlatform,
         success: false,
         durationMs: 500,
-        error: { type: "network_error", message: "Connection failed" },
+        error: { type: "network_error", message: "Connection failed", retryable: true },
         extractionSource: "failed"
       });
 
@@ -131,7 +131,7 @@ describe("extraction analytics", () => {
         platform: "tiktok" as SourcePlatform,
         success: false,
         durationMs: 500,
-        error: { type: "network_error", message: "Failed" },
+        error: { type: "network_error", message: "Failed", retryable: true },
         extractionSource: "failed"
       });
 
@@ -166,7 +166,7 @@ describe("extraction analytics", () => {
           platform: "tiktok" as SourcePlatform,
           success: false,
           durationMs: 500,
-          error: { type: "network_error", message: "Failed" },
+          error: { type: "network_error", message: "Failed", retryable: true },
           extractionSource: "failed"
         });
       }
@@ -200,7 +200,7 @@ describe("extraction analytics", () => {
           platform: "youtube" as SourcePlatform,
           success: false,
           durationMs: 500,
-          error: { type: "network_error", message: "Failed" },
+          error: { type: "network_error", message: "Failed", retryable: true },
           extractionSource: "failed"
         });
       }

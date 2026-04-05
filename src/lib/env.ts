@@ -6,6 +6,10 @@ const publicEnvSchema = z.object({
   EXPO_PUBLIC_RECIPE_IMPORT_MODE: z.enum(["mock", "remote", "auto"]).optional(),
   EXPO_PUBLIC_SUPABASE_URL: z.string().url().optional().or(z.literal("")),
   EXPO_PUBLIC_SUPABASE_ANON_KEY: z.string().optional().or(z.literal("")),
+  // Analytics & Monitoring
+  EXPO_PUBLIC_POSTHOG_API_KEY: z.string().optional().or(z.literal("")),
+  EXPO_PUBLIC_POSTHOG_HOST: z.string().optional().or(z.literal("")),
+  EXPO_PUBLIC_SENTRY_DSN: z.string().optional().or(z.literal("")),
   // Extraction API keys (optional - for enhanced extraction)
   EXPO_PUBLIC_RAPIDAPI_KEY: z.string().optional().or(z.literal("")),
   EXPO_PUBLIC_RAPIDAPI_HOST: z.string().optional().or(z.literal("")),
@@ -21,6 +25,9 @@ const publicEnv = publicEnvSchema.parse({
   EXPO_PUBLIC_RECIPE_IMPORT_MODE: process.env.EXPO_PUBLIC_RECIPE_IMPORT_MODE,
   EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
   EXPO_PUBLIC_SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+  EXPO_PUBLIC_POSTHOG_API_KEY: process.env.EXPO_PUBLIC_POSTHOG_API_KEY,
+  EXPO_PUBLIC_POSTHOG_HOST: process.env.EXPO_PUBLIC_POSTHOG_HOST,
+  EXPO_PUBLIC_SENTRY_DSN: process.env.EXPO_PUBLIC_SENTRY_DSN,
   EXPO_PUBLIC_RAPIDAPI_KEY: process.env.EXPO_PUBLIC_RAPIDAPI_KEY,
   EXPO_PUBLIC_RAPIDAPI_HOST: process.env.EXPO_PUBLIC_RAPIDAPI_HOST,
   EXPO_PUBLIC_OPENAI_API_KEY: process.env.EXPO_PUBLIC_OPENAI_API_KEY,
@@ -34,6 +41,10 @@ export const appEnv = {
   recipeImportMode: (publicEnv.EXPO_PUBLIC_RECIPE_IMPORT_MODE ?? "mock") as ImportBackendMode,
   supabaseUrl: publicEnv.EXPO_PUBLIC_SUPABASE_URL || undefined,
   supabaseAnonKey: publicEnv.EXPO_PUBLIC_SUPABASE_ANON_KEY || undefined,
+  // Analytics & Monitoring
+  posthogApiKey: publicEnv.EXPO_PUBLIC_POSTHOG_API_KEY || undefined,
+  posthogHost: publicEnv.EXPO_PUBLIC_POSTHOG_HOST || "https://app.posthog.com",
+  sentryDsn: publicEnv.EXPO_PUBLIC_SENTRY_DSN || undefined,
   // Extraction configuration
   rapidApiKey: publicEnv.EXPO_PUBLIC_RAPIDAPI_KEY || undefined,
   rapidApiHost: publicEnv.EXPO_PUBLIC_RAPIDAPI_HOST || undefined,
@@ -47,3 +58,5 @@ export const appEnv = {
 export const hasSupabaseConfig = Boolean(appEnv.supabaseUrl && appEnv.supabaseAnonKey);
 export const hasRapidApiConfig = Boolean(appEnv.rapidApiKey && appEnv.rapidApiHost);
 export const hasOpenAiConfig = Boolean(appEnv.openAiApiKey);
+export const hasPostHogConfig = Boolean(appEnv.posthogApiKey);
+export const hasSentryConfig = Boolean(appEnv.sentryDsn);

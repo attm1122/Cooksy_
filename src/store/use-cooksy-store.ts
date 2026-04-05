@@ -43,6 +43,18 @@ export const initialImportProgress: ImportProgress = {
   detail: "Ready to import"
 };
 
+const recipesMatch = (left: Recipe, right: Recipe) => {
+  if (left.id === right.id) {
+    return true;
+  }
+
+  if (left.importJobId && right.importJobId && left.importJobId === right.importJobId) {
+    return true;
+  }
+
+  return left.source.url === right.source.url;
+};
+
 export const useCooksyStore = create<CooksyState>((set) => ({
   recipes: shouldUseSeedData ? mockRecipes : [],
   books: shouldUseSeedData ? mockBooks : [],
@@ -100,12 +112,7 @@ export const useCooksyStore = create<CooksyState>((set) => ({
       const next = [...state.recipes];
 
       recipes.forEach((incoming) => {
-        const existingIndex = next.findIndex(
-          (item) =>
-            item.id === incoming.id ||
-            item.importJobId === incoming.importJobId ||
-            item.source.url === incoming.source.url
-        );
+        const existingIndex = next.findIndex((item) => recipesMatch(item, incoming));
 
         if (existingIndex >= 0) {
           next[existingIndex] = {

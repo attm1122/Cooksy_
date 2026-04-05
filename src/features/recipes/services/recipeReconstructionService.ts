@@ -1,4 +1,5 @@
 import { RecipeReconstructionError } from "@/features/recipes/lib/errors";
+import { normalizeReconstructionResult } from "@/features/recipes/lib/normalization";
 import { aggregateEvidence, aggregateSourceEvidence, hydrateEvidenceContext } from "@/features/recipes/lib/sourceEvidence";
 import { generateFallbackThumbnailStyle, getThumbnailFromContext, selectBestThumbnailCandidate } from "@/features/recipes/services/thumbnailService";
 import type {
@@ -13,7 +14,7 @@ import type {
 
 type PartialRecipe = Omit<
   ReconstructionResult,
-  "confidenceScore" | "confidenceReport" | "validationWarnings" | "inferredFields" | "missingFields"
+  "confidenceScore" | "confidenceNote" | "confidenceReport" | "validationWarnings" | "inferredFields" | "missingFields"
 >;
 
 const buildId = (prefix: string, index: number) => `${prefix}-${index + 1}`;
@@ -410,7 +411,7 @@ export const reconstructRecipe = async (context: RawRecipeContext): Promise<Reco
     hydratedContext
   );
 
-  return {
+  const result: ReconstructionResult = {
     title: inferred.title,
     description: inferred.description,
     servings: inferred.servings,
@@ -425,10 +426,14 @@ export const reconstructRecipe = async (context: RawRecipeContext): Promise<Reco
     sourceCreator: inferred.sourceCreator,
     sourceTitle: inferred.sourceTitle,
     confidenceScore: Math.round(confidenceReport.score * 100),
+    confidenceNote: `Recipe extracted with ${Math.round(confidenceReport.score * 100)}% confidence.`,
     confidenceReport,
     inferredFields: inferred.inferredFields,
     missingFields: confidenceReport.missingFields,
     validationWarnings: Array.from(new Set([...validationWarnings, ...confidenceReport.warnings])),
     rawExtraction: hydratedContext
   };
+
+  // Apply strong normalization layer before returning
+  return normalizeReconstructionResult(result, context);
 };

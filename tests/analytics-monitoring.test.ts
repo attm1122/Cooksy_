@@ -5,7 +5,7 @@ describe("analytics and monitoring seams", () => {
   it("forwards analytics events to the configured client", () => {
     const track = jest.fn();
 
-    setAnalyticsClient({ track });
+    setAnalyticsClient({ track, identify: jest.fn(), reset: jest.fn() });
     trackEvent("recipe_import_started", { jobId: "job-123" });
 
     expect(track).toHaveBeenCalledWith("recipe_import_started", { jobId: "job-123" });
@@ -14,7 +14,11 @@ describe("analytics and monitoring seams", () => {
   it("forwards monitoring calls to the configured client", () => {
     const client = {
       captureError: jest.fn(),
-      captureMessage: jest.fn()
+      captureException: jest.fn(),
+      captureMessage: jest.fn(),
+      setUser: jest.fn(),
+      setTag: jest.fn(),
+      addBreadcrumb: jest.fn()
     };
 
     setMonitoringClient(client);

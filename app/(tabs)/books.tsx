@@ -3,7 +3,6 @@ import { Plus } from "lucide-react-native";
 import { useState } from "react";
 import { Text, TextInput, View } from "react-native";
 
-import { AppHeader } from "@/components/common/AppHeader";
 import { PrimaryButton, SecondaryButton } from "@/components/common/Buttons";
 import { CooksyCard } from "@/components/common/CooksyCard";
 import { EmptyState } from "@/components/common/EmptyState";
@@ -50,7 +49,6 @@ export default function BooksScreen() {
 
   return (
     <ScreenContainer>
-      <AppHeader />
       <View className="mb-5 flex-row items-center justify-between">
         <View>
           <Text className="text-[28px] font-bold text-ink">Recipe books</Text>

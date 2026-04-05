@@ -1,5 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
+import { useEffect } from "react";
 import { Text, TextInput, View } from "react-native";
 
 import { PrimaryButton } from "@/components/common/Buttons";
@@ -19,10 +20,14 @@ export const RecipeEditorForm = ({
   submitLabel = "Save Changes",
   compact = false
 }: RecipeEditorFormProps) => {
-  const { control, handleSubmit } = useForm<RecipeFormValues>({
+  const { control, handleSubmit, reset } = useForm<RecipeFormValues>({
     resolver: zodResolver(recipeSchema),
-    values: recipe
+    defaultValues: recipe
   });
+
+  useEffect(() => {
+    reset(recipe);
+  }, [recipe, reset]);
 
   const save = handleSubmit((values) =>
     onSubmit({

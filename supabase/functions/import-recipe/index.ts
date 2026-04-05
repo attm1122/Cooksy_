@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { moderateContent, moderateUrl } from "../_shared/moderation.ts";
 import { processJobToTerminal, scheduleBackgroundJob } from "../_shared/background-jobs.ts";
 import {
   buildPersistedRecipe,
@@ -366,6 +367,28 @@ const advancePipeline = async ({
             sourcePayload
           }))) as RawRecipeContext;
       const reconstruction = await reconstructRecipe(context);
+      
+      // Check content moderation before persisting
+      const contentModeration = moderateContent({
+        title: reconstruction.title,
+        description: reconstruction.description ?? undefined,
+        creator: reconstruction.sourceCreator ?? undefined
+      });
+      
+      if (!contentModeration.allowed) {
+        const message = contentModeration.reason || "Generated content violates community guidelines";
+        await failImportJob({ supabase, jobId: row.id, message });
+        return {
+          ...row,
+          status: "failed",
+          progress: 1,
+          stage_label: "Import failed",
+          stage_description: message,
+          error_message: message,
+          normalized_recipe: row.normalized_recipe ?? null
+        };
+      }
+      
       const recipe = await persistCompletedRecipe({
         supabase,
         jobId: row.id,
@@ -460,6 +483,16 @@ Deno.serve(async (request) => {
 
   if (action === "create") {
     const sourceUrl = body.sourceUrl as string;
+    
+    // Check moderation
+    const moderationResult = moderateUrl(sourceUrl);
+    if (!moderationResult.allowed) {
+      return Response.json(
+        { error: moderationResult.reason || "This source cannot be imported" },
+        { status: 400, headers: corsHeaders }
+      );
+    }
+    
     const sourcePlatform = inferPlatformFromUrl(sourceUrl);
 
     if (!sourcePlatform) {
@@ -471,26 +504,7 @@ Deno.serve(async (request) => {
       );
     }
 
-    const rateLimitWindowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
-    const { count: recentImportCount, error: rateLimitError } = await supabase
-      .from("recipe_import_jobs")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .gte("created_at", rateLimitWindowStart);
-
-    if (rateLimitError) {
-      return Response.json({ error: rateLimitError.message }, { status: 500, headers: corsHeaders });
-    }
-
-    if ((recentImportCount ?? 0) >= MAX_IMPORTS_PER_WINDOW) {
-      return Response.json(
-        {
-          error: "You have reached the current import limit. Please wait a few minutes before trying again."
-        },
-        { status: 429, headers: corsHeaders }
-      );
-    }
-
+    // Step 1: Upsert the import source first
     const { data: importSource, error: importSourceError } = await supabase
       .from("import_sources")
       .upsert(
@@ -510,6 +524,7 @@ Deno.serve(async (request) => {
       return Response.json({ error: importSourceError.message }, { status: 500, headers: corsHeaders });
     }
 
+    // Step 2: Check for existing in-flight job (REUSE before rate limit)
     const { data: existingJob, error: existingJobError } = await supabase
       .from("recipe_import_jobs")
       .select("id, status, progress, stage_label, stage_description, created_at, updated_at")
@@ -525,6 +540,7 @@ Deno.serve(async (request) => {
     }
 
     if (existingJob) {
+      // Reuse existing job - return immediately without rate limit check
       scheduleBackgroundJob(() =>
         processImportJob({
           supabase,
@@ -549,6 +565,7 @@ Deno.serve(async (request) => {
       );
     }
 
+    // Step 3: Check for completed job (REUSE before rate limit)
     const { data: completedJob, error: completedJobError } = await supabase
       .from("recipe_import_jobs")
       .select("id, status, progress, stage_label, stage_description, created_at, updated_at")
@@ -564,6 +581,7 @@ Deno.serve(async (request) => {
     }
 
     if (completedJob) {
+      // Return completed job without rate limit check
       return Response.json(
         buildJobResponse({
           id: completedJob.id,
@@ -580,6 +598,28 @@ Deno.serve(async (request) => {
       );
     }
 
+    // Step 4: Apply rate limit ONLY for truly new jobs
+    const rateLimitWindowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
+    const { count: recentImportCount, error: rateLimitError } = await supabase
+      .from("recipe_import_jobs")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .gte("created_at", rateLimitWindowStart);
+
+    if (rateLimitError) {
+      return Response.json({ error: rateLimitError.message }, { status: 500, headers: corsHeaders });
+    }
+
+    if ((recentImportCount ?? 0) >= MAX_IMPORTS_PER_WINDOW) {
+      return Response.json(
+        {
+          error: "You have reached the current import limit. Please wait a few minutes before trying again."
+        },
+        { status: 429, headers: corsHeaders }
+      );
+    }
+
+    // Step 5: Create new import job
     const { data: job, error: jobError } = await supabase
       .from("recipe_import_jobs")
       .insert({
