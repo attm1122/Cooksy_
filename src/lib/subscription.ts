@@ -3,14 +3,21 @@
  * Handles purchases, entitlements, and subscription status
  */
 
-import Purchases, { 
-  LOG_LEVEL, 
-  PurchasesPackage, 
-  CustomerInfo,
-  PurchasesError 
-} from 'react-native-purchases';
+import type { CustomerInfo, PurchasesError, PurchasesPackage } from 'react-native-purchases';
 import { Platform } from 'react-native';
 import { supabase } from './supabase';
+
+type RevenueCatModule = typeof import('react-native-purchases');
+
+let purchasesModulePromise: Promise<RevenueCatModule> | null = null;
+
+async function getRevenueCatModule(): Promise<RevenueCatModule> {
+  if (!purchasesModulePromise) {
+    purchasesModulePromise = import('react-native-purchases');
+  }
+
+  return purchasesModulePromise;
+}
 
 // RevenueCat API Keys - configure in .env
 const REVENUECAT_IOS_KEY = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY;
@@ -70,6 +77,7 @@ export const initialSubscriptionState: SubscriptionState = {
 
 // Initialize RevenueCat
 export async function initializePurchases(userId: string): Promise<void> {
+  const { default: Purchases, LOG_LEVEL } = await getRevenueCatModule();
   const apiKey = Platform.select({
     ios: REVENUECAT_IOS_KEY,
     android: REVENUECAT_ANDROID_KEY,
@@ -95,6 +103,7 @@ export async function initializePurchases(userId: string): Promise<void> {
 // Get available offerings (pricing packages)
 export async function getOfferings(): Promise<PurchasesPackage[] | null> {
   try {
+    const { default: Purchases } = await getRevenueCatModule();
     const offerings = await Purchases.getOfferings();
     
     if (offerings.current) {
@@ -113,6 +122,7 @@ export async function purchasePackage(
   pkg: PurchasesPackage
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const { default: Purchases } = await getRevenueCatModule();
     const { customerInfo } = await Purchases.purchasePackage(pkg);
     
     // Sync with server
@@ -141,6 +151,7 @@ export async function restorePurchases(): Promise<{
   error?: string 
 }> {
   try {
+    const { default: Purchases } = await getRevenueCatModule();
     const customerInfo = await Purchases.restorePurchases();
     await syncSubscriptionStatusFromCustomerInfo(customerInfo);
     
@@ -160,6 +171,7 @@ export async function restorePurchases(): Promise<{
 // Get customer info
 export async function getCustomerInfo(): Promise<CustomerInfo | null> {
   try {
+    const { default: Purchases } = await getRevenueCatModule();
     return await Purchases.getCustomerInfo();
   } catch (error) {
     console.error('Failed to get customer info:', error);
@@ -316,8 +328,8 @@ export async function presentPaywall(): Promise<boolean> {
   try {
     // This uses RevenueCat's native paywall UI
     // Available in react-native-purchases-ui
-    const { RevenueCatUI } = await import('react-native-purchases-ui');
-    const paywallResult = await RevenueCatUI.presentPaywall({
+    const { default: RevenueCatUI } = await import('react-native-purchases-ui');
+    const paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
       requiredEntitlementIdentifier: ENTITLEMENTS.PREMIUM,
     });
     
@@ -430,7 +442,7 @@ export async function getManagementURL(): Promise<string | null> {
     }
     
     // Web - use RevenueCat management URL if available
-    return customerInfo.managementURL || null;
+    return customerInfo?.managementURL || null;
   } catch {
     return null;
   }

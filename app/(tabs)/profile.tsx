@@ -4,8 +4,8 @@ import { Text, View } from "react-native";
 
 import { CooksyCard } from "@/components/common/CooksyCard";
 import { ScreenContainer } from "@/components/common/ScreenContainer";
-import { PremiumBadge } from "@/src/components/subscription/PremiumBadge";
-import { useIsPremium } from "@/src/stores/subscription-store";
+import { PremiumBadge } from "@/components/subscription/PremiumBadge";
+import { useIsPremium } from "@/stores/subscription-store";
 
 type RouteHref = "/legal/privacy" | "/legal/terms" | "/subscription/manage" | null;
 
@@ -47,7 +47,7 @@ export default function ProfileScreen() {
       {/* Subscription Section */}
       <Text className="mb-3 text-[20px] font-bold text-ink">Subscription</Text>
       <View style={{ gap: 12 }} className="mb-6">
-        <Link href="/subscription/manage" asChild>
+        <Link href={"/subscription/manage" as never} asChild>
           <View>
             <CooksyCard className="p-4">
               <View className="flex-row items-center" style={{ gap: 14 }}>
@@ -88,7 +88,7 @@ export default function ProfileScreen() {
 
           if (row.href) {
             return (
-              <Link key={row.title} href={row.href} asChild>
+              <Link key={row.title} href={row.href as never} asChild>
                 <View>{CardContent}</View>
               </Link>
             );
@@ -103,7 +103,7 @@ export default function ProfileScreen() {
         {legalRows.map((row) => {
           const Icon = row.icon;
           return (
-            <Link key={row.title} href={row.href} asChild>
+            <Link key={row.title} href={row.href as never} asChild>
               <View>
                 <CooksyCard className="p-4">
                   <View className="flex-row items-center" style={{ gap: 14 }}>

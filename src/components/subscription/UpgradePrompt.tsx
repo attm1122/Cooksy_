@@ -44,7 +44,7 @@ export function UpgradePrompt({ isVisible, onClose, feature, platform }: Upgrade
 
   const handleUpgrade = () => {
     onClose();
-    router.push('/subscription/paywall');
+    router.push('/subscription/paywall' as never);
   };
 
   return (

@@ -14,8 +14,8 @@ import {
   Linking,
 } from 'react-native';
 import { Check, X, Crown, ChefHat, BookOpen, Trash2, Infinity, Sparkles } from 'lucide-react-native';
-import { useSubscriptionStore, useCanUpload } from '@/src/stores/subscription-store';
-import { purchasePackage, restorePurchases } from '@/src/lib/subscription';
+import { useSubscriptionStore, useCanUpload } from '@/stores/subscription-store';
+import { purchasePackage, restorePurchases } from '@/lib/subscription';
 import { PurchasesPackage } from 'react-native-purchases';
 
 interface PaywallProps {

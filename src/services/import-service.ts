@@ -5,12 +5,12 @@ import { trackEvent } from "@/lib/analytics";
 import { captureError, captureMessage } from "@/lib/monitoring";
 import { supabase } from "@/lib/supabase";
 import { mapDomainRecipeToUiRecipe } from "@/features/recipes/lib/adapters";
-import { detectPlatformFromUrl, type VideoPlatform } from "@/features/recipes/lib/platform";
+import { detectPlatformFromUrl } from "@/features/recipes/lib/platform";
 import { recipeRepository } from "@/features/recipes/services/recipeRepository";
 import { startRecipeImport } from "@/features/recipes/services/recipeWorkflowService";
 import { buildMockImportJob } from "@/mocks/import-job";
 import { getThumbnailFromUrl } from "@/features/recipes/services/thumbnailService";
-import { canUpload, trackUpload } from "@/src/lib/subscription";
+import { canUpload, trackUpload } from "@/lib/subscription";
 import type {
   CreateImportJobRequest,
   CreateImportJobResponse,
@@ -381,7 +381,7 @@ export const beginRecipeImport = async (sourceUrl: string): Promise<PendingImpor
   }
   
   // Check subscription - platform restrictions (free = YouTube only)
-  if (!uploadCheck.remaining === -1 && platform !== 'youtube') {
+  if (uploadCheck.remaining !== -1 && platform !== "youtube") {
     trackEvent("recipe_import_failed", {
       sourceUrl,
       platform,

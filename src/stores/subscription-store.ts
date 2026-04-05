@@ -4,8 +4,8 @@
  */
 
 import { create } from 'zustand';
-import { subscribeWithSelector } from 'zustand/middleware';
 import Purchases, { CustomerInfo, PurchasesPackage } from 'react-native-purchases';
+import { subscribeWithSelector } from '@/lib/zustand-middleware';
 import {
   SubscriptionState,
   initialSubscriptionState,
@@ -17,7 +17,7 @@ import {
   getOfferings,
   getCustomerInfo,
   canUpload as checkCanUpload,
-} from '@/src/lib/subscription';
+} from '@/lib/subscription';
 
 interface SubscriptionStore extends SubscriptionState {
   // Actions
@@ -43,7 +43,7 @@ export const useSubscriptionStore = create<SubscriptionStore>()(
       
       try {
         // Import and initialize
-        const { initializePurchases } = await import('@/src/lib/subscription');
+        const { initializePurchases } = await import('@/lib/subscription');
         await initializePurchases(userId);
         
         // Get initial data

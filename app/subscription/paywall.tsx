@@ -6,7 +6,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Paywall } from '@/src/components/subscription/Paywall';
+import { Paywall } from '@/components/subscription/Paywall';
 
 export default function PaywallScreen() {
   const router = useRouter();

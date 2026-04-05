@@ -24,8 +24,8 @@ import {
   HelpCircle,
   Check,
 } from 'lucide-react-native';
-import { useSubscriptionStore, selectIsPremium, selectCurrentPlan, selectWillRenew } from '@/src/stores/subscription-store';
-import { getCustomerInfo, restorePurchases, getManagementURL } from '@/src/lib/subscription';
+import { useSubscriptionStore, selectIsPremium, selectCurrentPlan, selectWillRenew } from '@/stores/subscription-store';
+import { restorePurchases, getManagementURL } from '@/lib/subscription';
 
 export default function SubscriptionManagementScreen() {
   const router = useRouter();
@@ -38,13 +38,18 @@ export default function SubscriptionManagementScreen() {
   const store = useSubscriptionStore();
 
   useEffect(() => {
-    loadManagementUrl();
-  }, []);
+    let isActive = true;
 
-  const loadManagementUrl = async () => {
-    const url = await getManagementURL();
-    setManagementUrl(url);
-  };
+    void getManagementURL().then((url) => {
+      if (isActive) {
+        setManagementUrl(url);
+      }
+    });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -140,7 +145,7 @@ export default function SubscriptionManagementScreen() {
             </View>
 
             <TouchableOpacity
-              onPress={() => router.push('/subscription/paywall')}
+              onPress={() => router.push('/subscription/paywall' as never)}
               className="w-full bg-amber-500 rounded-2xl py-4 items-center"
             >
               <Text className="text-white font-semibold text-lg">

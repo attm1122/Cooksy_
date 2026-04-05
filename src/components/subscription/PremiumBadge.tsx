@@ -6,7 +6,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { Crown } from 'lucide-react-native';
-import { useIsPremium } from '@/src/stores/subscription-store';
+import { useIsPremium } from '@/stores/subscription-store';
 
 interface PremiumBadgeProps {
   size?: 'sm' | 'md';
