@@ -1,9 +1,14 @@
 import { Link } from "expo-router";
 import { ArrowRight, CheckCircle2, Clock3, Library, PlayCircle, ShoppingBag, Sparkles, Wand2 } from "lucide-react-native";
-import { Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { Image, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
 import { CooksyLogo } from "@/components/common/CooksyLogo";
+
+const bowlImage = require("../../../assets/landing/bowl.jpg");
+const noodlesImage = require("../../../assets/landing/noodles.jpg");
+const friesImage = require("../../../assets/landing/loaded-fries.jpg");
+const paneerImage = require("../../../assets/landing/spiced-paneer.jpg");
 
 const navItems = ["Product", "Flow", "Trust", "FAQ"] as const;
 
@@ -84,7 +89,7 @@ const NavLink = ({ label }: { label: string }) => (
 );
 
 const HeroDashboard = () => (
-  <View className="relative min-h-[520px] flex-1 items-center justify-end overflow-hidden rounded-[36px] border border-[#E8EAF0] bg-white px-5 pb-7 pt-6">
+  <View className="relative min-h-[560px] flex-1 items-center justify-end overflow-hidden rounded-[36px] border border-[#E8EAF0] bg-white px-5 pb-7 pt-6">
     <View
       className="absolute inset-0"
       style={{
@@ -99,6 +104,12 @@ const HeroDashboard = () => (
       <View className="absolute right-[10%] top-0 h-full w-[1px] bg-[#ECEEF5]" />
       <View className="absolute left-[28%] top-[26%] h-[160px] w-[1px] -rotate-45 bg-[#F0F2F8]" />
       <View className="absolute right-[24%] top-[24%] h-[180px] w-[1px] rotate-45 bg-[#F0F2F8]" />
+      <LinearGradient
+        colors={["rgba(255,246,204,0.1)", "rgba(245,196,0,0.28)", "rgba(255,244,163,0.08)"]}
+        start={{ x: 0.1, y: 0 }}
+        end={{ x: 0.9, y: 1 }}
+        className="absolute inset-x-8 top-10 h-[260px] rounded-[36px]"
+      />
     </View>
 
     <View className="absolute left-6 top-6 rounded-full px-4 py-2" style={pillStyle}>
@@ -115,13 +126,21 @@ const HeroDashboard = () => (
     </View>
 
     <View
-      className="absolute right-4 bottom-20 w-[210px] rounded-[28px] border border-[#E8EEF8] bg-white px-4 py-4"
+      className="absolute right-4 bottom-20 w-[220px] rounded-[28px] border border-[#E8EEF8] bg-white px-4 py-4"
       style={[softShadow, { transform: [{ rotate: "8deg" }] }]}
     >
       <Text className="text-[13px] font-semibold text-ink">Cooksy note</Text>
       <Text className="mt-2 text-[14px] leading-7 text-[#5F6573]">
         Garlic amount was inferred from the transcript and visible ingredient list, so it stays easy to review.
       </Text>
+    </View>
+
+    <View className="absolute left-7 top-24 h-[184px] w-[138px] overflow-hidden rounded-[28px] border border-[#E8EAF0] bg-white" style={[softShadow, { transform: [{ rotate: "-10deg" }] }]}>
+      <Image source={noodlesImage} resizeMode="cover" className="h-full w-full" />
+    </View>
+
+    <View className="absolute right-10 top-24 h-[160px] w-[132px] overflow-hidden rounded-[28px] border border-[#E8EAF0] bg-white" style={[softShadow, { transform: [{ rotate: "9deg" }] }]}>
+      <Image source={friesImage} resizeMode="cover" className="h-full w-full" />
     </View>
 
     <View
@@ -134,51 +153,50 @@ const HeroDashboard = () => (
         }
       ]}
     >
-      <View className="mb-4 flex-row items-center justify-between">
-        <View>
-          <Text className="text-[15px] font-semibold text-ink">Recipe readiness over time</Text>
-          <Text className="mt-1 text-[13px] text-[#7A8192]">Source signals turned into a cookable recipe</Text>
+      <View className="mb-4 flex-row items-center justify-between" style={{ gap: 16 }}>
+        <View className="flex-1">
+          <Text className="text-[15px] font-semibold text-ink">From saved video to dinner plan</Text>
+          <Text className="mt-1 text-[13px] text-[#7A8192]">Original food visual first, Cooksy structure second</Text>
         </View>
-        <View className="flex-row rounded-full border border-[#E7EBF4] bg-[#FBFCFF] p-1">
-          <View className="rounded-full bg-[#EEF5FF] px-3 py-1">
-            <Text className="text-[12px] font-semibold text-[#4A7FEA]">Recipe</Text>
-          </View>
-          <View className="px-3 py-1">
-            <Text className="text-[12px] font-medium text-[#7B8190]">Source</Text>
-          </View>
+        <View className="rounded-full bg-[#FFF6CC] px-3 py-2">
+          <Text className="text-[12px] font-semibold text-[#6E5700]">Ready in minutes</Text>
         </View>
       </View>
 
-      <View className="h-[240px] overflow-hidden rounded-[24px] bg-[#FCFDFF] px-4 py-4">
-        <View className="absolute inset-0">
-          {[0, 1, 2, 3].map((row) => (
-            <View
-              key={row}
-              className="absolute left-0 right-0 border-t border-dashed border-[#E8ECF5]"
-              style={{ top: 32 + row * 48 }}
+      <View className="h-[268px] overflow-hidden rounded-[24px] bg-[#FCFDFF] px-4 py-4">
+        <LinearGradient
+          colors={["rgba(255,255,255,0)", "rgba(245,196,0,0.18)", "rgba(255,255,255,0)"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          className="absolute inset-0"
+        />
+
+        <View className="flex-row" style={{ gap: 12 }}>
+          <View className="h-[236px] flex-1 overflow-hidden rounded-[22px]">
+            <Image source={bowlImage} resizeMode="cover" className="h-full w-full" />
+            <LinearGradient
+              colors={["rgba(17,17,17,0)", "rgba(17,17,17,0.72)"]}
+              start={{ x: 0.5, y: 0.1 }}
+              end={{ x: 0.5, y: 1 }}
+              className="absolute inset-x-0 bottom-0 h-[110px]"
             />
-          ))}
-        </View>
-        <View
-          className="absolute bottom-[44px] left-[40px] right-[36px] h-[2px] bg-transparent"
-          style={{
-            borderTopWidth: 3,
-            borderColor: "#4A8BFF",
-            borderTopLeftRadius: 999,
-            borderTopRightRadius: 999,
-            transform: [{ skewY: "-8deg" }]
-          }}
-        />
-        <View
-          className="absolute left-[220px] top-[96px] h-4 w-4 rounded-full border-4 border-[#4A8BFF] bg-white"
-          style={{ shadowColor: "#4A8BFF", shadowOpacity: 0.18, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } }}
-        />
-        <View className="absolute bottom-4 left-5 right-5 flex-row justify-between">
-          {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-            <Text key={day} className="text-[11px] font-medium text-[#A0A5B2]">
-              {day}
-            </Text>
-          ))}
+            <View className="absolute inset-x-4 bottom-4">
+              <Text className="text-[11px] font-semibold uppercase tracking-[1px] text-[#FFF3B3]">Imported recipe</Text>
+              <Text className="mt-1 text-[22px] font-bold text-white">Creamy garlic chicken bowl</Text>
+              <Text className="mt-1 text-[13px] text-white/80">Ingredients, timings, and confidence cleaned up for cooking.</Text>
+            </View>
+          </View>
+
+          <View className="w-[190px]" style={{ gap: 12 }}>
+            <View className="rounded-[20px] border border-[#E8EAF0] bg-white px-4 py-4">
+              <Text className="text-[12px] font-semibold uppercase tracking-[1px] text-[#7B8190]">Confidence</Text>
+              <Text className="mt-3 text-[30px] font-bold text-ink">87%</Text>
+              <Text className="mt-2 text-[13px] leading-6 text-[#68707F]">Strong source match with a few inferred quantities.</Text>
+            </View>
+            <View className="overflow-hidden rounded-[20px] border border-[#E8EAF0] bg-white">
+              <Image source={paneerImage} resizeMode="cover" className="h-[112px] w-full" />
+            </View>
+          </View>
         </View>
       </View>
     </View>
@@ -191,7 +209,7 @@ export const WebLandingPage = () => {
   const isTablet = width >= 760;
 
   return (
-    <LinearGradient colors={["#F3F5FA", "#F7F8FB", "#EEF1F7"]} className="flex-1">
+    <LinearGradient colors={["#FFFDF7", "#FDFBF2", "#F4F6FB"]} className="flex-1">
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 10 }}>
         <View
           className="mx-auto w-full overflow-hidden rounded-[34px] border border-[#E3E6EE] bg-[#FAFBFD] px-4 pb-14 pt-6"
@@ -201,6 +219,12 @@ export const WebLandingPage = () => {
             <View className="absolute inset-0">
               <View className="absolute left-[24%] top-0 h-full w-[1px] bg-[#EDEFF5]" />
               <View className="absolute left-[76%] top-0 h-full w-[1px] bg-[#EDEFF5]" />
+              <LinearGradient
+                colors={["rgba(245,196,0,0.16)", "rgba(255,255,255,0)"]}
+                start={{ x: 0.15, y: 0 }}
+                end={{ x: 0.8, y: 0.9 }}
+                className="absolute left-[20%] top-8 h-[420px] w-[60%] rounded-[999px]"
+              />
             </View>
 
             <View
@@ -296,6 +320,53 @@ export const WebLandingPage = () => {
                 </View>
               );
             })}
+          </View>
+
+          <View className="mt-16 flex-row flex-wrap" style={{ gap: 16 }}>
+            <View className={`${isDesktop ? "flex-[1.15]" : "w-full"} overflow-hidden rounded-[30px] border border-[#E7EAF1] bg-white`}>
+              <View className="p-6">
+                <SectionPill>Food-first visual system</SectionPill>
+                <Text className="mt-5 max-w-[520px] text-[42px] font-bold leading-[46px] text-ink">
+                  Recipes still feel like the food content you fell in love with.
+                </Text>
+                <Text className="mt-4 max-w-[560px] text-[15px] leading-8 text-[#68707F]">
+                  Cooksy keeps the visual spark of the original post, then wraps it in structure that makes the recipe usable.
+                </Text>
+              </View>
+              <View className="px-6 pb-6">
+                <View className="flex-row" style={{ gap: 12 }}>
+                  <View className="h-[280px] flex-1 overflow-hidden rounded-[26px]">
+                    <Image source={noodlesImage} resizeMode="cover" className="h-full w-full" />
+                  </View>
+                  <View className="w-[34%]" style={{ gap: 12 }}>
+                    <View className="h-[134px] overflow-hidden rounded-[24px]">
+                      <Image source={friesImage} resizeMode="cover" className="h-full w-full" />
+                    </View>
+                    <View className="h-[134px] overflow-hidden rounded-[24px]">
+                      <Image source={paneerImage} resizeMode="cover" className="h-full w-full" />
+                    </View>
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            <LinearGradient
+              colors={["#FFF8D9", "#F5C400", "#FFE780"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              className={`${isDesktop ? "flex-[0.85]" : "w-full"} rounded-[30px] border border-[#F4DB66] px-6 py-6`}
+            >
+              <Text className="text-[12px] font-semibold uppercase tracking-[1px] text-[#7A5B00]">Cooksy yellow</Text>
+              <Text className="mt-5 text-[42px] font-bold leading-[46px] text-ink">
+                Warm, bright, and unmistakably about food.
+              </Text>
+              <Text className="mt-4 text-[15px] leading-8 text-[#5E520E]">
+                The background stays light and premium, while the yellow gradient gives the page enough appetite and energy to feel like Cooksy.
+              </Text>
+              <View className="mt-8 overflow-hidden rounded-[26px] border border-[#F6E28B] bg-white/80 p-3">
+                <Image source={bowlImage} resizeMode="cover" className="h-[248px] w-full rounded-[20px]" />
+              </View>
+            </LinearGradient>
           </View>
 
           <View className="mt-16 items-center px-3">
