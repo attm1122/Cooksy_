@@ -69,10 +69,9 @@ Use `mock` only for local product work. Use `auto` or `remote` for integration v
 For Vercel web production, also set:
 
 ```bash
-EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY=<optional for native preview parity>
-EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY=<optional for native preview parity>
-EXPO_PUBLIC_REVENUECAT_ENTITLEMENT=cooksy_pro
-EXPO_PUBLIC_WEB_BILLING_URL=<hosted checkout or billing portal URL>
+EXPO_PUBLIC_REVENUECAT_IOS_KEY=<optional for native preview parity>
+EXPO_PUBLIC_REVENUECAT_ANDROID_KEY=<optional for native preview parity>
+EXPO_PUBLIC_REVENUECAT_WEB_KEY=<optional for web billing parity>
 ```
 
 See [docs/extraction-layer.md](./extraction-layer.md) for detailed extraction configuration.

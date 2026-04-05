@@ -192,10 +192,9 @@ Before a production promote on Vercel, make sure these env vars are present:
 - `EXPO_PUBLIC_RECIPE_IMPORT_MODE`
 - `EXPO_PUBLIC_SUPABASE_URL`
 - `EXPO_PUBLIC_SUPABASE_ANON_KEY`
-- `EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY`
-- `EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY`
-- `EXPO_PUBLIC_REVENUECAT_ENTITLEMENT`
-- `EXPO_PUBLIC_WEB_BILLING_URL`
+- `EXPO_PUBLIC_REVENUECAT_IOS_KEY`
+- `EXPO_PUBLIC_REVENUECAT_ANDROID_KEY`
+- `EXPO_PUBLIC_REVENUECAT_WEB_KEY`
 
 The current public Vercel production URL is still protected by Vercel Authentication. Before public release, disable deployment protection for the production URL or move Cooksy web onto a public custom domain.
 
@@ -220,6 +219,24 @@ Use these commands for store builds:
 - `npm run build:android:production`
 - `npm run submit:ios:production`
 - `npm run submit:android:production`
+
+## Auth for launch
+
+Cooksy now uses a profile-first auth model:
+
+- `Continue with Apple`
+- `Continue with Google`
+- `Email code` fallback
+
+Identity should stay anchored to the Supabase user id. RevenueCat should use that same id as `appUserID` so purchases follow the same account across web, iPhone, and Android.
+
+Before launch:
+
+1. Enable Apple and Google providers in Supabase Auth.
+2. Add redirect URLs:
+   - `https://cooksy-six.vercel.app/auth`
+   - `cooksy://auth`
+3. Replace the default Supabase auth email with the branded Cooksy template in [`docs/supabase-auth-branding.md`](/Users/aubreymazinyi/Documents/Playground/Cooksy_/docs/supabase-auth-branding.md).
 
 ## Recommended backend next steps
 
