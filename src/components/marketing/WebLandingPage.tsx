@@ -12,31 +12,31 @@ const paneerImage = require("../../../assets/landing/spiced-paneer.jpg");
 const navItems = ["Product", "Flow", "Trust", "FAQ"] as const;
 
 const highlights = [
-  "Import recipe links from TikTok, Instagram, and YouTube",
-  "See confidence and fix uncertain details quickly",
-  "Move directly into grocery mode or cooking mode"
+  "Turn TikTok, Instagram, and YouTube links into cookable recipes",
+  "See what was inferred before you buy ingredients",
+  "Go from saved post to grocery list in a few taps"
 ] as const;
 
 const features = [
   {
     icon: PlayCircle,
-    title: "Save-first import",
-    body: "Paste a link and Cooksy saves it immediately, then reconstructs the recipe in the background."
+    title: "Import in one tap",
+    body: "Paste a food link and Cooksy saves it instantly, then turns it into a structured recipe in the background."
   },
   {
     icon: Wand2,
-    title: "Confidence built in",
-    body: "Estimated values, source evidence, and editable fields make the result feel reliable instead of mysterious."
+    title: "Trust what you're cooking",
+    body: "Cooksy shows confidence, inferred fields, and source evidence so you can review a recipe before dinner depends on it."
   },
   {
     icon: ShoppingBag,
-    title: "One-tap grocery list",
-    body: "The recipe becomes actionable fast, which is what saved food content usually fails to do."
+    title: "Shop faster",
+    body: "Turn ingredients into a grocery list right away instead of rewatching a video while standing in the aisle."
   },
   {
     icon: Library,
-    title: "A visual recipe library",
-    body: "Thumbnails, source context, and clean organization keep recipes tied to the content that inspired them."
+    title: "Keep the recipes you'll actually make",
+    body: "Your library stays visual, organized, and tied back to the creator or video that made you want to cook it."
   }
 ] as const;
 
@@ -50,6 +50,11 @@ const faqs = [
     question: "What happens when the source leaves out details?",
     answer:
       "Cooksy marks what was inferred, lowers confidence where needed, and lets you correct ingredients or steps quickly."
+  },
+  {
+    question: "Why would I pay for Cooksy instead of doing this manually?",
+    answer:
+      "Because manual recipe saving breaks at the exact point where you want to cook. Cooksy saves the time you lose rewatching, rewriting, estimating, and building a shopping list from scratch."
   },
   {
     question: "Does Cooksy keep creator attribution?",
@@ -141,7 +146,7 @@ const HeroDashboard = () => (
     </View>
 
     <View className="absolute left-6 top-6 rounded-full px-4 py-2" style={pillStyle}>
-      <Text className="text-[13px] font-medium text-[#4A7FEA]">Cooksy turns saved food content into usable recipes.</Text>
+      <Text className="text-[13px] font-medium text-[#4A7FEA]">Built for people who save food videos and actually want to cook them.</Text>
     </View>
 
     <View
@@ -183,11 +188,11 @@ const HeroDashboard = () => (
     >
       <View className="mb-4 flex-row items-center justify-between" style={{ gap: 16 }}>
         <View className="flex-1">
-          <Text className="text-[15px] font-semibold text-ink">From saved video to dinner plan</Text>
-          <Text className="mt-1 text-[13px] text-[#7A8192]">Original food visual first, Cooksy structure second</Text>
+          <Text className="text-[15px] font-semibold text-ink">From saved post to grocery-ready recipe</Text>
+          <Text className="mt-1 text-[13px] text-[#7A8192]">Keep the original visual, then layer in the structure needed to cook</Text>
         </View>
         <View className="rounded-full bg-[#FFF6CC] px-3 py-2">
-          <Text className="text-[12px] font-semibold text-[#6E5700]">Ready in minutes</Text>
+          <Text className="text-[12px] font-semibold text-[#6E5700]">Faster than doing it yourself</Text>
         </View>
       </View>
 
@@ -211,7 +216,7 @@ const HeroDashboard = () => (
             <View className="absolute inset-x-4 bottom-4">
               <Text className="text-[11px] font-semibold uppercase tracking-[1px] text-[#FFF3B3]">Imported recipe</Text>
               <Text className="mt-1 text-[22px] font-bold text-white">Creamy garlic chicken bowl</Text>
-              <Text className="mt-1 text-[13px] text-white/80">Ingredients, timings, and confidence cleaned up for cooking.</Text>
+              <Text className="mt-1 text-[13px] text-white/80">Ingredients, timings, and confidence made usable before you shop.</Text>
             </View>
           </View>
 
@@ -219,7 +224,7 @@ const HeroDashboard = () => (
             <View className="rounded-[20px] border border-[#E8EAF0] bg-white px-4 py-4">
               <Text className="text-[12px] font-semibold uppercase tracking-[1px] text-[#7B8190]">Confidence</Text>
               <Text className="mt-3 text-[30px] font-bold text-ink">87%</Text>
-              <Text className="mt-2 text-[13px] leading-6 text-[#68707F]">Strong source match with a few inferred quantities.</Text>
+              <Text className="mt-2 text-[13px] leading-6 text-[#68707F]">Strong signal match with only a few estimated quantities to review.</Text>
             </View>
             <View className="overflow-hidden rounded-[20px] border border-[#E8EAF0] bg-white">
               <Image source={paneerImage} resizeMode="cover" className="h-[112px] w-full" />
@@ -285,10 +290,10 @@ export const WebLandingPage = () => {
             <View className="mb-16 items-center px-4">
               <SectionPill>Cooksy for web, iPhone, and Android</SectionPill>
               <Text className="mt-8 max-w-[920px] text-center text-[66px] font-bold leading-[70px] text-ink">
-                Your smartest saved recipe, built from the links you actually discover.
+                Turn saved food videos into recipes you'll actually cook.
               </Text>
               <Text className="mt-6 max-w-[860px] text-center text-[18px] leading-9 text-[#6B7180]">
-                Cooksy pulls social cooking content into a structured recipe, shows where confidence is strong or soft, and gives you the fastest path to fixing, shopping, and cooking.
+                Cooksy extracts ingredients, steps, timings, and confidence from TikTok, Instagram, and YouTube so you can stop rewatching videos and start cooking with clarity.
               </Text>
 
               <View className="mt-10 flex-row flex-wrap justify-center" style={{ gap: 14 }}>
@@ -298,7 +303,7 @@ export const WebLandingPage = () => {
                     style={{ shadowColor: "#16181D", shadowOpacity: 0.14, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } }}
                   >
                     <View className="flex-row items-center" style={{ gap: 10 }}>
-                      <Text className="text-[16px] font-semibold text-white">Start on web</Text>
+                      <Text className="text-[16px] font-semibold text-white">Try Cooksy free</Text>
                       <View className="h-7 w-7 items-center justify-center rounded-full bg-white">
                         <ArrowRight size={15} color="#111111" />
                       </View>
@@ -308,7 +313,7 @@ export const WebLandingPage = () => {
 
                 <Link href="/recipes" asChild>
                   <Pressable className="px-4 py-4">
-                    <Text className="text-[16px] font-semibold text-ink">See the product</Text>
+                    <Text className="text-[16px] font-semibold text-ink">See how it works</Text>
                   </Pressable>
                 </Link>
               </View>
@@ -355,10 +360,10 @@ export const WebLandingPage = () => {
               <View className="p-6">
                 <SectionPill>Food-first visual system</SectionPill>
                 <Text className="mt-5 max-w-[520px] text-[42px] font-bold leading-[46px] text-ink">
-                  Recipes still feel like the food content you fell in love with.
+                  The recipe still feels like the food that made you save it.
                 </Text>
                 <Text className="mt-4 max-w-[560px] text-[15px] leading-8 text-[#68707F]">
-                  Cooksy keeps the visual spark of the original post, then wraps it in structure that makes the recipe usable.
+                  Cooksy keeps the visual spark of the original post, then adds the structure that helps you decide, shop, and cook with less friction.
                 </Text>
               </View>
               <View className="px-6 pb-6">
@@ -368,10 +373,10 @@ export const WebLandingPage = () => {
                   </View>
                   <View className={`${isTablet ? "flex-[0.72]" : "w-full"}`} style={{ gap: 14 }}>
                     <View className="rounded-[24px] border border-[#ECEFF4] bg-[#FCFCFD] px-5 py-5">
-                      <Text className="text-[12px] font-semibold uppercase tracking-[1px] text-[#7C8593]">Original visual kept intact</Text>
-                      <Text className="mt-4 text-[28px] font-bold leading-[32px] text-ink">Food first. Structure right behind it.</Text>
+                      <Text className="text-[12px] font-semibold uppercase tracking-[1px] text-[#7C8593]">What you pay for</Text>
+                      <Text className="mt-4 text-[28px] font-bold leading-[32px] text-ink">Less rewriting. Less guessing. Less back-and-forth.</Text>
                       <Text className="mt-3 text-[14px] leading-7 text-[#667080]">
-                        The visual still feels like the post you discovered, but the result is now ready for shopping and cooking.
+                        The result is ready to review and act on without manually pulling steps and ingredient guesses out of a video.
                       </Text>
                     </View>
                     <View className="flex-row" style={{ gap: 14 }}>
@@ -393,27 +398,37 @@ export const WebLandingPage = () => {
               end={{ x: 1, y: 1 }}
               className={`${isDesktop ? "flex-[0.85]" : "w-full"} rounded-[30px] border border-[#F4DB66] px-6 py-6`}
             >
-              <Text className="text-[12px] font-semibold uppercase tracking-[1px] text-[#7A5B00]">Cooksy yellow</Text>
+              <Text className="text-[12px] font-semibold uppercase tracking-[1px] text-[#7A5B00]">Why people buy Cooksy</Text>
               <Text className="mt-5 text-[42px] font-bold leading-[46px] text-ink">
-                Warm, bright, and unmistakably about food.
+                It saves the time between "that looks good" and "let's make it".
               </Text>
               <Text className="mt-4 text-[15px] leading-8 text-[#5E520E]">
-                The background stays light and premium, while the yellow gradient gives the page enough appetite and energy to feel like Cooksy.
+                Cooksy earns its place by removing the annoying part of internet recipes: rewriting vague content into something you can trust enough to cook tonight.
               </Text>
               <View className="mt-8 rounded-[26px] border border-[#F6E28B] bg-white/70 p-3">
                 <FoodPhoto source={paneerImage} height={320} rounded={22} label="Cooksy mood" tone="dark" />
                 <View className="mt-4 rounded-[22px] bg-white/80 px-4 py-4">
-                  <Text className="text-[12px] font-semibold uppercase tracking-[1px] text-[#7A5B00]">Visual taste</Text>
-                  <Text className="mt-3 text-[24px] font-bold leading-[30px] text-ink">Bright warmth, clean surfaces, and real food that looks worth cooking.</Text>
+                  <Text className="text-[12px] font-semibold uppercase tracking-[1px] text-[#7A5B00]">Value in practice</Text>
+                  <Text className="mt-3 text-[24px] font-bold leading-[30px] text-ink">
+                    Faster imports, clearer recipes, easier fixes, and a grocery list before you leave the page.
+                  </Text>
+                  <Link href={"/home" as never} asChild>
+                    <Pressable className="mt-4 self-start rounded-full border border-[#23262E] bg-[#16181D] px-5 py-3">
+                      <View className="flex-row items-center" style={{ gap: 8 }}>
+                        <Text className="text-[14px] font-semibold text-white">Get Cooksy</Text>
+                        <ArrowRight size={14} color="#FFFFFF" />
+                      </View>
+                    </Pressable>
+                  </Link>
                 </View>
               </View>
             </LinearGradient>
           </View>
 
           <View className="mt-16 items-center px-3">
-            <SectionPill>Product rhythm</SectionPill>
+            <SectionPill>How it works</SectionPill>
             <Text className="mt-6 max-w-[820px] text-center text-[50px] font-bold leading-[54px] text-ink">
-              The experience is designed around what happens after the save.
+              Cooksy is built to get you from inspiration to action fast.
             </Text>
           </View>
 
@@ -421,15 +436,15 @@ export const WebLandingPage = () => {
             {[
               {
                 title: "Import",
-                body: "Save the food link immediately so the product feels responsive before anything finishes processing."
+                body: "Save the post once and let Cooksy extract the title, ingredients, steps, and timing in the background."
               },
               {
                 title: "Review",
-                body: "See where the recipe is strong, what was inferred, and what should be checked before you cook."
+                body: "Check what Cooksy inferred, fix anything uncertain, and make sure the recipe looks right before you shop."
               },
               {
                 title: "Cook",
-                body: "Move into grocery mode or step-by-step cooking mode instead of letting the recipe rot in a saved folder."
+                body: "Open grocery mode or cooking mode immediately, instead of leaving the recipe trapped in a saved-video graveyard."
               }
             ].map((step, index) => (
               <View
@@ -445,22 +460,22 @@ export const WebLandingPage = () => {
 
           <View className="mt-16 flex-row flex-wrap" style={{ gap: 16 }}>
             <View className={`${isDesktop ? "flex-[1.2]" : "w-full"} rounded-[30px] border border-[#E7EAF1] bg-white px-6 py-6`}>
-              <SectionPill>Why it feels premium</SectionPill>
+              <SectionPill>Why it converts</SectionPill>
               <Text className="mt-5 max-w-[560px] text-[46px] font-bold leading-[50px] text-ink">
-                Calm interface. Clear hierarchy. Trust you can actually use.
+                People pay for Cooksy because it removes friction from a habit they already have.
               </Text>
               <Text className="mt-4 max-w-[520px] text-[15px] leading-8 text-[#68707F]">
-                Cooksy keeps the original food content feeling alive through thumbnails and source context, then adds the structure needed to shop, fix, and cook confidently.
+                They already save food posts. Cooksy turns those saves into something usable enough to cook from, which makes the value obvious in the first session.
               </Text>
             </View>
 
             <View className={`${isDesktop ? "flex-[0.8]" : "w-full"} rounded-[30px] border border-[#E7EAF1] bg-[#F4F8FF] px-6 py-6`}>
-              <Text className="text-[12px] font-semibold uppercase tracking-[1px] text-[#6F7C93]">Inside the product</Text>
+              <Text className="text-[12px] font-semibold uppercase tracking-[1px] text-[#6F7C93]">What users get</Text>
               <View className="mt-5" style={{ gap: 16 }}>
                 {[
-                  { icon: Sparkles, text: "Confidence and evidence summary" },
-                  { icon: ShoppingBag, text: "One-tap grocery list generation" },
-                  { icon: Clock3, text: "Guided step-by-step cooking mode" }
+                  { icon: Sparkles, text: "Confidence and evidence before they trust a recipe" },
+                  { icon: ShoppingBag, text: "A grocery list without rewatching the video" },
+                  { icon: Clock3, text: "Guided cooking mode when they are ready to make it" }
                 ].map((item) => {
                   const Icon = item.icon;
                   return (
@@ -477,7 +492,7 @@ export const WebLandingPage = () => {
           <View className="mt-16 items-center px-3">
             <SectionPill>FAQ</SectionPill>
             <Text className="mt-6 max-w-[760px] text-center text-[44px] font-bold leading-[48px] text-ink">
-              Questions people ask before they trust a recipe product
+              Questions people ask before they try Cooksy
             </Text>
           </View>
 
