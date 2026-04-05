@@ -43,7 +43,8 @@
         {
           "fonts": []
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

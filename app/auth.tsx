@@ -1,16 +1,16 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { router } from "expo-router";
-import { Mail, ShieldCheck, UserRound } from "lucide-react-native";
+import { Apple, Globe, Mail, ShieldCheck, UserRound } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { Text, TextInput, View } from "react-native";
+import { Platform, Text, TextInput, View } from "react-native";
 
 import { PrimaryButton, SecondaryButton } from "@/components/common/Buttons";
 import { CooksyCard } from "@/components/common/CooksyCard";
 import { CooksyLogo } from "@/components/common/CooksyLogo";
 import { ScreenContainer } from "@/components/common/ScreenContainer";
 import { createProfileSchema, type CreateProfileValues, verifyProfileCodeSchema, type VerifyProfileCodeValues } from "@/lib/auth-schemas";
-import { completeCooksyEmailLink, getCooksyAuthErrorMessage, requestCooksyProfileAccess, verifyCooksyProfileCode } from "@/lib/auth";
+import { completeCooksyEmailLink, getCooksyAuthErrorMessage, requestCooksyProfileAccess, signInWithCooksyOAuth, type CooksyOAuthProvider, verifyCooksyProfileCode } from "@/lib/auth";
 import { trackEvent } from "@/lib/analytics";
 import { captureError } from "@/lib/monitoring";
 import { useAuthStore } from "@/store/use-auth-store";
@@ -23,6 +23,7 @@ export default function AuthScreen() {
   const [verifyError, setVerifyError] = useState<string>();
   const [isRequesting, setIsRequesting] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [oauthLoadingProvider, setOauthLoadingProvider] = useState<CooksyOAuthProvider>();
   const [requestCooldownUntil, setRequestCooldownUntil] = useState<number>();
   const [cooldownNow, setCooldownNow] = useState(() => Date.now());
 
@@ -48,6 +49,17 @@ export default function AuthScreen() {
 
   const isRequestCoolingDown = cooldownSeconds > 0;
   const requestButtonLabel = isRequestCoolingDown ? `Try again in ${cooldownSeconds}s` : "Create profile";
+  const oauthProviders = useMemo(() => {
+    const providers: { provider: CooksyOAuthProvider; label: string; icon: typeof Apple }[] = [];
+
+    if (Platform.OS !== "android") {
+      providers.push({ provider: "apple", label: "Continue with Apple", icon: Apple });
+    }
+
+    providers.push({ provider: "google", label: "Continue with Google", icon: Globe });
+
+    return providers;
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -182,6 +194,42 @@ export default function AuthScreen() {
     }
   });
 
+  const onOAuthSignIn = async (provider: CooksyOAuthProvider) => {
+    setRequestError(undefined);
+    setVerifyError(undefined);
+    setOauthLoadingProvider(provider);
+
+    try {
+      const session = await signInWithCooksyOAuth(provider);
+
+      if (session?.userId) {
+        setAuthState({
+          status: "ready",
+          userId: session.userId,
+          email: session.email,
+          fullName: session.fullName,
+          errorMessage: undefined
+        });
+
+        trackEvent("onboarding_completed", {
+          provider,
+          hasName: Boolean(session.fullName)
+        });
+
+        router.replace("/home" as never);
+        return;
+      }
+
+      trackEvent("auth_social_started", { provider });
+    } catch (error) {
+      const message = getCooksyAuthErrorMessage(error, "request");
+      setRequestError(message);
+      captureError(error, { action: "social_sign_in", provider });
+    } finally {
+      setOauthLoadingProvider(undefined);
+    }
+  };
+
   return (
     <ScreenContainer showHeader={false} showBottomNav={false} keyboardAvoiding>
       <View className="mx-auto w-full max-w-[1120px] px-5 pb-14 pt-10">
@@ -240,10 +288,34 @@ export default function AuthScreen() {
                 <>
                   <Text className="text-[28px] font-bold text-ink">Create your Cooksy profile</Text>
                   <Text className="mt-3 text-[15px] leading-7 text-muted">
-                    We’ll email you a 6-digit code so you can start saving recipes under your account.
+                    Start with Apple or Google for the fastest setup, or use your email if you prefer a 6-digit code.
                   </Text>
 
                   <View className="mt-6" style={{ gap: 14 }}>
+                    {oauthProviders.map(({ provider, label, icon: Icon }) => (
+                      <SecondaryButton
+                        key={provider}
+                        fullWidth
+                        disabled={Boolean(oauthLoadingProvider)}
+                        onPress={() => {
+                          void onOAuthSignIn(provider);
+                        }}
+                      >
+                        <View className="flex-row items-center justify-center" style={{ gap: 10 }}>
+                          <Icon size={18} color="#111111" />
+                          <Text className="text-[15px] font-semibold text-soft-ink">
+                            {oauthLoadingProvider === provider ? "Opening..." : label}
+                          </Text>
+                        </View>
+                      </SecondaryButton>
+                    ))}
+
+                    <View className="flex-row items-center" style={{ gap: 12 }}>
+                      <View className="h-px flex-1 bg-line" />
+                      <Text className="text-[12px] font-semibold uppercase tracking-[1px] text-[#8A8478]">Or use email</Text>
+                      <View className="h-px flex-1 bg-line" />
+                    </View>
+
                     <Controller
                       control={createProfileForm.control}
                       name="fullName"
@@ -287,6 +359,10 @@ export default function AuthScreen() {
                         We’re protecting delivery for everyone. Please wait {cooldownSeconds}s before requesting another code.
                       </Text>
                     ) : null}
+
+                    <Text className="text-[13px] leading-6 text-muted">
+                      Apple and Google are best if you plan to subscribe, because they keep your Cooksy account cleaner across web, iPhone, and Android.
+                    </Text>
 
                     <PrimaryButton onPress={onCreateProfile} loading={isRequesting} disabled={isRequestCoolingDown}>
                       {requestButtonLabel}

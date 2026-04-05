@@ -5,6 +5,7 @@ export type AnalyticsEventName =
   | "auth_session_ready"
   | "auth_session_failed"
   | "auth_code_requested"
+  | "auth_social_started"
   | "onboarding_completed"
   | "recipes_hydrated"
   | "books_hydrated"

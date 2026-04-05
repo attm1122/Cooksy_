@@ -1,4 +1,10 @@
+import * as Linking from "expo-linking";
+import * as WebBrowser from "expo-web-browser";
+import { Platform } from "react-native";
+
 import { supabase } from "@/lib/supabase";
+
+WebBrowser.maybeCompleteAuthSession();
 
 type SessionSnapshot = {
   userId?: string;
@@ -8,6 +14,7 @@ type SessionSnapshot = {
 };
 
 type AuthErrorMode = "request" | "verify";
+export type CooksyOAuthProvider = "google" | "apple";
 
 const getErrorMessage = (error: unknown) => {
   if (error instanceof Error) {
@@ -50,6 +57,10 @@ export const getCooksyAuthErrorMessage = (error: unknown, mode: AuthErrorMode) =
     return "That sign-in link is no longer valid. Request a new code and try again.";
   }
 
+  if (rawMessage.includes("cancelled") || rawMessage.includes("canceled")) {
+    return "Sign-in was cancelled before Cooksy could finish setting up your profile.";
+  }
+
   if (rawMessage.includes("token") && rawMessage.includes("invalid")) {
     return "That code doesn’t look right. Check the latest email from Cooksy and try again.";
   }
@@ -68,7 +79,7 @@ const getCooksyEmailRedirectUrl = () => {
     return `${window.location.origin}/auth`;
   }
 
-  return undefined;
+  return Linking.createURL("/auth");
 };
 
 export const ensureCooksySession = async () => {
@@ -205,6 +216,47 @@ export const completeCooksyEmailLink = async (urlString: string, fallbackFullNam
       email: data.user?.email,
       fullName: typeof data.user?.user_metadata?.full_name === "string" ? data.user.user_metadata.full_name : fallbackFullName
     };
+  }
+
+  return undefined;
+};
+
+export const signInWithCooksyOAuth = async (provider: CooksyOAuthProvider) => {
+  if (!supabase) {
+    throw new Error("Cooksy auth is not configured yet.");
+  }
+
+  const redirectTo = getCooksyEmailRedirectUrl();
+  const isWeb = Platform.OS === "web";
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo,
+      skipBrowserRedirect: !isWeb
+    }
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  if (isWeb) {
+    return undefined;
+  }
+
+  if (!data.url) {
+    throw new Error("Cooksy could not start sign-in right now. Please try again.");
+  }
+
+  const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+
+  if (result.type === "cancel" || result.type === "dismiss") {
+    throw new Error("Sign-in was cancelled before Cooksy could finish setting up your profile.");
+  }
+
+  if (result.type === "success" && result.url) {
+    return completeCooksyEmailLink(result.url);
   }
 
   return undefined;

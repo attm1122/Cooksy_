@@ -23,6 +23,7 @@ interface SubscriptionStore extends SubscriptionState {
   // Actions
   initialize: (userId: string) => Promise<void>;
   refresh: () => Promise<void>;
+  reset: () => void;
   setCustomerInfo: (info: CustomerInfo | null) => void;
   setOfferings: (offerings: PurchasesPackage[] | null) => void;
   setLoading: (loading: boolean) => void;
@@ -111,6 +112,8 @@ export const useSubscriptionStore = create<SubscriptionStore>()(
         set({ isLoading: false });
       }
     },
+
+    reset: () => set({ ...initialSubscriptionState }),
 
     setCustomerInfo: (info) => {
       const isPremium = isPremiumSubscriber(info);

@@ -20,6 +20,7 @@ import { queryClient } from "@/lib/query-client";
 import { fetchPendingImportJobs, fetchRecipeBooks, fetchRecentRecipes, pollImportJobUntilComplete } from "@/services/recipe-service";
 import { useAuthStore } from "@/store/use-auth-store";
 import { useCooksyStore } from "@/store/use-cooksy-store";
+import { useSubscriptionStore } from "@/stores/subscription-store";
 import type { Recipe, ThumbnailSource, SourcePlatform } from "@/types/recipe";
 
 SplashScreen.preventAutoHideAsync();
@@ -39,6 +40,8 @@ export default function RootLayout() {
   const authStatus = useAuthStore((state) => state.status);
   const authUserId = useAuthStore((state) => state.userId);
   const setAuthState = useAuthStore((state) => state.setAuthState);
+  const initializeSubscriptionStore = useSubscriptionStore((state) => state.initialize);
+  const resetSubscriptionStore = useSubscriptionStore((state) => state.reset);
   const pathname = usePathname();
 
   // Hide splash screen when fonts are loaded
@@ -126,6 +129,19 @@ export default function RootLayout() {
       addBreadcrumb("User identified", "auth", { userId: authUserId });
     }
   }, [authStatus, authUserId]);
+
+  useEffect(() => {
+    if (authStatus !== "ready") {
+      return;
+    }
+
+    if (!authUserId) {
+      resetSubscriptionStore();
+      return;
+    }
+
+    void initializeSubscriptionStore(authUserId);
+  }, [authStatus, authUserId, initializeSubscriptionStore, resetSubscriptionStore]);
 
   // Hydrate data ONLY when auth is confirmed ready
   useEffect(() => {
