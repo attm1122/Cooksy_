@@ -10,7 +10,7 @@ import { CooksyCard } from "@/components/common/CooksyCard";
 import { CooksyLogo } from "@/components/common/CooksyLogo";
 import { ScreenContainer } from "@/components/common/ScreenContainer";
 import { createProfileSchema, type CreateProfileValues, verifyProfileCodeSchema, type VerifyProfileCodeValues } from "@/lib/auth-schemas";
-import { requestCooksyProfileAccess, verifyCooksyProfileCode } from "@/lib/auth";
+import { getCooksyAuthErrorMessage, requestCooksyProfileAccess, verifyCooksyProfileCode } from "@/lib/auth";
 import { trackEvent } from "@/lib/analytics";
 import { captureError } from "@/lib/monitoring";
 import { useAuthStore } from "@/store/use-auth-store";
@@ -51,7 +51,7 @@ export default function AuthScreen() {
         emailDomain: email.split("@")[1] ?? "unknown"
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Cooksy could not send your sign-in code";
+      const message = getCooksyAuthErrorMessage(error, "request");
       setRequestError(message);
       captureError(error, { action: "request_profile_access" });
     } finally {
@@ -81,7 +81,7 @@ export default function AuthScreen() {
       });
       router.replace("/home" as never);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Cooksy could not verify that code";
+      const message = getCooksyAuthErrorMessage(error, "verify");
       setVerifyError(message);
       captureError(error, { action: "verify_profile_code" });
     } finally {

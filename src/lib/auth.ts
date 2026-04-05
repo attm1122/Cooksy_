@@ -7,6 +7,54 @@ type SessionSnapshot = {
   errorMessage?: string;
 };
 
+type AuthErrorMode = "request" | "verify";
+
+const getErrorMessage = (error: unknown) => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === "string") {
+    return error;
+  }
+
+  return undefined;
+};
+
+export const getCooksyAuthErrorMessage = (error: unknown, mode: AuthErrorMode) => {
+  const rawMessage = getErrorMessage(error)?.trim().toLowerCase() ?? "";
+
+  if (!rawMessage) {
+    return mode === "request"
+      ? "Cooksy could not send your sign-in code. Please try again."
+      : "Cooksy could not verify that code. Please try again.";
+  }
+
+  if (rawMessage.includes("email rate limit exceeded") || rawMessage.includes("over_email_send_rate_limit")) {
+    return "Too many codes were requested recently. Please wait a minute, then try again.";
+  }
+
+  if (rawMessage.includes("invalid") && rawMessage.includes("email")) {
+    return "Enter a valid email address to create your Cooksy profile.";
+  }
+
+  if (rawMessage.includes("expired") && rawMessage.includes("token")) {
+    return "That code has expired. Request a new code and try again.";
+  }
+
+  if (rawMessage.includes("token") && rawMessage.includes("invalid")) {
+    return "That code doesn’t look right. Check the latest email from Cooksy and try again.";
+  }
+
+  if (rawMessage.includes("auth is not configured yet")) {
+    return "Cooksy sign-in is temporarily unavailable on this deployment.";
+  }
+
+  return mode === "request"
+    ? "Cooksy could not send your sign-in code right now. Please try again in a moment."
+    : "Cooksy could not verify that code. Please check it and try again.";
+};
+
 export const ensureCooksySession = async () => {
   if (!supabase) {
     return { userId: undefined, email: undefined, fullName: undefined, errorMessage: undefined };
