@@ -2,15 +2,22 @@ import { Link } from "expo-router";
 import { Crown, FileText, MoonStar, Scale, ShieldCheck, UserRound } from "lucide-react-native";
 import { Text, View } from "react-native";
 
+import { SecondaryButton } from "@/components/common/Buttons";
 import { CooksyCard } from "@/components/common/CooksyCard";
 import { ScreenContainer } from "@/components/common/ScreenContainer";
 import { PremiumBadge } from "@/components/subscription/PremiumBadge";
+import { signOutCooksy } from "@/lib/auth";
+import { captureError } from "@/lib/monitoring";
+import { useAuthStore } from "@/store/use-auth-store";
 import { useIsPremium } from "@/stores/subscription-store";
 
 type RouteHref = "/legal/privacy" | "/legal/terms" | "/subscription/manage" | null;
 
 export default function ProfileScreen() {
   const isPremium = useIsPremium();
+  const fullName = useAuthStore((state) => state.fullName);
+  const email = useAuthStore((state) => state.email);
+  const resetAuthState = useAuthStore((state) => state.resetAuthState);
 
   const settingRows: {
     title: string;
@@ -43,6 +50,27 @@ export default function ProfileScreen() {
       <Text className="mb-5 text-[15px] leading-6 text-muted">
         Manage your account, preferences, and legal information.
       </Text>
+
+      <CooksyCard className="mb-6 p-4">
+        <Text className="text-[12px] font-semibold uppercase tracking-[1px] text-[#7D8594]">Your profile</Text>
+        <Text className="mt-3 text-[20px] font-bold text-ink">{fullName || "Cooksy member"}</Text>
+        <Text className="mt-1 text-[14px] text-muted">{email || "Signed in profile"}</Text>
+        <View className="mt-4">
+          <SecondaryButton
+            onPress={() => {
+              void signOutCooksy()
+                .then(() => {
+                  resetAuthState();
+                })
+                .catch((error) => {
+                  captureError(error, { action: "sign_out" });
+                });
+            }}
+          >
+            Sign out
+          </SecondaryButton>
+        </View>
+      </CooksyCard>
 
       {/* Subscription Section */}
       <Text className="mb-3 text-[20px] font-bold text-ink">Subscription</Text>

@@ -5,7 +5,7 @@ import { WebLandingPage } from "@/components/marketing/WebLandingPage";
 
 export default function RootIndexScreen() {
   if (Platform.OS !== "web") {
-    return <Redirect href={"/home" as never} />;
+    return <Redirect href={"/auth" as never} />;
   }
 
   return <WebLandingPage />;

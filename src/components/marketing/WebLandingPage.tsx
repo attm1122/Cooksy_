@@ -272,13 +272,13 @@ export const WebLandingPage = () => {
                   ))}
                 </View>
               ) : <View />}
-              <Link href={"/home" as never} asChild>
+              <Link href={"/auth" as never} asChild>
                 <Pressable
                   className="rounded-full border border-[#23262E] bg-[#16181D] px-5 py-3"
                   style={{ shadowColor: "#16181D", shadowOpacity: 0.14, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } }}
                 >
                   <View className="flex-row items-center" style={{ gap: 8 }}>
-                    <Text className="text-[13px] font-semibold uppercase tracking-[0.8px] text-white">Open app</Text>
+                    <Text className="text-[13px] font-semibold uppercase tracking-[0.8px] text-white">Create profile</Text>
                     <View className="h-6 w-6 items-center justify-center rounded-full bg-white">
                       <ArrowRight size={14} color="#111111" />
                     </View>
@@ -297,13 +297,13 @@ export const WebLandingPage = () => {
               </Text>
 
               <View className="mt-10 flex-row flex-wrap justify-center" style={{ gap: 14 }}>
-                <Link href={"/home" as never} asChild>
+                <Link href={"/auth" as never} asChild>
                   <Pressable
                     className="rounded-full border border-[#23262E] bg-[#16181D] px-7 py-4"
                     style={{ shadowColor: "#16181D", shadowOpacity: 0.14, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } }}
                   >
                     <View className="flex-row items-center" style={{ gap: 10 }}>
-                      <Text className="text-[16px] font-semibold text-white">Try Cooksy free</Text>
+                      <Text className="text-[16px] font-semibold text-white">Create profile free</Text>
                       <View className="h-7 w-7 items-center justify-center rounded-full bg-white">
                         <ArrowRight size={15} color="#111111" />
                       </View>
@@ -412,10 +412,10 @@ export const WebLandingPage = () => {
                   <Text className="mt-3 text-[24px] font-bold leading-[30px] text-ink">
                     Faster imports, clearer recipes, easier fixes, and a grocery list before you leave the page.
                   </Text>
-                  <Link href={"/home" as never} asChild>
+                  <Link href={"/auth" as never} asChild>
                     <Pressable className="mt-4 self-start rounded-full border border-[#23262E] bg-[#16181D] px-5 py-3">
                       <View className="flex-row items-center" style={{ gap: 8 }}>
-                        <Text className="text-[14px] font-semibold text-white">Get Cooksy</Text>
+                        <Text className="text-[14px] font-semibold text-white">Create profile</Text>
                         <ArrowRight size={14} color="#FFFFFF" />
                       </View>
                     </Pressable>

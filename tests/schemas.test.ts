@@ -1,3 +1,4 @@
+import { createProfileSchema, verifyProfileCodeSchema } from "@/lib/auth-schemas";
 import { importRecipeSchema, recipeSchema } from "@/lib/schemas";
 import { mockRecipes } from "@/mocks/recipes";
 
@@ -20,5 +21,33 @@ describe("recipeSchema", () => {
     expect(() => importRecipeSchema.parse({ sourceUrl: "https://www.youtube.com/watch?v=cooksy123" })).not.toThrow();
     expect(() => importRecipeSchema.parse({ sourceUrl: "https://www.tiktok.com/@cooksy/video/123456789" })).not.toThrow();
     expect(() => importRecipeSchema.parse({ sourceUrl: "https://www.instagram.com/reel/CooksyPasta/" })).not.toThrow();
+  });
+});
+
+describe("profile auth schemas", () => {
+  it("accepts a valid profile creation payload", () => {
+    expect(() =>
+      createProfileSchema.parse({
+        fullName: "Aubrey Mazinyi",
+        email: "aubrey@example.com"
+      })
+    ).not.toThrow();
+  });
+
+  it("rejects invalid profile creation payloads", () => {
+    expect(() =>
+      createProfileSchema.parse({
+        fullName: "A",
+        email: "not-an-email"
+      })
+    ).toThrow();
+  });
+
+  it("accepts a 6 digit verification code", () => {
+    expect(() => verifyProfileCodeSchema.parse({ token: "123456" })).not.toThrow();
+  });
+
+  it("rejects malformed verification codes", () => {
+    expect(() => verifyProfileCodeSchema.parse({ token: "12ab" })).toThrow();
   });
 });

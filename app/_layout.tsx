@@ -6,7 +6,7 @@ import { Platform } from "react-native";
 
 import { Inter_500Medium, Inter_600SemiBold, Inter_700Bold, useFonts } from "@expo-google-fonts/inter";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { Stack } from "expo-router";
+import { router, Stack, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
@@ -39,6 +39,7 @@ export default function RootLayout() {
   const authStatus = useAuthStore((state) => state.status);
   const authUserId = useAuthStore((state) => state.userId);
   const setAuthState = useAuthStore((state) => state.setAuthState);
+  const pathname = usePathname();
 
   // Hide splash screen when fonts are loaded
   useEffect(() => {
@@ -61,33 +62,61 @@ export default function RootLayout() {
       setAuthState({
         status: "ready",
         userId: undefined,
+        email: undefined,
+        fullName: undefined,
         errorMessage: undefined
       });
       return;
     }
 
     setAuthState({ status: "loading", errorMessage: undefined });
-    ensureCooksySession().then(({ userId, errorMessage }) => {
+    ensureCooksySession().then(({ userId, email, fullName, errorMessage }) => {
       trackEvent(errorMessage ? "auth_session_failed" : "auth_session_ready", {
         hasUser: Boolean(userId)
       });
       setAuthState({
         status: errorMessage ? "error" : "ready",
         userId,
+        email,
+        fullName,
         errorMessage
       });
     });
 
-    const unsubscribe = subscribeToCooksyAuth((userId) => {
+    const unsubscribe = subscribeToCooksyAuth(({ userId, email, fullName }) => {
       setAuthState({
         status: "ready",
         userId,
+        email,
+        fullName,
         errorMessage: undefined
       });
     });
 
     return unsubscribe;
   }, [loaded, setAuthState]);
+
+  useEffect(() => {
+    if (!loaded || authStatus !== "ready") {
+      return;
+    }
+
+    const isRootRoute = pathname === "/";
+    const isAuthRoute = pathname === "/auth";
+    const isLegalRoute = pathname.startsWith("/legal");
+    const isPublicRoute = isRootRoute || isAuthRoute || isLegalRoute;
+
+    if (!authUserId) {
+      if (!isPublicRoute) {
+        router.replace("/auth" as never);
+      }
+      return;
+    }
+
+    if (isAuthRoute) {
+      router.replace("/home" as never);
+    }
+  }, [authStatus, authUserId, loaded, pathname]);
 
   // Identify user for analytics/monitoring when auth is ready
   useEffect(() => {
@@ -101,7 +130,7 @@ export default function RootLayout() {
   // Hydrate data ONLY when auth is confirmed ready
   useEffect(() => {
     // Gate data hydration on confirmed auth readiness
-    if (!loaded || authStatus !== "ready") {
+    if (!loaded || authStatus !== "ready" || !authUserId) {
       return;
     }
 
@@ -299,6 +328,7 @@ export default function RootLayout() {
     };
   }, [
     authStatus,
+    authUserId,
     loaded,
     mergeBooks,
     mergeRecipes,
