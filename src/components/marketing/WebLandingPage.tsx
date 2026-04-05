@@ -3,182 +3,182 @@ import { ArrowRight, CheckCircle2, Clock3, Library, PlayCircle, ShoppingBag, Spa
 import { Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
-import { PrimaryButton, SecondaryButton } from "@/components/common/Buttons";
-import { CooksyCard } from "@/components/common/CooksyCard";
 import { CooksyLogo } from "@/components/common/CooksyLogo";
 
-const heroSignals = [
-  "Paste TikTok, Instagram, or YouTube links",
-  "Get ingredients, steps, timing, and grocery list in one pass",
-  "Fix uncertain details fast before you cook"
+const navItems = ["Product", "Flow", "Trust", "FAQ"] as const;
+
+const highlights = [
+  "Import recipe links from TikTok, Instagram, and YouTube",
+  "See confidence and fix uncertain details quickly",
+  "Move directly into grocery mode or cooking mode"
 ] as const;
 
-const journeyCards = [
-  {
-    label: "01 Import",
-    title: "Save the recipe the second you see it",
-    body: "Cooksy saves first, then reconstructs in the background so the product feels instant instead of demanding your attention."
-  },
-  {
-    label: "02 Review",
-    title: "See where confidence is strong or soft",
-    body: "Estimated values and uncertain steps are visible, which makes the result feel honest and easy to improve."
-  },
-  {
-    label: "03 Cook",
-    title: "Move into grocery mode or guided cooking",
-    body: "The product is built to get you from inspiration to action, not just leave you with another saved link."
-  }
-] as const;
-
-const premiumFeatures = [
+const features = [
   {
     icon: PlayCircle,
-    title: "Fast import pipeline",
-    body: "Social cooking videos become structured recipes with source context, timing, and a clean cooking format."
+    title: "Save-first import",
+    body: "Paste a link and Cooksy saves it immediately, then reconstructs the recipe in the background."
   },
   {
     icon: Wand2,
-    title: "Trust-first recipe reconstruction",
-    body: "Confidence, evidence, and easy correction are part of the product surface instead of hidden system details."
+    title: "Confidence built in",
+    body: "Estimated values, source evidence, and editable fields make the result feel reliable instead of mysterious."
   },
   {
     icon: ShoppingBag,
-    title: "Grocery list in one tap",
-    body: "A recipe becomes usable immediately, which is the whole point of saving it in the first place."
+    title: "One-tap grocery list",
+    body: "The recipe becomes actionable fast, which is what saved food content usually fails to do."
   },
   {
     icon: Library,
-    title: "A visual library that still feels alive",
-    body: "Thumbnails, source context, and calm organization keep recipes tied to the food content that inspired them."
+    title: "A visual recipe library",
+    body: "Thumbnails, source context, and clean organization keep recipes tied to the content that inspired them."
   }
-] as const;
-
-const productStats = [
-  { value: "3", label: "supported source platforms" },
-  { value: "1 tap", label: "to turn a recipe into a grocery list" },
-  { value: "step-by-step", label: "cooking mode for real kitchen use" }
 ] as const;
 
 const faqs = [
   {
-    question: "Is Cooksy replacing the original creator?",
+    question: "Why is Cooksy different from saving links in notes?",
     answer:
-      "No. Cooksy keeps source attribution visible and uses the original content as the starting point for a recipe you can actually cook from."
+      "Because the job is not storing the link. The job is turning it into something structured enough to shop, fix, and cook from."
   },
   {
-    question: "What if a video leaves out quantities or timings?",
+    question: "What happens when the source leaves out details?",
     answer:
-      "Cooksy surfaces what was inferred, lowers confidence where needed, and gives you a fast fix path so the result stays usable and trustworthy."
+      "Cooksy marks what was inferred, lowers confidence where needed, and lets you correct ingredients or steps quickly."
   },
   {
-    question: "Why not just save the link in a notes app?",
+    question: "Does Cooksy keep creator attribution?",
     answer:
-      "Because the hard part is not storing the link. The hard part is turning it into something structured enough to shop, edit, and cook from."
+      "Yes. The original source remains visible so the recipe still feels connected to the creator and the content you discovered."
   }
 ] as const;
 
-const SectionPill = ({
-  children,
-  tone = "light"
-}: {
-  children: string;
-  tone?: "light" | "dark";
-}) => (
-  <View
-    className={`self-start rounded-full px-4 py-2 ${tone === "dark" ? "bg-[#1A1A1A]" : "bg-white"}`}
-    style={{
-      borderWidth: 1,
-      borderColor: tone === "dark" ? "#2D2D2D" : "#DCD5C8",
-      shadowColor: "#111111",
-      shadowOpacity: tone === "dark" ? 0 : 0.04,
-      shadowRadius: 8,
-      shadowOffset: { width: 0, height: 2 }
-    }}
-  >
-    <Text className={`text-[12px] font-semibold uppercase tracking-[1px] ${tone === "dark" ? "text-white" : "text-soft-ink"}`}>
-      {children}
-    </Text>
+const softShadow = {
+  shadowColor: "#101010",
+  shadowOpacity: 0.06,
+  shadowRadius: 24,
+  shadowOffset: { width: 0, height: 8 }
+} as const;
+
+const pillStyle = {
+  borderWidth: 1,
+  borderColor: "#E9EAF0",
+  backgroundColor: "#FFFFFF",
+  shadowColor: "#101010",
+  shadowOpacity: 0.04,
+  shadowRadius: 16,
+  shadowOffset: { width: 0, height: 6 }
+} as const;
+
+const SectionPill = ({ children }: { children: string }) => (
+  <View className="self-start rounded-full px-4 py-2" style={pillStyle}>
+    <Text className="text-[12px] font-semibold uppercase tracking-[1px] text-soft-ink">{children}</Text>
   </View>
 );
 
-const HeroDevice = () => (
-  <View className="relative min-h-[560px] flex-1 overflow-hidden rounded-[38px] bg-[#E7FF2D] px-7 py-7">
-    <LinearGradient
-      colors={["rgba(255, 253, 247, 0.7)", "rgba(255, 253, 247, 0)", "rgba(17, 17, 17, 0.08)"]}
+const NavLink = ({ label }: { label: string }) => (
+  <Pressable className="px-2 py-2">
+    <Text className="text-[14px] font-medium text-[#5E6270]">{label}</Text>
+  </Pressable>
+);
+
+const HeroDashboard = () => (
+  <View className="relative min-h-[520px] flex-1 items-center justify-end overflow-hidden rounded-[36px] border border-[#E8EAF0] bg-white px-5 pb-7 pt-6">
+    <View
       className="absolute inset-0"
-    />
-
-    <View className="absolute left-7 top-7 rounded-[26px] bg-white/92 px-4 py-4">
-      <Text className="text-[12px] font-semibold uppercase tracking-[0.8px] text-muted">Latest import</Text>
-      <Text className="mt-2 text-[30px] font-bold text-ink">91%</Text>
-      <Text className="text-[12px] text-[#277A49]">High confidence reconstruction</Text>
+      style={{
+        borderTopLeftRadius: 36,
+        borderTopRightRadius: 36,
+        borderBottomLeftRadius: 36,
+        borderBottomRightRadius: 36
+      }}
+    >
+      <View className="absolute left-[10%] top-0 h-full w-[1px] bg-[#ECEEF5]" />
+      <View className="absolute left-[52%] top-0 h-full w-[1px] bg-[#ECEEF5]" />
+      <View className="absolute right-[10%] top-0 h-full w-[1px] bg-[#ECEEF5]" />
+      <View className="absolute left-[28%] top-[26%] h-[160px] w-[1px] -rotate-45 bg-[#F0F2F8]" />
+      <View className="absolute right-[24%] top-[24%] h-[180px] w-[1px] rotate-45 bg-[#F0F2F8]" />
     </View>
 
-    <View className="absolute bottom-7 left-7 rounded-[24px] bg-[#111111] px-4 py-4">
-      <Text className="text-[12px] font-semibold uppercase tracking-[0.8px] text-white/60">Cooking mode</Text>
-      <Text className="mt-2 max-w-[210px] text-[15px] leading-7 text-white">
-        One calm step at a time, with timings and the grocery checklist already handled.
-      </Text>
-    </View>
-
-    <View className="absolute right-7 top-28 rounded-[24px] bg-[#FFF8D7] px-4 py-4">
-      <Text className="text-[12px] font-semibold uppercase tracking-[0.8px] text-muted">Ready next</Text>
-      <Text className="mt-2 text-[16px] font-bold text-ink">Open grocery list</Text>
-      <View className="mt-3 flex-row items-center" style={{ gap: 8 }}>
-        <ShoppingBag size={16} color="#111111" />
-        <Text className="text-[13px] text-soft-ink">11 ingredients checked</Text>
-      </View>
+    <View className="absolute left-6 top-6 rounded-full px-4 py-2" style={pillStyle}>
+      <Text className="text-[13px] font-medium text-[#4A7FEA]">Cooksy turns saved food content into usable recipes.</Text>
     </View>
 
     <View
-      className="mx-auto mt-16 w-full max-w-[340px] rounded-[42px] border border-[#1B1B1B] bg-[#181818] px-4 pb-5 pt-4"
-      style={{
-        shadowColor: "#111111",
-        shadowOpacity: 0.2,
-        shadowRadius: 24,
-        shadowOffset: { width: 0, height: 12 }
-      }}
+      className="absolute left-2 bottom-16 w-[112px] rounded-[24px] border border-[#E8EEF8] bg-white px-3 py-3"
+      style={[softShadow, { transform: [{ rotate: "-18deg" }] }]}
+    >
+      <Text className="text-[10px] font-semibold uppercase tracking-[0.8px] text-[#7A8192]">Import quality</Text>
+      <Text className="mt-2 text-[24px] font-bold text-ink">+32%</Text>
+      <Text className="mt-1 text-[11px] leading-5 text-[#6B7180]">Clearer ingredient extraction and stronger timing cues.</Text>
+    </View>
+
+    <View
+      className="absolute right-4 bottom-20 w-[210px] rounded-[28px] border border-[#E8EEF8] bg-white px-4 py-4"
+      style={[softShadow, { transform: [{ rotate: "8deg" }] }]}
+    >
+      <Text className="text-[13px] font-semibold text-ink">Cooksy note</Text>
+      <Text className="mt-2 text-[14px] leading-7 text-[#5F6573]">
+        Garlic amount was inferred from the transcript and visible ingredient list, so it stays easy to review.
+      </Text>
+    </View>
+
+    <View
+      className="w-full max-w-[620px] rounded-[30px] border border-[#E5EBF7] bg-white px-4 py-4"
+      style={[
+        softShadow,
+        {
+          shadowOpacity: 0.09,
+          shadowRadius: 30
+        }
+      ]}
     >
       <View className="mb-4 flex-row items-center justify-between">
-        <View className="h-2 w-16 rounded-full bg-[#353535]" />
-        <Text className="text-[11px] font-semibold text-white/70">Cooksy</Text>
-      </View>
-
-      <View className="overflow-hidden rounded-[30px] bg-[#232323]">
-        <View className="h-[200px] bg-[#D99B57] px-4 py-4">
-          <LinearGradient
-            colors={["rgba(17, 17, 17, 0.04)", "rgba(17, 17, 17, 0.38)"]}
-            className="absolute inset-0"
-          />
-          <View className="mt-auto">
-            <Text className="text-[12px] font-semibold uppercase tracking-[0.8px] text-white/70">YouTube import</Text>
-            <Text className="mt-2 text-[28px] font-bold leading-[32px] text-white">Crispy hot honey salmon</Text>
-            <Text className="mt-2 text-[13px] text-white/75">2 servings • 14 min • Fixes available</Text>
+        <View>
+          <Text className="text-[15px] font-semibold text-ink">Recipe readiness over time</Text>
+          <Text className="mt-1 text-[13px] text-[#7A8192]">Source signals turned into a cookable recipe</Text>
+        </View>
+        <View className="flex-row rounded-full border border-[#E7EBF4] bg-[#FBFCFF] p-1">
+          <View className="rounded-full bg-[#EEF5FF] px-3 py-1">
+            <Text className="text-[12px] font-semibold text-[#4A7FEA]">Recipe</Text>
+          </View>
+          <View className="px-3 py-1">
+            <Text className="text-[12px] font-medium text-[#7B8190]">Source</Text>
           </View>
         </View>
+      </View>
 
-        <View className="px-4 py-4">
-          <View className="mb-3 flex-row items-center justify-between">
-            <Text className="text-[13px] font-semibold text-white/65">Reconstructed recipe</Text>
-            <View className="rounded-full bg-white/7 px-3 py-1">
-              <Text className="text-[11px] font-semibold uppercase tracking-[0.8px] text-white/70">Grocery ready</Text>
-            </View>
-          </View>
-
-          <View style={{ gap: 10 }}>
-            {[
-              "1.5 lb salmon fillet",
-              "2 tbsp hot honey glaze",
-              "Roast until the center just turns flaky",
-              "Finish with lemon, herbs, and crispy edges"
-            ].map((line) => (
-              <View key={line} className="flex-row items-center rounded-[18px] bg-white/7 px-3 py-3" style={{ gap: 10 }}>
-                <CheckCircle2 size={16} color="#F5C400" />
-                <Text className="flex-1 text-[13px] leading-6 text-white/88">{line}</Text>
-              </View>
-            ))}
-          </View>
+      <View className="h-[240px] overflow-hidden rounded-[24px] bg-[#FCFDFF] px-4 py-4">
+        <View className="absolute inset-0">
+          {[0, 1, 2, 3].map((row) => (
+            <View
+              key={row}
+              className="absolute left-0 right-0 border-t border-dashed border-[#E8ECF5]"
+              style={{ top: 32 + row * 48 }}
+            />
+          ))}
+        </View>
+        <View
+          className="absolute bottom-[44px] left-[40px] right-[36px] h-[2px] bg-transparent"
+          style={{
+            borderTopWidth: 3,
+            borderColor: "#4A8BFF",
+            borderTopLeftRadius: 999,
+            borderTopRightRadius: 999,
+            transform: [{ skewY: "-8deg" }]
+          }}
+        />
+        <View
+          className="absolute left-[220px] top-[96px] h-4 w-4 rounded-full border-4 border-[#4A8BFF] bg-white"
+          style={{ shadowColor: "#4A8BFF", shadowOpacity: 0.18, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } }}
+        />
+        <View className="absolute bottom-4 left-5 right-5 flex-row justify-between">
+          {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+            <Text key={day} className="text-[11px] font-medium text-[#A0A5B2]">
+              {day}
+            </Text>
+          ))}
         </View>
       </View>
     </View>
@@ -187,245 +187,196 @@ const HeroDevice = () => (
 
 export const WebLandingPage = () => {
   const { width } = useWindowDimensions();
-  const isDesktop = width >= 1120;
+  const isDesktop = width >= 1140;
   const isTablet = width >= 760;
 
   return (
-    <LinearGradient colors={["#C3C79D", "#D7D0BD", "#ECE5D7"]} className="flex-1">
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 20 }}>
+    <LinearGradient colors={["#F3F5FA", "#F7F8FB", "#EEF1F7"]} className="flex-1">
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 10 }}>
         <View
-          className="mx-auto w-full overflow-hidden rounded-[42px] bg-[#F8F4EC] px-5 pb-14 pt-5"
-          style={{
-            maxWidth: 1220,
-            shadowColor: "#111111",
-            shadowOpacity: 0.1,
-            shadowRadius: 32,
-            shadowOffset: { width: 0, height: 16 }
-          }}
+          className="mx-auto w-full overflow-hidden rounded-[34px] border border-[#E3E6EE] bg-[#FAFBFD] px-4 pb-14 pt-6"
+          style={{ maxWidth: 1320 }}
         >
-          <View className="mb-7 flex-row items-center justify-between rounded-[28px] bg-white px-5 py-4">
-            <CooksyLogo size="md" />
-            <View className="flex-row items-center" style={{ gap: 12 }}>
+          <View className="relative overflow-hidden rounded-[30px] border border-[#E7EAF1] bg-[#FBFCFE] px-4 pb-12 pt-5">
+            <View className="absolute inset-0">
+              <View className="absolute left-[24%] top-0 h-full w-[1px] bg-[#EDEFF5]" />
+              <View className="absolute left-[76%] top-0 h-full w-[1px] bg-[#EDEFF5]" />
+            </View>
+
+            <View
+              className="mx-auto mb-12 w-full max-w-[980px] flex-row items-center justify-between rounded-[26px] border border-[#E8EAF0] bg-white px-5 py-4"
+              style={softShadow}
+            >
+              <CooksyLogo size="md" />
               {isTablet ? (
-                <>
-                  <Text className="text-[14px] font-semibold text-soft-ink">Import</Text>
-                  <Text className="text-[14px] font-semibold text-soft-ink">Fix</Text>
-                  <Text className="text-[14px] font-semibold text-soft-ink">Cook</Text>
-                </>
-              ) : null}
+                <View className="flex-row items-center" style={{ gap: 22 }}>
+                  {navItems.map((item) => (
+                    <NavLink key={item} label={item} />
+                  ))}
+                </View>
+              ) : <View />}
               <Link href={"/home" as never} asChild>
-                <Pressable className="rounded-full bg-ink px-5 py-3">
-                  <Text className="text-[14px] font-semibold text-white">Open app</Text>
+                <Pressable
+                  className="rounded-full border border-[#23262E] bg-[#16181D] px-5 py-3"
+                  style={{ shadowColor: "#16181D", shadowOpacity: 0.14, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } }}
+                >
+                  <View className="flex-row items-center" style={{ gap: 8 }}>
+                    <Text className="text-[13px] font-semibold uppercase tracking-[0.8px] text-white">Open app</Text>
+                    <View className="h-6 w-6 items-center justify-center rounded-full bg-white">
+                      <ArrowRight size={14} color="#111111" />
+                    </View>
+                  </View>
                 </Pressable>
               </Link>
             </View>
-          </View>
 
-          <View
-            className="mb-7"
-            style={{
-              flexDirection: isDesktop ? "row" : "column",
-              gap: 18
-            }}
-          >
-            <View className="min-h-[560px] flex-1 rounded-[38px] bg-white px-7 py-8">
-              <SectionPill>Cooksy for web</SectionPill>
-
-              <Text className="mt-7 max-w-[560px] text-[58px] font-bold leading-[60px] text-ink">
-                Save the food you discover and actually cook it later.
+            <View className="mb-16 items-center px-4">
+              <SectionPill>Cooksy for web, iPhone, and Android</SectionPill>
+              <Text className="mt-8 max-w-[920px] text-center text-[66px] font-bold leading-[70px] text-ink">
+                Your smartest saved recipe, built from the links you actually discover.
+              </Text>
+              <Text className="mt-6 max-w-[860px] text-center text-[18px] leading-9 text-[#6B7180]">
+                Cooksy pulls social cooking content into a structured recipe, shows where confidence is strong or soft, and gives you the fastest path to fixing, shopping, and cooking.
               </Text>
 
-              <Text className="mt-5 max-w-[520px] text-[18px] leading-8 text-muted">
-                Cooksy turns social cooking videos into structured recipes with source context, confidence cues, grocery lists, and a cleaner path from inspiration to dinner.
-              </Text>
-
-              <View className="mt-9" style={{ gap: 12 }}>
-                {heroSignals.map((signal) => (
-                  <View key={signal} className="flex-row items-start" style={{ gap: 10 }}>
-                    <CheckCircle2 size={18} color="#111111" style={{ marginTop: 3 }} />
-                    <Text className="flex-1 text-[15px] leading-7 text-soft-ink">{signal}</Text>
-                  </View>
-                ))}
-              </View>
-
-              <View className="mt-9 flex-row flex-wrap" style={{ gap: 12 }}>
+              <View className="mt-10 flex-row flex-wrap justify-center" style={{ gap: 14 }}>
                 <Link href={"/home" as never} asChild>
-                  <View>
-                    <PrimaryButton fullWidth={false}>
-                      <View className="flex-row items-center" style={{ gap: 8 }}>
-                        <Text className="text-[15px] font-semibold text-ink">Start on web</Text>
-                        <ArrowRight size={16} color="#111111" />
+                  <Pressable
+                    className="rounded-full border border-[#23262E] bg-[#16181D] px-7 py-4"
+                    style={{ shadowColor: "#16181D", shadowOpacity: 0.14, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } }}
+                  >
+                    <View className="flex-row items-center" style={{ gap: 10 }}>
+                      <Text className="text-[16px] font-semibold text-white">Start on web</Text>
+                      <View className="h-7 w-7 items-center justify-center rounded-full bg-white">
+                        <ArrowRight size={15} color="#111111" />
                       </View>
-                    </PrimaryButton>
-                  </View>
+                    </View>
+                  </Pressable>
                 </Link>
 
                 <Link href="/recipes" asChild>
-                  <View>
-                    <SecondaryButton fullWidth={false}>
-                      <Text className="text-[15px] font-semibold text-soft-ink">See the product</Text>
-                    </SecondaryButton>
-                  </View>
+                  <Pressable className="px-4 py-4">
+                    <Text className="text-[16px] font-semibold text-ink">See the product</Text>
+                  </Pressable>
                 </Link>
               </View>
 
-              <View className="mt-10 flex-row flex-wrap" style={{ gap: 12 }}>
-                {["Web app", "iPhone", "Android"].map((label) => (
-                  <View key={label} className="rounded-full border border-line bg-[#FBF8F1] px-4 py-3">
-                    <Text className="text-[13px] font-semibold text-soft-ink">{label}</Text>
+              <View className="mt-10 flex-row flex-wrap justify-center" style={{ gap: 12 }}>
+                {highlights.map((item) => (
+                  <View key={item} className="flex-row items-center rounded-full border border-[#E8EAF0] bg-white px-4 py-3" style={softShadow}>
+                    <CheckCircle2 size={16} color="#4A8BFF" />
+                    <Text className="ml-2 text-[13px] font-medium text-[#5E6473]">{item}</Text>
                   </View>
                 ))}
               </View>
             </View>
 
-            <HeroDevice />
+            <HeroDashboard />
           </View>
 
-          <View
-            className="mb-16 rounded-[34px] bg-[#111111] px-6 py-6"
-            style={{
-              flexDirection: isDesktop ? "row" : "column",
-              gap: 14
-            }}
-          >
-            {productStats.map((stat, index) => (
-              <View
-                key={stat.label}
-                className={`rounded-[26px] px-5 py-5 ${isDesktop ? "flex-1" : ""}`}
-                style={{
-                  backgroundColor: index === 1 ? "#E7FF2D" : "#1E1E1E",
-                  borderWidth: 1,
-                  borderColor: index === 1 ? "#E7FF2D" : "#2A2A2A"
-                }}
-              >
-                <Text className={`text-[30px] font-bold ${index === 1 ? "text-ink" : "text-white"}`}>{stat.value}</Text>
-                <Text className={`mt-2 text-[14px] leading-7 ${index === 1 ? "text-soft-ink" : "text-white/72"}`}>{stat.label}</Text>
-              </View>
-            ))}
-          </View>
-
-          <View className="mb-16 items-center px-3">
-            <SectionPill>Why it works</SectionPill>
-            <Text className="mt-5 max-w-[800px] text-center text-[50px] font-bold leading-[54px] text-ink">
-              The product is opinionated about what happens after the save.
-            </Text>
-            <Text className="mt-4 max-w-[720px] text-center text-[17px] leading-8 text-muted">
-              Cooksy is not just a place to store links. It is built to turn social recipe content into something you can review, shop from, and cook without friction.
-            </Text>
-          </View>
-
-          <View className="mb-16 flex-row flex-wrap" style={{ gap: 16 }}>
-            {journeyCards.map((card) => (
-              <CooksyCard key={card.title} className={`${isDesktop ? "flex-1" : "w-full"} p-6`}>
-                <SectionPill>{card.label}</SectionPill>
-                <Text className="mt-6 text-[32px] font-bold leading-[38px] text-ink">{card.title}</Text>
-                <Text className="mt-4 text-[15px] leading-7 text-muted">{card.body}</Text>
-              </CooksyCard>
-            ))}
-          </View>
-
-          <View
-            className="mb-16 rounded-[38px] bg-white px-6 py-8"
-            style={{ gap: 24 }}
-          >
-            <View
-              style={{
-                flexDirection: isDesktop ? "row" : "column",
-                justifyContent: "space-between",
-                gap: 18
-              }}
-            >
-              <View className="max-w-[640px]">
-                <SectionPill>Premium details</SectionPill>
-                <Text className="mt-5 text-[46px] font-bold leading-[50px] text-ink">
-                  A calmer, higher-trust cooking product
-                </Text>
-              </View>
-              <Text className="max-w-[360px] text-[15px] leading-7 text-muted">
-                The visual system stays warm and quiet, while the product surfaces what matters most: the recipe, the source, the confidence, and the next action.
-              </Text>
-            </View>
-
-            <View className="flex-row flex-wrap" style={{ gap: 16 }}>
-              {premiumFeatures.map((feature, index) => {
-                const Icon = feature.icon;
-                const accent = index === 1;
-                return (
-                  <View
-                    key={feature.title}
-                    className={`${isDesktop ? "flex-1" : "w-full"} rounded-[30px] px-5 py-6`}
-                    style={{
-                      backgroundColor: accent ? "#E7FF2D" : "#F8F4EC",
-                      borderWidth: 1,
-                      borderColor: accent ? "#D7EA5B" : "#E8E0D3"
-                    }}
-                  >
-                    <View className="mb-6 h-12 w-12 items-center justify-center rounded-full bg-white">
-                      <Icon size={18} color="#111111" />
-                    </View>
-                    <Text className="text-[25px] font-bold leading-[31px] text-ink">{feature.title}</Text>
-                    <Text className="mt-3 text-[14px] leading-7 text-soft-ink">{feature.body}</Text>
+          <View className="mt-14 flex-row flex-wrap" style={{ gap: 16 }}>
+            {features.map((feature, index) => {
+              const Icon = feature.icon;
+              const emphasized = index === 1;
+              return (
+                <View
+                  key={feature.title}
+                  className={`${isDesktop ? "flex-1" : "w-full"} rounded-[28px] border px-5 py-6`}
+                  style={{
+                    minWidth: isDesktop ? 0 : undefined,
+                    borderColor: emphasized ? "#D7E6FF" : "#E7EAF1",
+                    backgroundColor: emphasized ? "#F3F8FF" : "#FFFFFF"
+                  }}
+                >
+                  <View className="mb-5 h-11 w-11 items-center justify-center rounded-full bg-[#F6F8FC]">
+                    <Icon size={18} color="#111111" />
                   </View>
-                );
-              })}
-            </View>
+                  <Text className="text-[26px] font-bold leading-[30px] text-ink">{feature.title}</Text>
+                  <Text className="mt-3 text-[14px] leading-7 text-[#68707F]">{feature.body}</Text>
+                </View>
+              );
+            })}
           </View>
 
-          <View
-            className="mb-16"
-            style={{
-              flexDirection: isDesktop ? "row" : "column",
-              gap: 18
-            }}
-          >
-            <View className="flex-1 rounded-[36px] bg-[#D1D4B3] px-6 py-7">
-              <SectionPill>Inside the product</SectionPill>
-              <Text className="mt-5 text-[44px] font-bold leading-[48px] text-ink">
-                Thumbnail first. Structured second. Always ready for action.
+          <View className="mt-16 items-center px-3">
+            <SectionPill>Product rhythm</SectionPill>
+            <Text className="mt-6 max-w-[820px] text-center text-[50px] font-bold leading-[54px] text-ink">
+              The experience is designed around what happens after the save.
+            </Text>
+          </View>
+
+          <View className="mt-10 flex-row flex-wrap" style={{ gap: 16 }}>
+            {[
+              {
+                title: "Import",
+                body: "Save the food link immediately so the product feels responsive before anything finishes processing."
+              },
+              {
+                title: "Review",
+                body: "See where the recipe is strong, what was inferred, and what should be checked before you cook."
+              },
+              {
+                title: "Cook",
+                body: "Move into grocery mode or step-by-step cooking mode instead of letting the recipe rot in a saved folder."
+              }
+            ].map((step, index) => (
+              <View
+                key={step.title}
+                className={`${isDesktop ? "flex-1" : "w-full"} rounded-[28px] border border-[#E7EAF1] bg-white px-5 py-6`}
+              >
+                <Text className="text-[12px] font-semibold uppercase tracking-[1px] text-[#7D8594]">{String(index + 1).padStart(2, "0")}</Text>
+                <Text className="mt-5 text-[32px] font-bold leading-[36px] text-ink">{step.title}</Text>
+                <Text className="mt-3 text-[15px] leading-7 text-[#68707F]">{step.body}</Text>
+              </View>
+            ))}
+          </View>
+
+          <View className="mt-16 flex-row flex-wrap" style={{ gap: 16 }}>
+            <View className={`${isDesktop ? "flex-[1.2]" : "w-full"} rounded-[30px] border border-[#E7EAF1] bg-white px-6 py-6`}>
+              <SectionPill>Why it feels premium</SectionPill>
+              <Text className="mt-5 max-w-[560px] text-[46px] font-bold leading-[50px] text-ink">
+                Calm interface. Clear hierarchy. Trust you can actually use.
               </Text>
-              <Text className="mt-4 max-w-[470px] text-[15px] leading-7 text-soft-ink">
-                Cooksy keeps the emotional connection of the original food content, then adds the structure needed to actually make the dish.
+              <Text className="mt-4 max-w-[520px] text-[15px] leading-8 text-[#68707F]">
+                Cooksy keeps the original food content feeling alive through thumbnails and source context, then adds the structure needed to shop, fix, and cook confidently.
               </Text>
             </View>
 
-            <View className="flex-1 rounded-[36px] bg-white px-6 py-7">
-              <View className="rounded-[28px] bg-[#FAF7EF] p-5">
-                <Text className="text-[13px] font-semibold uppercase tracking-[0.9px] text-muted">First five minutes</Text>
-                <View className="mt-5" style={{ gap: 14 }}>
-                  {[
-                    { icon: PlayCircle, text: "Import from a social recipe link" },
-                    { icon: Sparkles, text: "Review confidence and fix uncertain fields" },
-                    { icon: ShoppingBag, text: "Generate your grocery list" },
-                    { icon: Clock3, text: "Cook one step at a time" }
-                  ].map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <View key={item.text} className="flex-row items-start" style={{ gap: 10 }}>
-                        <Icon size={16} color="#111111" style={{ marginTop: 4 }} />
-                        <Text className="flex-1 text-[15px] leading-7 text-soft-ink">{item.text}</Text>
-                      </View>
-                    );
-                  })}
-                </View>
+            <View className={`${isDesktop ? "flex-[0.8]" : "w-full"} rounded-[30px] border border-[#E7EAF1] bg-[#F4F8FF] px-6 py-6`}>
+              <Text className="text-[12px] font-semibold uppercase tracking-[1px] text-[#6F7C93]">Inside the product</Text>
+              <View className="mt-5" style={{ gap: 16 }}>
+                {[
+                  { icon: Sparkles, text: "Confidence and evidence summary" },
+                  { icon: ShoppingBag, text: "One-tap grocery list generation" },
+                  { icon: Clock3, text: "Guided step-by-step cooking mode" }
+                ].map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <View key={item.text} className="flex-row items-start" style={{ gap: 10 }}>
+                      <Icon size={16} color="#111111" style={{ marginTop: 5 }} />
+                      <Text className="flex-1 text-[15px] leading-7 text-[#556071]">{item.text}</Text>
+                    </View>
+                  );
+                })}
               </View>
             </View>
           </View>
 
-          <View className="items-center px-3">
+          <View className="mt-16 items-center px-3">
             <SectionPill>FAQ</SectionPill>
-            <Text className="mt-5 max-w-[780px] text-center text-[46px] font-bold leading-[50px] text-ink">
+            <Text className="mt-6 max-w-[760px] text-center text-[44px] font-bold leading-[48px] text-ink">
               Questions people ask before they trust a recipe product
             </Text>
           </View>
 
           <View className="mt-8" style={{ gap: 12 }}>
             {faqs.map((faq, index) => (
-              <View key={faq.question} className="rounded-[28px] border border-line bg-white px-5 py-5">
+              <View key={faq.question} className="rounded-[26px] border border-[#E7EAF1] bg-white px-5 py-5">
                 <View className="flex-row items-start" style={{ gap: 12 }}>
-                  <Text className="w-8 text-[13px] font-bold text-muted">{String(index + 1).padStart(2, "0")}</Text>
+                  <Text className="w-8 text-[13px] font-bold text-[#8A91A0]">{String(index + 1).padStart(2, "0")}</Text>
                   <View className="flex-1">
                     <Text className="text-[22px] font-bold leading-[28px] text-ink">{faq.question}</Text>
-                    <Text className="mt-3 text-[15px] leading-7 text-muted">{faq.answer}</Text>
+                    <Text className="mt-3 text-[15px] leading-7 text-[#68707F]">{faq.answer}</Text>
                   </View>
                 </View>
               </View>
