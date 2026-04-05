@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { router } from "expo-router";
 import { Mail, ShieldCheck, UserRound } from "lucide-react-native";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Text, TextInput, View } from "react-native";
 
@@ -23,6 +23,31 @@ export default function AuthScreen() {
   const [verifyError, setVerifyError] = useState<string>();
   const [isRequesting, setIsRequesting] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [requestCooldownUntil, setRequestCooldownUntil] = useState<number>();
+  const [cooldownNow, setCooldownNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!requestCooldownUntil || requestCooldownUntil <= Date.now()) {
+      return undefined;
+    }
+
+    const interval = setInterval(() => {
+      setCooldownNow(Date.now());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [requestCooldownUntil]);
+
+  const cooldownSeconds = useMemo(() => {
+    if (!requestCooldownUntil) {
+      return 0;
+    }
+
+    return Math.max(0, Math.ceil((requestCooldownUntil - cooldownNow) / 1000));
+  }, [cooldownNow, requestCooldownUntil]);
+
+  const isRequestCoolingDown = cooldownSeconds > 0;
+  const requestButtonLabel = isRequestCoolingDown ? `Try again in ${cooldownSeconds}s` : "Create profile";
 
   const createProfileForm = useForm<CreateProfileValues>({
     resolver: zodResolver(createProfileSchema),
@@ -40,11 +65,16 @@ export default function AuthScreen() {
   });
 
   const onCreateProfile = createProfileForm.handleSubmit(async ({ email, fullName }) => {
+    if (isRequestCoolingDown) {
+      return;
+    }
+
     setRequestError(undefined);
     setIsRequesting(true);
 
     try {
       await requestCooksyProfileAccess(email.trim().toLowerCase(), fullName.trim());
+      setRequestCooldownUntil(undefined);
       setRequestedEmail(email.trim().toLowerCase());
       setRequestedName(fullName.trim());
       trackEvent("auth_code_requested", {
@@ -53,6 +83,10 @@ export default function AuthScreen() {
     } catch (error) {
       const message = getCooksyAuthErrorMessage(error, "request");
       setRequestError(message);
+      if (message.toLowerCase().includes("wait a minute")) {
+        setRequestCooldownUntil(Date.now() + 60_000);
+        setCooldownNow(Date.now());
+      }
       captureError(error, { action: "request_profile_access" });
     } finally {
       setIsRequesting(false);
@@ -189,9 +223,14 @@ export default function AuthScreen() {
                     ) : null}
 
                     {requestError ? <Text className="text-[13px] text-danger">{requestError}</Text> : null}
+                    {isRequestCoolingDown ? (
+                      <Text className="text-[13px] text-muted">
+                        We’re protecting delivery for everyone. Please wait {cooldownSeconds}s before requesting another code.
+                      </Text>
+                    ) : null}
 
-                    <PrimaryButton onPress={onCreateProfile} loading={isRequesting}>
-                      Create profile
+                    <PrimaryButton onPress={onCreateProfile} loading={isRequesting} disabled={isRequestCoolingDown}>
+                      {requestButtonLabel}
                     </PrimaryButton>
                   </View>
                 </>
