@@ -1,5 +1,5 @@
 import { parseYouTubeUrl } from "@/features/recipes/lib/platform";
-import type { RawRecipeContext, SourcePlatform, TranscriptSegment } from "@/features/recipes/types";
+import type { RawRecipeContext, TranscriptSegment } from "@/features/recipes/types";
 import type { ExtractionAdapter, ExtractionResult } from "./types";
 
 const YOUTUBE_OEMBED_ENDPOINT = "https://www.youtube.com/oembed";

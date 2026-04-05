@@ -18,10 +18,6 @@ const adapters: ExtractionAdapter[] = [
 // Sort by priority (highest first)
 adapters.sort((a, b) => b.priority - a.priority);
 
-const getAdapterForPlatform = (platform: SourcePlatform): ExtractionAdapter | undefined => {
-  return adapters.find(a => a.platforms.includes(platform));
-};
-
 const getAllAdaptersForPlatform = (platform: SourcePlatform): ExtractionAdapter[] => {
   return adapters.filter(a => a.platforms.includes(platform));
 };

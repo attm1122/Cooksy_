@@ -263,7 +263,7 @@ export const extractRecipeContextFromUrl = async (url: string): Promise<RawRecip
  */
 export const extractMultipleContexts = async (
   urls: string[]
-): Promise<Array<{ url: string; context: RawRecipeContext; success: boolean; error?: string }>> => {
+): Promise<{ url: string; context: RawRecipeContext; success: boolean; error?: string }[]> => {
   const results = await Promise.all(
     urls.map(async (url) => {
       try {

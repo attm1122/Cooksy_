@@ -130,18 +130,18 @@ export const transcribeWithWhisper = async (
       text: string;
       language?: string;
       duration?: number;
-      segments?: Array<{
+      segments?: {
         id: number;
         seek: number;
         start: number;
         end: number;
         text: string;
-      }>;
-      words?: Array<{
+      }[];
+      words?: {
         word: string;
         start: number;
         end: number;
-      }>;
+      }[];
     };
 
     // Convert to our segment format

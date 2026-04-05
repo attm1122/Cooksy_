@@ -290,10 +290,6 @@ export async function getPricingForRegion(): Promise<{
   if (!supabase) return null;
   
   try {
-    // Detect country from timezone/locale
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const locale = Intl.DateTimeFormat().resolvedOptions().locale;
-    
     // Get pricing from Supabase
     const { data, error } = await supabase.rpc('get_pricing_for_country');
     

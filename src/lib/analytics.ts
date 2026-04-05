@@ -59,7 +59,7 @@ class PostHogClient implements AnalyticsClient {
   private apiKey: string;
   private host: string;
   private userId: string | null = null;
-  private queue: Array<{ type: string; payload: AnalyticsPayload }> = [];
+  private queue: { type: string; payload: AnalyticsPayload }[] = [];
   private flushInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(apiKey: string, host: string) {

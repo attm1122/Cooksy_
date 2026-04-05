@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { AlertCircle, CheckCircle, Flag, ShieldCheck, XCircle } from "lucide-react-native";
+import { AlertCircle, Flag, ShieldCheck, XCircle } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { Alert, RefreshControl, ScrollView, Text, View } from "react-native";
 
@@ -34,7 +34,6 @@ type ModerationStats = {
 export default function AdminModerationScreen() {
   const [reports, setReports] = useState<ContentReport[]>([]);
   const [stats, setStats] = useState<ModerationStats | null>(null);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [updating, setUpdating] = useState<string | null>(null);
 
@@ -96,7 +95,6 @@ export default function AdminModerationScreen() {
       captureError(error, { action: "fetch_moderation_data" });
       Alert.alert("Error", "Failed to load moderation data");
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
   };

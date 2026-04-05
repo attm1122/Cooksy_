@@ -67,7 +67,7 @@ export function Paywall({ onClose, onSubscribe, source }: PaywallProps) {
       } else if (result.error) {
         Alert.alert('Purchase Failed', result.error);
       }
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Something went wrong. Please try again.');
     } finally {
       setIsLoading(false);

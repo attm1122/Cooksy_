@@ -132,7 +132,7 @@ class ExtractionAnalytics {
     return (metrics.successful / metrics.attempts) * 100;
   }
 
-  getRecentErrors(limit: number = 10): Array<{ platform: SourcePlatform; errorType: string; count: number }> {
+  getRecentErrors(limit: number = 10): { platform: SourcePlatform; errorType: string; count: number }[] {
     const errorMap = new Map<string, { platform: SourcePlatform; errorType: string; count: number }>();
     
     // Get last 100 failed events

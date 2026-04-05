@@ -12,23 +12,23 @@ type RouteHref = "/legal/privacy" | "/legal/terms" | "/subscription/manage" | nu
 export default function ProfileScreen() {
   const isPremium = useIsPremium();
 
-  const settingRows: Array<{
+  const settingRows: {
     title: string;
     subtitle: string;
     icon: typeof UserRound;
     href: RouteHref;
-  }> = [
+  }[] = [
     { title: "Account", subtitle: "Profile and sign-in settings", icon: UserRound, href: null },
     { title: "Appearance", subtitle: "Theme controls and display preferences", icon: MoonStar, href: null },
     { title: "Privacy", subtitle: "Import history and saved recipe permissions", icon: ShieldCheck, href: "/legal/privacy" }
   ];
 
-  const legalRows: Array<{
+  const legalRows: {
     title: string;
     subtitle: string;
     icon: typeof UserRound;
     href: "/legal/privacy" | "/legal/terms";
-  }> = [
+  }[] = [
     { title: "Privacy Policy", subtitle: "How we handle your data", icon: ShieldCheck, href: "/legal/privacy" },
     { title: "Terms of Service", subtitle: "Rules for using Cooksy", icon: FileText, href: "/legal/terms" },
     { title: "Content Policy", subtitle: "What content is allowed", icon: Scale, href: "/legal/terms" }

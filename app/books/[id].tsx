@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import { AlertCircle, LoaderCircle } from "lucide-react-native";
 import { Alert, Text, View } from "react-native";
 
@@ -9,14 +9,11 @@ import { RecipeThumbnail } from "@/components/recipe/RecipeThumbnail";
 import { useRemoveRecipeFromBook } from "@/hooks/use-recipes";
 import { useCooksyStore } from "@/store/use-cooksy-store";
 import { formatMinutes } from "@/utils/time";
-import { PrimaryButton, SecondaryButton } from "@/components/common/Buttons";
-import { PlatformBadge } from "@/components/common/PlatformBadge";
 
 export default function BookDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const book = useCooksyStore((state) => state.books.find((item) => item.id === id));
   const recipes = useCooksyStore((state) => state.recipes);
-  const setSelectedRecipe = useCooksyStore((state) => state.setSelectedRecipe);
   const removeRecipeFromBook = useCooksyStore((state) => state.removeRecipeFromBook);
   const removeMutation = useRemoveRecipeFromBook();
 
@@ -27,11 +24,6 @@ export default function BookDetailScreen() {
       </ScreenContainer>
     );
   }
-
-  const handleOpenRecipe = (recipeId: string) => {
-    setSelectedRecipe(recipeId);
-    router.push(`/recipe/${recipeId}`);
-  };
 
   const bookRecipes = recipes.filter((recipe) => book.recipeIds.includes(recipe.id));
 

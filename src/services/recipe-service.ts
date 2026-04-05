@@ -303,13 +303,13 @@ export const retryRecipeImport = async (
   onProgress?: (progress: ImportProgress) => void
 ) => runRetryRecipeImport(recipe, onProgress);
 
-export const fetchPendingImportJobs = async (): Promise<Array<{
+export const fetchPendingImportJobs = async (): Promise<{
   id: string;
   source_url: string;
   source_platform: string;
   source_creator?: string;
   stage_description?: string;
-}>> => {
+}[]> => {
   if (hasSupabaseConfig && supabase) {
     const { data, error } = await supabase
       .from("recipe_import_jobs")

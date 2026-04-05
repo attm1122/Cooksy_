@@ -56,7 +56,7 @@ export type ContentToModerate = {
   title?: string;
   description?: string;
   creator?: string;
-  ingredients?: Array<{ name: string }>;
+  ingredients?: { name: string }[];
   confidenceScore?: number;
 };
 

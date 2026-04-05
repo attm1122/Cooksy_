@@ -1,4 +1,4 @@
-import { Link, router } from "expo-router";
+import { router } from "expo-router";
 import { AlertCircle, LoaderCircle } from "lucide-react-native";
 import { useMemo, useState } from "react";
 import { Text, View } from "react-native";

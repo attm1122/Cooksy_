@@ -23,53 +23,75 @@
 import { useCallback } from "react";
 import { Platform } from "react-native";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type HapticsModule = any;
-
 const isNative = Platform.OS === "ios" || Platform.OS === "android";
+type HapticsModule = {
+  impactAsync: (style: unknown) => Promise<void>;
+  notificationAsync: (type: unknown) => Promise<void>;
+  selectionAsync: () => Promise<void>;
+  ImpactFeedbackStyle: {
+    Light: unknown;
+    Medium: unknown;
+    Heavy: unknown;
+  };
+  NotificationFeedbackType: {
+    Success: unknown;
+    Warning: unknown;
+    Error: unknown;
+  };
+};
 
-let Haptics: HapticsModule | null = null;
+let hapticsModule: HapticsModule | null = null;
 
-// Lazy load expo-haptics only on native platforms
-if (isNative) {
+const loadHapticsModule = (): HapticsModule | null => {
+  if (!isNative) return null;
+  if (hapticsModule) return hapticsModule;
+
+  const globalRequire = globalThis as typeof globalThis & {
+    require?: (moduleId: string) => unknown;
+  };
+
   try {
-    // Dynamic require to prevent web bundling issues
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    Haptics = require("expo-haptics");
+    const loaded = globalRequire.require?.("expo-haptics");
+    if (loaded && typeof loaded === "object") {
+      hapticsModule = loaded as HapticsModule;
+      return hapticsModule;
+    }
   } catch {
-    // expo-haptics not installed
-    // Silently skip - haptics are optional
+    return null;
   }
-}
+
+  return null;
+};
 
 export const useHaptics = () => {
   const trigger = useCallback((
     type: "light" | "medium" | "heavy" | "success" | "warning" | "error"
   ) => {
-    if (!isNative || !Haptics) return;
+    const ExpoHaptics = loadHapticsModule();
+    if (!ExpoHaptics) return;
 
     try {
       switch (type) {
         case "light":
         case "medium":
         case "heavy":
-          Haptics.impactAsync(
+          ExpoHaptics.impactAsync(
             type === "light" 
-              ? Haptics.ImpactFeedbackStyle.Light 
+              ? ExpoHaptics.ImpactFeedbackStyle.Light 
               : type === "medium" 
-                ? Haptics.ImpactFeedbackStyle.Medium 
-                : Haptics.ImpactFeedbackStyle.Heavy
+                ? ExpoHaptics.ImpactFeedbackStyle.Medium 
+                : ExpoHaptics.ImpactFeedbackStyle.Heavy
           );
           break;
         case "success":
         case "warning":
         case "error":
-          Haptics.notificationAsync(
+          ExpoHaptics.notificationAsync(
             type === "success" 
-              ? Haptics.NotificationFeedbackType.Success 
+              ? ExpoHaptics.NotificationFeedbackType.Success 
               : type === "warning" 
-                ? Haptics.NotificationFeedbackType.Warning 
-                : Haptics.NotificationFeedbackType.Error
+                ? ExpoHaptics.NotificationFeedbackType.Warning 
+                : ExpoHaptics.NotificationFeedbackType.Error
           );
           break;
       }
@@ -80,10 +102,11 @@ export const useHaptics = () => {
   }, []);
 
   const selection = useCallback(() => {
-    if (!isNative || !Haptics) return;
+    const ExpoHaptics = loadHapticsModule();
+    if (!ExpoHaptics) return;
 
     try {
-      Haptics.selectionAsync();
+      ExpoHaptics.selectionAsync();
     } catch (error) {
       console.debug("[haptics] Selection failed:", error);
     }

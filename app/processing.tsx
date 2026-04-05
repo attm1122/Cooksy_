@@ -1,7 +1,7 @@
 import { useLocalSearchParams, router } from "expo-router";
 import { AlertCircle, CheckCircle2, LoaderCircle, RotateCw } from "lucide-react-native";
 import { useEffect, useMemo, useRef } from "react";
-import { Alert, Text, View } from "react-native";
+import { Text, View } from "react-native";
 
 import { CooksyCard } from "@/components/common/CooksyCard";
 import { ScreenContainer } from "@/components/common/ScreenContainer";

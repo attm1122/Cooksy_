@@ -52,7 +52,7 @@ class SentryClient implements MonitoringClient {
   private dsn: string;
   private userId: string | null = null;
   private tags: Map<string, string> = new Map();
-  private breadcrumbs: Array<{ message: string; category?: string; metadata?: MonitoringMetadata; timestamp: string }> = [];
+  private breadcrumbs: { message: string; category?: string; metadata?: MonitoringMetadata; timestamp: string }[] = [];
 
   constructor(dsn: string) {
     this.dsn = dsn;

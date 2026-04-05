@@ -5,7 +5,6 @@ import { Alert, Modal, Pressable, Text, TextInput, View } from "react-native";
 import { PrimaryButton, SecondaryButton } from "@/components/common/Buttons";
 import { CooksyCard } from "@/components/common/CooksyCard";
 import { reportContent } from "@/lib/moderation";
-import { useCooksyStore } from "@/store/use-cooksy-store";
 
 type ReportContentButtonProps = {
   recipeId: string;
@@ -25,8 +24,6 @@ export const ReportContentButton = ({ recipeId }: ReportContentButtonProps) => {
   const [selectedReason, setSelectedReason] = useState<string>("");
   const [details, setDetails] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const userId = useCooksyStore((state) => state.recipes.find(r => r.id === recipeId)?.id);
-
   const handleReport = async () => {
     if (!selectedReason) {
       Alert.alert("Please select a reason");

@@ -2,7 +2,6 @@ import { captureError, captureMessage } from "@/lib/monitoring";
 import type { SourcePlatform } from "@/features/recipes/types";
 import type { ExtractionResult } from "./types";
 import { extractContextFromUrl } from "./orchestrator";
-import { extractionAnalytics } from "./analytics";
 
 export type JobStatus = "queued" | "processing" | "completed" | "failed" | "cancelled";
 

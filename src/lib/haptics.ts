@@ -10,8 +10,6 @@
 
 // import * as Haptics from "expo-haptics";
 
-const isNative = typeof navigator !== "undefined" && navigator.product !== "ReactNative";
-
 const trigger = (type: "light" | "medium" | "heavy" | "success" | "warning" | "error") => {
   // Uncomment when expo-haptics is installed:
   // if (!isNative) return;
