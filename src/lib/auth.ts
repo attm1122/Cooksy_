@@ -42,6 +42,14 @@ export const getCooksyAuthErrorMessage = (error: unknown, mode: AuthErrorMode) =
     return "That code has expired. Request a new code and try again.";
   }
 
+  if (rawMessage.includes("otp_expired")) {
+    return "That sign-in link has expired. Request a new code and try again.";
+  }
+
+  if (rawMessage.includes("access_denied")) {
+    return "That sign-in link is no longer valid. Request a new code and try again.";
+  }
+
   if (rawMessage.includes("token") && rawMessage.includes("invalid")) {
     return "That code doesn’t look right. Check the latest email from Cooksy and try again.";
   }
@@ -53,6 +61,14 @@ export const getCooksyAuthErrorMessage = (error: unknown, mode: AuthErrorMode) =
   return mode === "request"
     ? "Cooksy could not send your sign-in code right now. Please try again in a moment."
     : "Cooksy could not verify that code. Please check it and try again.";
+};
+
+const getCooksyEmailRedirectUrl = () => {
+  if (typeof window !== "undefined" && window.location.origin) {
+    return `${window.location.origin}/auth`;
+  }
+
+  return undefined;
 };
 
 export const ensureCooksySession = async () => {
@@ -89,6 +105,7 @@ export const requestCooksyProfileAccess = async (email: string, fullName: string
     email,
     options: {
       shouldCreateUser: true,
+      emailRedirectTo: getCooksyEmailRedirectUrl(),
       data: {
         full_name: fullName
       }
@@ -136,6 +153,61 @@ export const verifyCooksyProfileCode = async (email: string, token: string, full
     email: data.user?.email,
     fullName
   };
+};
+
+export const completeCooksyEmailLink = async (urlString: string, fallbackFullName?: string) => {
+  if (!supabase) {
+    throw new Error("Cooksy auth is not configured yet.");
+  }
+
+  const url = new URL(urlString);
+  const queryParams = new URLSearchParams(url.search);
+  const hashParams = new URLSearchParams(url.hash.replace(/^#/, ""));
+
+  const errorCode = hashParams.get("error_code") ?? queryParams.get("error_code");
+  const errorDescription = hashParams.get("error_description") ?? queryParams.get("error_description");
+
+  if (errorCode || errorDescription) {
+    throw new Error(errorDescription ?? errorCode ?? "Cooksy could not complete that sign-in link");
+  }
+
+  const authCode = queryParams.get("code");
+
+  if (authCode) {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(authCode);
+
+    if (error) {
+      throw error;
+    }
+
+    return {
+      userId: data.user?.id,
+      email: data.user?.email,
+      fullName: typeof data.user?.user_metadata?.full_name === "string" ? data.user.user_metadata.full_name : fallbackFullName
+    };
+  }
+
+  const tokenHash = hashParams.get("token_hash");
+  const type = hashParams.get("type");
+
+  if (tokenHash && type) {
+    const { data, error } = await supabase.auth.verifyOtp({
+      token_hash: tokenHash,
+      type: type as "signup" | "invite" | "magiclink" | "recovery" | "email_change" | "email"
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    return {
+      userId: data.user?.id,
+      email: data.user?.email,
+      fullName: typeof data.user?.user_metadata?.full_name === "string" ? data.user.user_metadata.full_name : fallbackFullName
+    };
+  }
+
+  return undefined;
 };
 
 export const signOutCooksy = async () => {

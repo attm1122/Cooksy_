@@ -10,7 +10,7 @@ import { CooksyCard } from "@/components/common/CooksyCard";
 import { CooksyLogo } from "@/components/common/CooksyLogo";
 import { ScreenContainer } from "@/components/common/ScreenContainer";
 import { createProfileSchema, type CreateProfileValues, verifyProfileCodeSchema, type VerifyProfileCodeValues } from "@/lib/auth-schemas";
-import { getCooksyAuthErrorMessage, requestCooksyProfileAccess, verifyCooksyProfileCode } from "@/lib/auth";
+import { completeCooksyEmailLink, getCooksyAuthErrorMessage, requestCooksyProfileAccess, verifyCooksyProfileCode } from "@/lib/auth";
 import { trackEvent } from "@/lib/analytics";
 import { captureError } from "@/lib/monitoring";
 import { useAuthStore } from "@/store/use-auth-store";
@@ -48,6 +48,65 @@ export default function AuthScreen() {
 
   const isRequestCoolingDown = cooldownSeconds > 0;
   const requestButtonLabel = isRequestCoolingDown ? `Try again in ${cooldownSeconds}s` : "Create profile";
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const hasAuthCallback =
+      window.location.search.includes("code=") ||
+      window.location.hash.includes("token_hash=") ||
+      window.location.hash.includes("error_code=") ||
+      window.location.search.includes("error_code=");
+
+    if (!hasAuthCallback) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const run = async () => {
+      setVerifyError(undefined);
+      setRequestError(undefined);
+      setIsVerifying(true);
+
+      try {
+        const session = await completeCooksyEmailLink(window.location.href);
+
+        if (!session || cancelled) {
+          return;
+        }
+
+        setAuthState({
+          status: "ready",
+          userId: session.userId,
+          email: session.email,
+          fullName: session.fullName,
+          errorMessage: undefined
+        });
+
+        const cleanUrl = `${window.location.origin}/auth`;
+        window.history.replaceState({}, "", cleanUrl);
+        router.replace("/home" as never);
+      } catch (error) {
+        if (!cancelled) {
+          setVerifyError(getCooksyAuthErrorMessage(error, "verify"));
+          captureError(error, { action: "complete_email_link" });
+        }
+      } finally {
+        if (!cancelled) {
+          setIsVerifying(false);
+        }
+      }
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [setAuthState]);
 
   const createProfileForm = useForm<CreateProfileValues>({
     resolver: zodResolver(createProfileSchema),
