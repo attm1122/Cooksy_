@@ -25,6 +25,8 @@ npm run android
 npm run test
 npm run lint
 npm run typecheck
+npm run build:web:release
+npm run release:check
 ```
 
 ## Product scope
@@ -153,7 +155,7 @@ The Supabase project ref currently wired into this repo is `qirjjbmrgtailifhmakp
 
 ### Current backend limitation
 
-The remote ingestion path now has a real contract and persistence model, but it still needs a worker that advances queued jobs through extraction, ingredient parsing, and recipe generation. Until that worker exists, keep the app in `mock` mode for local product work.
+The remote ingestion path now has a real contract and persistence model, and import jobs can be resumed safely across app restarts. The next big backend step is still a fully independent worker/extractor layer so imports can finish without any client polling at all.
 
 ## Production operations
 
@@ -169,6 +171,28 @@ Cooksy now includes the first operational production layer:
 The default analytics and monitoring clients only log locally. Swap them with a provider like PostHog, Segment, Sentry, or Bugsnag before launch.
 
 The backend now also rejects unsupported source URLs and applies a lightweight per-user import limit to reduce duplicate or abusive import creation before a fuller queueing system is in place.
+
+## Vercel release build
+
+Cooksy ships the web target as a static Expo export on Vercel.
+
+- `npm run build:web:release` exports the app and verifies the generated bundle
+- `npm run release:check` runs the full local release gate: lint, types, tests, and verified web export
+- `vercel.json` is configured to:
+  - build with `npm run build:web:release`
+  - serve `dist`
+  - cache hashed Expo assets aggressively
+  - keep SPA rewrites and basic security headers in place
+
+Before a production promote on Vercel, make sure these env vars are present:
+
+- `EXPO_PUBLIC_RECIPE_IMPORT_MODE`
+- `EXPO_PUBLIC_SUPABASE_URL`
+- `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+- `EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY`
+- `EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY`
+- `EXPO_PUBLIC_REVENUECAT_ENTITLEMENT`
+- `EXPO_PUBLIC_WEB_BILLING_URL`
 
 ## Recommended backend next steps
 

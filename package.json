@@ -9,10 +9,16 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "build:web": "expo export --platform web",
+    "build:web:release": "npm run build:web && npm run verify:web-build",
+    "verify:web-build": "node ./scripts/verify-web-build.mjs",
+    "release:check": "npm run lint && npm run typecheck && npm run test -- --runInBand && npm run build:web:release",
     "lint": "eslint . --ext .ts,.tsx",
     "typecheck": "tsc --noEmit",
     "test": "jest --runInBand",
     "test:watch": "jest --watch"
+  },
+  "engines": {
+    "node": ">=20 <23"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.2.3",

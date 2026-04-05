@@ -2,6 +2,22 @@
 
 This runbook covers the minimum deploy and verification path for taking Cooksy from local MVP to a production-shaped beta.
 
+## Web release gate
+
+Before promoting a Vercel deployment, run:
+
+```bash
+npm run release:check
+```
+
+This now verifies:
+
+- lint
+- TypeScript
+- test suite
+- successful Expo web export
+- generated web bundles do not contain `import.meta` regressions that can white-screen production
+
 ## Supabase deploy order
 
 1. Apply migrations in order:
@@ -38,6 +54,15 @@ EXPO_PUBLIC_EXTRACTION_TIMEOUT_MS=30000
 ```
 
 Use `mock` only for local product work. Use `auto` or `remote` for integration verification.
+
+For Vercel web production, also set:
+
+```bash
+EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY=<optional for native preview parity>
+EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY=<optional for native preview parity>
+EXPO_PUBLIC_REVENUECAT_ENTITLEMENT=cooksy_pro
+EXPO_PUBLIC_WEB_BILLING_URL=<hosted checkout or billing portal URL>
+```
 
 See [docs/extraction-layer.md](./extraction-layer.md) for detailed extraction configuration.
 
@@ -89,7 +114,6 @@ Instagram actively blocks automated access. Options:
 3. **Third-party service** (recommended for production):
    - Use Apify, ScrapingBee, or similar
    - Configure via custom adapter
-
 ## Verification checklist
 
 Run these checks after every schema or function deploy:
@@ -107,20 +131,22 @@ Run these checks after every schema or function deploy:
 8. Fail an import intentionally and confirm the UI exposes a retry path instead of a dead end.
 9. Try an unsupported URL and confirm the user gets a clear validation error before or during import creation.
 10. Trigger repeated imports and confirm duplicate in-flight jobs are reused and the rate limit returns a clear error once exceeded.
+11. Open the deployed Vercel site, hard-refresh, and confirm the app boots without a white screen or console syntax errors.
+12. Verify deep links such as `/recipe/<id>` and `/onboarding` resolve correctly through Vercel rewrites.
 
 ### Extraction-specific verification
 
-11. Test YouTube import with transcript extraction:
+13. Test YouTube import with transcript extraction:
     - URL: `https://www.youtube.com/watch?v=example`
     - Verify transcript segments are extracted
     - Check confidence score is high (>70)
 
-12. Test TikTok import:
+14. Test TikTok import:
     - URL: `https://www.tiktok.com/@username/video/123456`
     - Verify creator and description extracted
     - Check for recipe hints in OCR text
 
-13. Test rate limiting:
+15. Test rate limiting:
     - Attempt 15 rapid imports
     - Verify 429 response after limit
     - Check retry-after header
