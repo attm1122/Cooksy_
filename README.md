@@ -25,8 +25,11 @@ npm run android
 npm run test
 npm run lint
 npm run typecheck
+npm run release:mobile:check
 npm run build:web:release
 npm run release:check
+npm run build:ios:production
+npm run build:android:production
 ```
 
 ## Product scope
@@ -193,6 +196,30 @@ Before a production promote on Vercel, make sure these env vars are present:
 - `EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY`
 - `EXPO_PUBLIC_REVENUECAT_ENTITLEMENT`
 - `EXPO_PUBLIC_WEB_BILLING_URL`
+
+The current public Vercel production URL is still protected by Vercel Authentication. Before public release, disable deployment protection for the production URL or move Cooksy web onto a public custom domain.
+
+## Native release build
+
+Cooksy now includes committed EAS build profiles in [`eas.json`](/Users/aubreymazinyi/Documents/Playground/Cooksy_/eas.json):
+
+- `development`: internal dev-client builds
+- `preview`: internal QA/TestFlight/Internal Testing builds
+- `production`: store-ready builds with native version auto-increment
+
+Expo release metadata now lives in [`app.json`](/Users/aubreymazinyi/Documents/Playground/Cooksy_/app.json):
+
+- `runtimeVersion` follows app version
+- iOS `buildNumber` is set
+- Android `versionCode` is set
+
+Use these commands for store builds:
+
+- `npm run release:mobile:check`
+- `npm run build:ios:production`
+- `npm run build:android:production`
+- `npm run submit:ios:production`
+- `npm run submit:android:production`
 
 ## Recommended backend next steps
 

@@ -18,6 +18,17 @@ This now verifies:
 - successful Expo web export
 - generated web bundles do not contain `import.meta` regressions that can white-screen production
 
+Before native release builds, also run:
+
+```bash
+npm run release:mobile:check
+```
+
+And confirm:
+
+- [`eas.json`](/Users/aubreymazinyi/Documents/Playground/Cooksy_/eas.json) is committed
+- [`app.json`](/Users/aubreymazinyi/Documents/Playground/Cooksy_/app.json) has the intended `version`, iOS `buildNumber`, and Android `versionCode`
+
 ## Supabase deploy order
 
 1. Apply migrations in order:
@@ -133,23 +144,41 @@ Run these checks after every schema or function deploy:
 10. Trigger repeated imports and confirm duplicate in-flight jobs are reused and the rate limit returns a clear error once exceeded.
 11. Open the deployed Vercel site, hard-refresh, and confirm the app boots without a white screen or console syntax errors.
 12. Verify deep links such as `/recipe/<id>` and `/onboarding` resolve correctly through Vercel rewrites.
+13. Confirm the public production URL is not blocked by Vercel Authentication before launch.
 
 ### Extraction-specific verification
 
-13. Test YouTube import with transcript extraction:
+14. Test YouTube import with transcript extraction:
     - URL: `https://www.youtube.com/watch?v=example`
     - Verify transcript segments are extracted
     - Check confidence score is high (>70)
 
-14. Test TikTok import:
+15. Test TikTok import:
     - URL: `https://www.tiktok.com/@username/video/123456`
     - Verify creator and description extracted
     - Check for recipe hints in OCR text
 
-15. Test rate limiting:
+16. Test rate limiting:
     - Attempt 15 rapid imports
     - Verify 429 response after limit
     - Check retry-after header
+
+## Native release profiles
+
+Cooksy ships with these EAS profiles in [`eas.json`](/Users/aubreymazinyi/Documents/Playground/Cooksy_/eas.json):
+
+- `development`: dev-client internal builds
+- `preview`: internal QA/TestFlight/Internal Testing builds
+- `production`: store-ready builds with native version auto-increment
+
+Recommended commands:
+
+```bash
+npm run build:ios:production
+npm run build:android:production
+npm run submit:ios:production
+npm run submit:android:production
+```
 
 ## Ops health endpoint
 

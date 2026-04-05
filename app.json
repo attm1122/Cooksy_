@@ -4,6 +4,9 @@
     "slug": "cooksy",
     "scheme": "cooksy",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "orientation": "portrait",
     "icon": "./assets/app-icon.png",
     "userInterfaceStyle": "automatic",
@@ -17,14 +20,16 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.cooksy.app"
+      "bundleIdentifier": "com.cooksy.app",
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFDF7"
       },
-      "package": "com.cooksy.app"
+      "package": "com.cooksy.app",
+      "versionCode": 1
     },
     "web": {
       "bundler": "metro",
