@@ -88,6 +88,20 @@ const NavLink = ({ label }: { label: string }) => (
   </Pressable>
 );
 
+const FoodPhoto = ({
+  source,
+  height,
+  rounded = 24
+}: {
+  source: number;
+  height: number;
+  rounded?: number;
+}) => (
+  <View className="overflow-hidden bg-[#F5F1E8]" style={{ height, borderRadius: rounded }}>
+    <Image source={source} resizeMode="cover" style={{ width: "100%", height: "100%" }} />
+  </View>
+);
+
 const HeroDashboard = () => (
   <View className="relative min-h-[560px] flex-1 items-center justify-end overflow-hidden rounded-[36px] border border-[#E8EAF0] bg-white px-5 pb-7 pt-6">
     <View
@@ -136,11 +150,11 @@ const HeroDashboard = () => (
     </View>
 
     <View className="absolute left-7 top-24 h-[184px] w-[138px] overflow-hidden rounded-[28px] border border-[#E8EAF0] bg-white" style={[softShadow, { transform: [{ rotate: "-10deg" }] }]}>
-      <Image source={noodlesImage} resizeMode="cover" className="h-full w-full" />
+      <Image source={noodlesImage} resizeMode="cover" style={{ width: "100%", height: "100%" }} />
     </View>
 
     <View className="absolute right-10 top-24 h-[160px] w-[132px] overflow-hidden rounded-[28px] border border-[#E8EAF0] bg-white" style={[softShadow, { transform: [{ rotate: "9deg" }] }]}>
-      <Image source={friesImage} resizeMode="cover" className="h-full w-full" />
+      <Image source={friesImage} resizeMode="cover" style={{ width: "100%", height: "100%" }} />
     </View>
 
     <View
@@ -173,7 +187,7 @@ const HeroDashboard = () => (
 
         <View className="flex-row" style={{ gap: 12 }}>
           <View className="h-[236px] flex-1 overflow-hidden rounded-[22px]">
-            <Image source={bowlImage} resizeMode="cover" className="h-full w-full" />
+                    <Image source={bowlImage} resizeMode="cover" style={{ width: "100%", height: "100%" }} />
             <LinearGradient
               colors={["rgba(17,17,17,0)", "rgba(17,17,17,0.72)"]}
               start={{ x: 0.5, y: 0.1 }}
@@ -334,16 +348,19 @@ export const WebLandingPage = () => {
                 </Text>
               </View>
               <View className="px-6 pb-6">
-                <View className="flex-row" style={{ gap: 12 }}>
-                  <View className="h-[280px] flex-1 overflow-hidden rounded-[26px]">
-                    <Image source={noodlesImage} resizeMode="cover" className="h-full w-full" />
+                <View className={`${isTablet ? "flex-row" : "flex-col"}`} style={{ gap: 14 }}>
+                  <View className={`${isTablet ? "flex-[0.9]" : "w-full"}`}>
+                    <FoodPhoto source={bowlImage} height={isTablet ? 360 : 320} rounded={28} />
                   </View>
-                  <View className="w-[34%]" style={{ gap: 12 }}>
-                    <View className="h-[134px] overflow-hidden rounded-[24px]">
-                      <Image source={friesImage} resizeMode="cover" className="h-full w-full" />
-                    </View>
-                    <View className="h-[134px] overflow-hidden rounded-[24px]">
-                      <Image source={paneerImage} resizeMode="cover" className="h-full w-full" />
+                  <View className={`${isTablet ? "flex-[0.72]" : "w-full"}`} style={{ gap: 14 }}>
+                    <FoodPhoto source={paneerImage} height={isTablet ? 173 : 180} rounded={24} />
+                    <View className="flex-row" style={{ gap: 14 }}>
+                      <View className="flex-1">
+                        <FoodPhoto source={noodlesImage} height={isTablet ? 173 : 180} rounded={24} />
+                      </View>
+                      <View className="flex-1">
+                        <FoodPhoto source={friesImage} height={isTablet ? 173 : 180} rounded={24} />
+                      </View>
                     </View>
                   </View>
                 </View>
@@ -363,8 +380,18 @@ export const WebLandingPage = () => {
               <Text className="mt-4 text-[15px] leading-8 text-[#5E520E]">
                 The background stays light and premium, while the yellow gradient gives the page enough appetite and energy to feel like Cooksy.
               </Text>
-              <View className="mt-8 overflow-hidden rounded-[26px] border border-[#F6E28B] bg-white/80 p-3">
-                <Image source={bowlImage} resizeMode="cover" className="h-[248px] w-full rounded-[20px]" />
+              <View className="mt-8 rounded-[26px] border border-[#F6E28B] bg-white/70 p-3">
+                <View style={{ gap: 12 }}>
+                  <FoodPhoto source={bowlImage} height={224} rounded={22} />
+                  <View className="flex-row" style={{ gap: 12 }}>
+                    <View className="flex-1">
+                      <FoodPhoto source={paneerImage} height={140} rounded={18} />
+                    </View>
+                    <View className="flex-1">
+                      <FoodPhoto source={noodlesImage} height={140} rounded={18} />
+                    </View>
+                  </View>
+                </View>
               </View>
             </LinearGradient>
           </View>
