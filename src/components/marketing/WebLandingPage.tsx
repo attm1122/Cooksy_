@@ -6,8 +6,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { CooksyLogo } from "@/components/common/CooksyLogo";
 
 const bowlImage = require("../../../assets/landing/bowl.jpg");
-const noodlesImage = require("../../../assets/landing/noodles.jpg");
-const friesImage = require("../../../assets/landing/loaded-fries.jpg");
+const friesImage = require("../../../assets/landing/cheese-fries.jpg");
 const paneerImage = require("../../../assets/landing/spiced-paneer.jpg");
 
 const navItems = ["Product", "Flow", "Trust", "FAQ"] as const;
@@ -91,14 +90,29 @@ const NavLink = ({ label }: { label: string }) => (
 const FoodPhoto = ({
   source,
   height,
-  rounded = 24
+  rounded = 24,
+  label,
+  tone = "light"
 }: {
   source: number;
   height: number;
   rounded?: number;
+  label?: string;
+  tone?: "light" | "dark";
 }) => (
-  <View className="overflow-hidden bg-[#F5F1E8]" style={{ height, borderRadius: rounded }}>
-    <Image source={source} resizeMode="cover" style={{ width: "100%", height: "100%" }} />
+  <View className="relative overflow-hidden bg-[#F5F1E8]" style={{ height, borderRadius: rounded }}>
+    <Image source={source} resizeMode="cover" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+    <LinearGradient
+      colors={tone === "dark" ? ["rgba(17,17,17,0)", "rgba(17,17,17,0.5)"] : ["rgba(255,255,255,0)", "rgba(17,17,17,0.16)"]}
+      start={{ x: 0.5, y: 0.1 }}
+      end={{ x: 0.5, y: 1 }}
+      className="absolute inset-x-0 bottom-0 h-[46%]"
+    />
+    {label ? (
+      <View className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-2">
+        <Text className="text-[11px] font-semibold uppercase tracking-[0.9px] text-ink">{label}</Text>
+      </View>
+    ) : null}
   </View>
 );
 
@@ -150,11 +164,11 @@ const HeroDashboard = () => (
     </View>
 
     <View className="absolute left-7 top-24 h-[184px] w-[138px] overflow-hidden rounded-[28px] border border-[#E8EAF0] bg-white" style={[softShadow, { transform: [{ rotate: "-10deg" }] }]}>
-      <Image source={noodlesImage} resizeMode="cover" style={{ width: "100%", height: "100%" }} />
+      <Image source={paneerImage} resizeMode="cover" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
     </View>
 
     <View className="absolute right-10 top-24 h-[160px] w-[132px] overflow-hidden rounded-[28px] border border-[#E8EAF0] bg-white" style={[softShadow, { transform: [{ rotate: "9deg" }] }]}>
-      <Image source={friesImage} resizeMode="cover" style={{ width: "100%", height: "100%" }} />
+      <Image source={friesImage} resizeMode="cover" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
     </View>
 
     <View
@@ -187,7 +201,7 @@ const HeroDashboard = () => (
 
         <View className="flex-row" style={{ gap: 12 }}>
           <View className="h-[236px] flex-1 overflow-hidden rounded-[22px]">
-                    <Image source={bowlImage} resizeMode="cover" style={{ width: "100%", height: "100%" }} />
+            <Image source={bowlImage} resizeMode="cover" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             <LinearGradient
               colors={["rgba(17,17,17,0)", "rgba(17,17,17,0.72)"]}
               start={{ x: 0.5, y: 0.1 }}
@@ -350,16 +364,22 @@ export const WebLandingPage = () => {
               <View className="px-6 pb-6">
                 <View className={`${isTablet ? "flex-row" : "flex-col"}`} style={{ gap: 14 }}>
                   <View className={`${isTablet ? "flex-[0.9]" : "w-full"}`}>
-                    <FoodPhoto source={bowlImage} height={isTablet ? 360 : 320} rounded={28} />
+                    <FoodPhoto source={bowlImage} height={isTablet ? 420 : 340} rounded={28} label="Imported recipe" tone="dark" />
                   </View>
                   <View className={`${isTablet ? "flex-[0.72]" : "w-full"}`} style={{ gap: 14 }}>
-                    <FoodPhoto source={paneerImage} height={isTablet ? 173 : 180} rounded={24} />
+                    <View className="rounded-[24px] border border-[#ECEFF4] bg-[#FCFCFD] px-5 py-5">
+                      <Text className="text-[12px] font-semibold uppercase tracking-[1px] text-[#7C8593]">Original visual kept intact</Text>
+                      <Text className="mt-4 text-[28px] font-bold leading-[32px] text-ink">Food first. Structure right behind it.</Text>
+                      <Text className="mt-3 text-[14px] leading-7 text-[#667080]">
+                        The visual still feels like the post you discovered, but the result is now ready for shopping and cooking.
+                      </Text>
+                    </View>
                     <View className="flex-row" style={{ gap: 14 }}>
                       <View className="flex-1">
-                        <FoodPhoto source={noodlesImage} height={isTablet ? 173 : 180} rounded={24} />
+                        <FoodPhoto source={paneerImage} height={isTablet ? 188 : 180} rounded={24} label="Weeknight" />
                       </View>
                       <View className="flex-1">
-                        <FoodPhoto source={friesImage} height={isTablet ? 173 : 180} rounded={24} />
+                        <FoodPhoto source={friesImage} height={isTablet ? 188 : 180} rounded={24} label="Comfort" />
                       </View>
                     </View>
                   </View>
@@ -381,16 +401,10 @@ export const WebLandingPage = () => {
                 The background stays light and premium, while the yellow gradient gives the page enough appetite and energy to feel like Cooksy.
               </Text>
               <View className="mt-8 rounded-[26px] border border-[#F6E28B] bg-white/70 p-3">
-                <View style={{ gap: 12 }}>
-                  <FoodPhoto source={bowlImage} height={224} rounded={22} />
-                  <View className="flex-row" style={{ gap: 12 }}>
-                    <View className="flex-1">
-                      <FoodPhoto source={paneerImage} height={140} rounded={18} />
-                    </View>
-                    <View className="flex-1">
-                      <FoodPhoto source={noodlesImage} height={140} rounded={18} />
-                    </View>
-                  </View>
+                <FoodPhoto source={paneerImage} height={320} rounded={22} label="Cooksy mood" tone="dark" />
+                <View className="mt-4 rounded-[22px] bg-white/80 px-4 py-4">
+                  <Text className="text-[12px] font-semibold uppercase tracking-[1px] text-[#7A5B00]">Visual taste</Text>
+                  <Text className="mt-3 text-[24px] font-bold leading-[30px] text-ink">Bright warmth, clean surfaces, and real food that looks worth cooking.</Text>
                 </View>
               </View>
             </LinearGradient>
