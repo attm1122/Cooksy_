@@ -6,9 +6,9 @@ const navItems = [
   {
     key: "home",
     label: "Home",
-    href: "/" as const,
+    href: "/home" as const,
     icon: House,
-    matches: (pathname: string) => pathname === "/" || pathname.startsWith("/processing")
+    matches: (pathname: string) => pathname === "/home" || pathname.startsWith("/processing")
   },
   {
     key: "recipes",
@@ -43,7 +43,7 @@ export const PersistentTabNav = () => {
         const isFocused = item.matches(pathname);
 
         return (
-          <Link key={item.key} href={item.href} asChild>
+          <Link key={item.key} href={item.href as never} asChild>
             <Pressable
               accessibilityRole="link"
               accessibilityState={isFocused ? { selected: true } : {}}

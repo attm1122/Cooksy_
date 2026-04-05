@@ -4,7 +4,7 @@ import { Pressable, Text, View } from "react-native";
 
 import { CooksyLogo } from "@/components/common/CooksyLogo";
 
-const topLevelRoutes = new Set(["/", "/recipes", "/books", "/profile"]);
+const topLevelRoutes = new Set(["/home", "/recipes", "/books", "/profile"]);
 
 const getBackHref = (pathname: string) => {
   if (pathname.startsWith("/books/")) {
@@ -15,7 +15,7 @@ const getBackHref = (pathname: string) => {
     return "/recipes";
   }
 
-  return "/";
+  return "/home";
 };
 
 export const AppHeader = () => {
@@ -29,7 +29,7 @@ export const AppHeader = () => {
       return;
     }
 
-    router.replace(backHref);
+    router.replace(backHref as never);
   };
 
   return (
@@ -49,7 +49,7 @@ export const AppHeader = () => {
       )}
 
       <View className="flex-1 items-center">
-        <Link href="/" asChild>
+        <Link href={"/home" as never} asChild>
           <Pressable accessibilityRole="link">
             <CooksyLogo size="md" />
           </Pressable>

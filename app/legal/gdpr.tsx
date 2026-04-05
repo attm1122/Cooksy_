@@ -85,7 +85,7 @@ export default function GDPRScreen() {
 
               // Sign out and redirect
               await supabase.auth.signOut();
-              router.replace("/");
+              router.replace("/home" as never);
             } catch (error) {
               captureError(error, { action: "delete_user_account" });
               Alert.alert("Error", "Failed to delete account");

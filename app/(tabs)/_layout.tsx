@@ -8,7 +8,7 @@ export default function TabsLayout() {
       }}
       tabBar={() => null}
     >
-      <Tabs.Screen name="index" />
+      <Tabs.Screen name="home" />
       <Tabs.Screen name="recipes" />
       <Tabs.Screen name="books" />
       <Tabs.Screen name="profile" />

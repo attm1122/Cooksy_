@@ -3,14 +3,14 @@ import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { Pressable, Text, View } from "react-native";
 
 const iconMap = {
-  index: House,
+  home: House,
   recipes: Library,
   books: BookOpen,
   profile: UserCircle2
 } as const;
 
 const labelMap = {
-  index: "Home",
+  home: "Home",
   recipes: "Recipes",
   books: "Books",
   profile: "Profile"
