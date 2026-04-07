@@ -3,6 +3,13 @@
   "buildCommand": "npm run build:web:release",
   "outputDirectory": "dist",
   "cleanUrls": true,
+  "redirects": [
+    {
+      "source": "/_sitemap",
+      "destination": "/",
+      "permanent": false
+    }
+  ],
   "headers": [
     {
       "source": "/_expo/static/(.*)",
