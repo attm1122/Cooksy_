@@ -20,9 +20,12 @@ async function getRevenueCatModule(): Promise<RevenueCatModule> {
   return purchasesModulePromise;
 }
 
-// RevenueCat API Keys - configure in .env
-const REVENUECAT_IOS_KEY = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY;
-const REVENUECAT_ANDROID_KEY = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY;
+// RevenueCat API Keys
+// EXPO_PUBLIC_ env vars take precedence; these are the default test keys.
+const REVENUECAT_IOS_KEY =
+  process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY || 'test_dFOvkzkolHCcofaTGPtfkIGyWjL';
+const REVENUECAT_ANDROID_KEY =
+  process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY || 'test_dFOvkzkolHCcofaTGPtfkIGyWjL';
 const REVENUECAT_WEB_KEY = process.env.EXPO_PUBLIC_REVENUECAT_WEB_KEY;
 
 // Product IDs configured in RevenueCat Dashboard
@@ -93,9 +96,9 @@ export async function initializePurchases(userId: string): Promise<void> {
     return;
   }
 
-  // Enable debug logs in development
+  // Enable verbose logs in development
   if (__DEV__) {
-    Purchases.setLogLevel(LOG_LEVEL.DEBUG);
+    Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
   }
 
   Purchases.configure({ apiKey, appUserID: userId });
