@@ -12,7 +12,9 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { CookieConsent } from "@/components/common/CookieConsent";
 import { ensureCooksySession, subscribeToCooksyAuth } from "@/lib/auth";
+import { useSubscriptionStore } from "@/stores/subscription-store";
 import { identifyUser, trackEvent } from "@/lib/analytics";
 import { hasSupabaseConfig } from "@/lib/env";
 import { addBreadcrumb, captureError, setMonitoringUser } from "@/lib/monitoring";
@@ -104,7 +106,9 @@ export default function RootLayout() {
     const isRootRoute = pathname === "/";
     const isAuthRoute = pathname === "/auth";
     const isLegalRoute = pathname.startsWith("/legal");
-    const isPublicRoute = isRootRoute || isAuthRoute || isLegalRoute;
+    const isDemoRoute = pathname === "/demo";
+    const isPrivacyRedirect = pathname === "/privacy" || pathname === "/terms";
+    const isPublicRoute = isRootRoute || isAuthRoute || isLegalRoute || isDemoRoute || isPrivacyRedirect;
 
     if (!authUserId) {
       if (!isPublicRoute) {
@@ -124,6 +128,13 @@ export default function RootLayout() {
       identifyUser(authUserId);
       setMonitoringUser(authUserId);
       addBreadcrumb("User identified", "auth", { userId: authUserId });
+    }
+  }, [authStatus, authUserId]);
+
+  // Initialize RevenueCat subscription store when user is authenticated
+  useEffect(() => {
+    if (authStatus === "ready" && authUserId && Platform.OS !== "web") {
+      useSubscriptionStore.getState().initialize(authUserId);
     }
   }, [authStatus, authUserId]);
 
@@ -346,6 +357,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
         <StatusBar style="dark" />
+        <CookieConsent />
         <Stack
           screenOptions={{
             headerShown: false,

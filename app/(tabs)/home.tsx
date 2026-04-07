@@ -38,7 +38,7 @@ export default function HomeScreen() {
   } = useForm<ImportRecipeFormValues>({
     resolver: zodResolver(importRecipeSchema),
     defaultValues: {
-      sourceUrl: "https://youtube.com/watch?v=short-form-cooking-demo"
+      sourceUrl: ""
     }
   });
 

@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { ScreenContainer } from "@/components/common/ScreenContainer";
 import { captureError } from "@/lib/monitoring";
 import { supabase } from "@/lib/supabase";
+import { useAuthStore } from "@/store/use-auth-store";
 
 type ContentReport = {
   id: string;
@@ -36,6 +37,34 @@ export default function AdminModerationScreen() {
   const [stats, setStats] = useState<ModerationStats | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const userId = useAuthStore((state) => state.userId);
+
+  // Guard: verify admin role via Supabase JWT claims before rendering any data
+  useEffect(() => {
+    if (!userId) {
+      router.replace("/home" as never);
+      return;
+    }
+
+    if (!supabase) {
+      setIsAdmin(false);
+      return;
+    }
+
+    supabase.auth.getUser().then(({ data, error }) => {
+      if (error || !data.user) {
+        router.replace("/home" as never);
+        return;
+      }
+      const role = data.user.app_metadata?.role as string | undefined;
+      if (role !== "admin") {
+        router.replace("/home" as never);
+        return;
+      }
+      setIsAdmin(true);
+    });
+  }, [userId]);
 
   const fetchModerationData = async () => {
     try {
@@ -143,6 +172,11 @@ export default function AdminModerationScreen() {
       minute: "2-digit"
     });
   };
+
+  // Block render until admin check resolves
+  if (isAdmin !== true) {
+    return null;
+  }
 
   return (
     <ScreenContainer scroll={false}>

@@ -21,7 +21,23 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.cooksy.app",
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "NSUserTrackingUsageDescription": "Cooksy uses anonymous analytics to improve the app experience. No personal data is shared with third parties.",
+        "NSCameraUsageDescription": "Cooksy does not use your camera.",
+        "NSPhotoLibraryUsageDescription": "Cooksy does not access your photo library.",
+        "CFBundleLocalizations": ["en"],
+        "CFBundleDevelopmentRegion": "en"
+      },
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]
+          }
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -29,7 +45,8 @@
         "backgroundColor": "#FFFDF7"
       },
       "package": "com.cooksy.app",
-      "versionCode": 1
+      "versionCode": 1,
+      "permissions": []
     },
     "web": {
       "bundler": "metro",
@@ -47,6 +64,10 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "privacyPolicyUrl": "https://cooksy-six.vercel.app/legal/privacy",
+      "termsOfServiceUrl": "https://cooksy-six.vercel.app/legal/terms"
     }
   }
 }

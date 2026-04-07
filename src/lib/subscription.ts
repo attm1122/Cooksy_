@@ -6,6 +6,7 @@
 import type { CustomerInfo, PurchasesError, PurchasesPackage } from 'react-native-purchases';
 import { Platform } from 'react-native';
 import { supabase } from './supabase';
+import { captureError } from './monitoring';
 
 type RevenueCatModule = typeof import('react-native-purchases');
 
@@ -112,7 +113,7 @@ export async function getOfferings(): Promise<PurchasesPackage[] | null> {
     
     return null;
   } catch (error) {
-    console.error('Failed to get offerings:', error);
+    captureError(error, { action: 'subscription_get_offerings' });
     return null;
   }
 }
@@ -174,7 +175,7 @@ export async function getCustomerInfo(): Promise<CustomerInfo | null> {
     const { default: Purchases } = await getRevenueCatModule();
     return await Purchases.getCustomerInfo();
   } catch (error) {
-    console.error('Failed to get customer info:', error);
+    captureError(error, { action: 'subscription_get_customer_info' });
     return null;
   }
 }
@@ -222,7 +223,7 @@ async function syncSubscriptionStatus(userId: string): Promise<void> {
       await syncSubscriptionStatusFromCustomerInfo(customerInfo);
     }
   } catch (error) {
-    console.error('Failed to sync subscription status:', error);
+    captureError(error, { action: 'subscription_sync_status' });
   }
 }
 
@@ -252,7 +253,7 @@ async function syncSubscriptionStatusFromCustomerInfo(
       p_revenuecat_customer_id: customerInfo.originalAppUserId,
     });
   } catch (error) {
-    console.error('Failed to sync subscription to Supabase:', error);
+    captureError(error, { action: 'subscription_sync_to_supabase' });
   }
 }
 
@@ -314,7 +315,7 @@ export async function getPricingForRegion(): Promise<{
       currency: data.currency,
     };
   } catch (error) {
-    console.error('Failed to get pricing:', error);
+    captureError(error, { action: 'subscription_get_pricing' });
     return null;
   }
 }
@@ -331,7 +332,7 @@ export async function presentPaywall(): Promise<boolean> {
     
     return paywallResult === 'PURCHASED' || paywallResult === 'RESTORED';
   } catch (error) {
-    console.error('Failed to present paywall:', error);
+    captureError(error, { action: 'subscription_present_paywall' });
     return false;
   }
 }
@@ -382,7 +383,7 @@ export async function canUpload(): Promise<{
       reason: remaining <= 0 ? 'Free limit reached. Upgrade to Premium.' : undefined,
     };
   } catch (error) {
-    console.error('Failed to check upload quota:', error);
+    captureError(error, { action: 'subscription_check_upload_quota' });
     return { allowed: false, remaining: 0, reason: 'Error checking quota' };
   }
 }
@@ -396,7 +397,7 @@ export async function trackUpload(): Promise<void> {
       p_user_id: (await supabase.auth.getUser()).data.user?.id,
     });
   } catch (error) {
-    console.error('Failed to track upload:', error);
+    captureError(error, { action: 'subscription_track_upload' });
   }
 }
 

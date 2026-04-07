@@ -6,6 +6,7 @@
 import { create } from 'zustand';
 import Purchases, { CustomerInfo, PurchasesPackage } from 'react-native-purchases';
 import { subscribeWithSelector } from '@/lib/zustand-middleware';
+import { captureError } from '@/lib/monitoring';
 import {
   SubscriptionState,
   initialSubscriptionState,
@@ -78,7 +79,7 @@ export const useSubscriptionStore = create<SubscriptionStore>()(
           });
         });
       } catch (error) {
-        console.error('Failed to initialize subscription store:', error);
+        captureError(error, { action: 'subscription_store_initialize' });
         set({ isLoading: false });
       }
     },
@@ -107,7 +108,7 @@ export const useSubscriptionStore = create<SubscriptionStore>()(
           isLoading: false,
         });
       } catch (error) {
-        console.error('Failed to refresh subscription:', error);
+        captureError(error, { action: 'subscription_store_refresh' });
         set({ isLoading: false });
       }
     },
