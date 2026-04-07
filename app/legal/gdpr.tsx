@@ -1,7 +1,7 @@
 import { router } from "expo-router";
 import { ArrowLeft, Download, Trash2 } from "lucide-react-native";
 import { useState } from "react";
-import { Alert, ScrollView, Text, View } from "react-native";
+import { Alert, Platform, ScrollView, Share, Text, View } from "react-native";
 
 import { PrimaryButton, SecondaryButton, TertiaryButton } from "@/components/common/Buttons";
 import { CooksyCard } from "@/components/common/CooksyCard";
@@ -33,17 +33,30 @@ export default function GDPRScreen() {
 
       if (error) throw error;
 
-      // In a real app, you'd email this or provide a download link
-      // For now, we just log it
-      console.log("User data export:", JSON.stringify(data, null, 2));
-      
-      Alert.alert(
-        "Data Export Ready",
-        "Your data export has been prepared. In a production app, this would be emailed to you or available for download."
-      );
+      const jsonString = JSON.stringify(data, null, 2);
+      const filename = `cooksy-data-export-${new Date().toISOString().split("T")[0]}.json`;
+
+      if (Platform.OS === "web") {
+        // Web: trigger a file download
+        const blob = new Blob([jsonString], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } else {
+        // iOS / Android: use the native Share sheet
+        await Share.share({
+          title: filename,
+          message: jsonString
+        });
+      }
     } catch (error) {
       captureError(error, { action: "export_user_data" });
-      Alert.alert("Error", "Failed to export data");
+      Alert.alert("Export Failed", "Could not prepare your data export. Please try again or contact privacy@cooksy.app.");
     } finally {
       setExporting(false);
     }

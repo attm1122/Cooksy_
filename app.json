@@ -23,6 +23,7 @@
       "bundleIdentifier": "com.cooksy.app",
       "buildNumber": "1",
       "usesAppleSignIn": true,
+      "usesNonExemptEncryption": false,
       "infoPlist": {
         "NSUserTrackingUsageDescription": "Cooksy uses anonymous analytics to improve the app experience. No personal data is shared with third parties.",
         "NSCameraUsageDescription": "Cooksy does not use your camera.",
@@ -60,7 +61,8 @@
         {
           "fonts": []
         }
-      ]
+      ],
+      "react-native-purchases"
     ],
     "experiments": {
       "typedRoutes": true

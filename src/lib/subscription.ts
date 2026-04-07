@@ -86,7 +86,10 @@ export async function initializePurchases(userId: string): Promise<void> {
   });
 
   if (!apiKey) {
-    console.warn('RevenueCat API key not configured');
+    captureMessage('RevenueCat API key not configured — subscriptions will not function', {
+      platform: Platform.OS,
+      action: 'subscription_init_skipped'
+    });
     return;
   }
 

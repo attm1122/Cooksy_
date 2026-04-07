@@ -20,8 +20,18 @@
   },
   "submit": {
     "production": {
-      "ios": {},
-      "android": {}
+      "ios": {
+        "appleId": "REPLACE_WITH_YOUR_APPLE_ID_EMAIL",
+        "ascAppId": "REPLACE_WITH_APP_STORE_CONNECT_APP_ID",
+        "sku": "com.cooksy.app",
+        "language": "en-US",
+        "complianceExemption": "ENCRYPTION_EXEMPT"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./google-play-service-account.json",
+        "track": "internal",
+        "releaseStatus": "draft"
+      }
     }
   }
 }
