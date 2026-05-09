@@ -1,0 +1,586 @@
+import Foundation
+import SwiftData
+
+// MARK: - SupabaseProtocol
+/// The abstract interface for all Supabase backend operations.
+///
+/// Conform to this protocol to provide a real Supabase client (`SupabaseService`)
+/// or a mock (`MockSupabaseService`) for previews and unit tests.
+///
+/// All methods are `async throws` and run on `@MainActor` contexts.
+protocol SupabaseProtocol: Sendable {
+    /// The currently signed-in user, if any.
+    var currentUser: User? { get }
+
+    // MARK: - Auth
+
+    /// Sends a magic-link / OTP email to the given address.
+    func signInWithOTP(email: String) async throws
+
+    /// Verifies the OTP token and returns the authenticated user.
+    func verifyOTP(email: String, token: String) async throws -> User
+
+    /// Signs out the current user and clears local session state.
+    func signOut() async throws
+
+    // MARK: - Push Notifications
+
+    /// Registers a push notification device token for the current user.
+    func registerPushToken(_ token: String) async throws
+
+    /// Unregisters a push notification device token.
+    func unregisterPushToken(_ token: String) async throws
+
+    // MARK: - Content Moderation
+
+    /// Submits a content report for moderation review.
+    func submitContentReport(recipeId: String, reason: String, details: String?) async throws
+
+    // MARK: - Recipes
+
+    /// Fetches all recipes for the current user from the Supabase `recipes` table.
+    func fetchRecipes() async throws -> [RecipeDTO]
+
+    // MARK: - Import
+
+    /// Kicks off a server-side recipe import from a video URL.
+    func importRecipe(url: String) async throws -> ImportJobResponse
+
+    /// Polls the server for the status of an in-flight import job.
+    func checkImportStatus(jobId: String) async throws -> ImportStatusResponse
+
+    /// Retrieves the fully parsed recipe after an import job reaches `.ready`.
+    func completeImport(jobId: String) async throws -> RecipeDTO
+}
+
+// MARK: - SupabaseService
+
+/// Production implementation of `SupabaseProtocol` backed by the official Supabase Swift client.
+///
+/// This service handles:
+/// - Authentication (OTP email sign-in)
+/// - Recipe CRUD via PostgREST
+/// - Import orchestration via Edge Functions
+///
+/// ## Configuration
+/// Initialize with your Supabase URL and anon key (from environment variables or a secure config):
+/// ```swift
+/// let service = SupabaseService(
+///     url: ProcessInfo.processInfo.environment["SUPABASE_URL"]!,
+///     key: ProcessInfo.processInfo.environment["SUPABASE_ANON_KEY"]!
+/// )
+/// ```
+@Observable
+@MainActor
+final class SupabaseService: SupabaseProtocol {
+
+    // MARK: - Properties
+
+    private let supabaseURL: String
+    private let supabaseKey: String
+
+    /// The currently signed-in user. Updated after successful `verifyOTP` or `signOut`.
+    private(set) var currentUser: User?
+
+    /// Cached session token. Stored in `UserDefaults` for now.
+    /// - Important: Migrate to Keychain for production security.
+    private var sessionToken: String? {
+        get { UserDefaults.standard.string(forKey: "supabase_session_token") }
+        set {
+            if let token = newValue {
+                UserDefaults.standard.set(token, forKey: "supabase_session_token")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "supabase_session_token")
+            }
+        }
+    }
+
+    // MARK: - HTTP Client
+
+    private lazy var urlSession: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30
+        config.timeoutIntervalForResource = 300
+        return URLSession(configuration: config)
+    }()
+
+    // MARK: - Initialization
+
+    /// Creates a new `SupabaseService` with the given credentials.
+    /// - Parameters:
+    ///   - url: The Supabase project URL (e.g. `https://abc123.supabase.co`).
+    ///   - key: The Supabase anon/public API key.
+    init(url: String, key: String) {
+        self.supabaseURL = url.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.supabaseKey = key.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    // MARK: - Headers
+
+    private func makeHeaders() -> [String: String] {
+        var headers: [String: String] = [
+            "apikey": supabaseKey,
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        ]
+        if let token = sessionToken {
+            headers["Authorization"] = "Bearer \(token)"
+        } else {
+            headers["Authorization"] = "Bearer \(supabaseKey)"
+        }
+        return headers
+    }
+
+    // MARK: - Base URL Builder
+
+    private func baseURL(path: String) -> URL? {
+        let trimmed = supabaseURL.hasSuffix("/") ? String(supabaseURL.dropLast()) : supabaseURL
+        let cleanPath = path.hasPrefix("/") ? path : "/\(path)"
+        return URL(string: "\(trimmed)\(cleanPath)")
+    }
+
+    // MARK: - JSON Decoder
+
+    private static func makeDecoder() -> JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let string = try container.decode(String.self)
+            let isoFormatter = ISO8601DateFormatter()
+            isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let date = isoFormatter.date(from: string) {
+                return date
+            }
+            // Fallback without fractional seconds
+            isoFormatter.formatOptions = [.withInternetDateTime]
+            if let date = isoFormatter.date(from: string) {
+                return date
+            }
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid date: \(string)")
+        }
+        return decoder
+    }
+
+    // MARK: - Auth
+
+    /// Sends a magic-link / OTP email to the given address via Supabase Auth.
+    func signInWithOTP(email: String) async throws {
+        guard let url = baseURL(path: "/auth/v1/otp") else {
+            throw CooksyError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = makeHeaders()
+
+        let body: [String: Any] = [
+            "email": email.lowercased(),
+            "create_user": true
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (_, response) = try await urlSession.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw CooksyError.networkError(URLError(.badServerResponse))
+        }
+
+        switch httpResponse.statusCode {
+        case 200:
+            return
+        case 429:
+            throw CooksyError.serverError(statusCode: 429, message: "Too many requests. Please wait before trying again.")
+        case 400...499:
+            throw CooksyError.serverError(statusCode: httpResponse.statusCode, message: "Invalid request. Please check your email address.")
+        default:
+            throw CooksyError.serverError(statusCode: httpResponse.statusCode, message: "Server error. Please try again later.")
+        }
+    }
+
+    /// Verifies the OTP token and establishes a session.
+    func verifyOTP(email: String, token: String) async throws -> User {
+        guard let url = baseURL(path: "/auth/v1/verify") else {
+            throw CooksyError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = makeHeaders()
+
+        let body: [String: Any] = [
+            "type": "email",
+            "email": email.lowercased(),
+            "token": token
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await urlSession.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw CooksyError.networkError(URLError(.badServerResponse))
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            if httpResponse.statusCode == 401 || httpResponse.statusCode == 403 {
+                throw CooksyError.unauthorized
+            }
+            let errorBody = String(data: data, encoding: .utf8) ?? "Unknown error"
+            throw CooksyError.serverError(statusCode: httpResponse.statusCode, message: errorBody)
+        }
+
+        // Parse session response
+        struct SessionResponse: Codable {
+            struct UserData: Codable {
+                let id: String
+                let email: String?
+                let createdAt: String?
+            }
+            let accessToken: String?
+            let tokenType: String?
+            let user: UserData?
+
+            enum CodingKeys: String, CodingKey {
+                case accessToken = "access_token"
+                case tokenType = "token_type"
+                case user
+            }
+        }
+
+        let decoder = Self.makeDecoder()
+        let session = try decoder.decode(SessionResponse.self, from: data)
+
+        guard let accessToken = session.accessToken,
+              let userData = session.user,
+              let userEmail = userData.email else {
+            throw CooksyError.unauthorized
+        }
+
+        // Cache the session token
+        sessionToken = accessToken
+
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let createdAt = isoFormatter.date(from: userData.createdAt ?? "") ?? Date()
+
+        let user = User(id: userData.id, email: userEmail, createdAt: createdAt)
+        currentUser = user
+
+        // Persist minimal auth state
+        UserDefaults.standard.set(userEmail, forKey: "userEmail")
+        UserDefaults.standard.set(true, forKey: "isAuthenticated")
+
+        return user
+    }
+
+    /// Signs out the current user, invalidates the session, and clears local auth state.
+    func signOut() async throws {
+        guard let url = baseURL(path: "/auth/v1/logout") else {
+            throw CooksyError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = makeHeaders()
+
+        do {
+            let (_, _) = try await urlSession.data(for: request)
+        } catch {
+            // Even if the server call fails, clear local state
+        }
+
+        // Clear all local auth state
+        sessionToken = nil
+        currentUser = nil
+        UserDefaults.standard.removeObject(forKey: "isAuthenticated")
+        UserDefaults.standard.removeObject(forKey: "userEmail")
+    }
+
+    // MARK: - Recipes
+
+    /// Fetches all recipes for the current user from the `recipes` table.
+    /// Uses `.select("*, ingredients(*), steps(*)")` to eagerly load relationships.
+    func fetchRecipes() async throws -> [RecipeDTO] {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else {
+            throw CooksyError.serverError(statusCode: 0, message: "Supabase not configured. Check your environment variables.")
+        }
+
+        guard let url = baseURL(path: "/rest/v1/recipes?select=*,ingredients(*),steps(*)&order=created_at.desc") else {
+            throw CooksyError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.allHTTPHeaderFields = makeHeaders()
+
+        let (data, response) = try await urlSession.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw CooksyError.networkError(URLError(.badServerResponse))
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            if httpResponse.statusCode == 401 {
+                throw CooksyError.unauthorized
+            }
+            let errorBody = String(data: data, encoding: .utf8) ?? "Unknown error"
+            throw CooksyError.serverError(statusCode: httpResponse.statusCode, message: errorBody)
+        }
+
+        let decoder = Self.makeDecoder()
+        return try decoder.decode([RecipeDTO].self, from: data)
+    }
+
+    // MARK: - Import
+
+    /// Calls the `import-recipe` Edge Function to start parsing a video URL.
+    func importRecipe(url: String) async throws -> ImportJobResponse {
+        guard let requestURL = baseURL(path: "/functions/v1/import-recipe") else {
+            throw CooksyError.invalidURL
+        }
+
+        var request = URLRequest(url: requestURL)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = makeHeaders()
+
+        let body: [String: Any] = ["url": url]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await urlSession.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw CooksyError.networkError(URLError(.badServerResponse))
+        }
+
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            if httpResponse.statusCode == 401 {
+                throw CooksyError.unauthorized
+            }
+            if httpResponse.statusCode == 429 {
+                throw CooksyError.subscriptionError("Import limit reached. Upgrade to Premium for unlimited imports.")
+            }
+            let errorBody = String(data: data, encoding: .utf8) ?? "Import failed"
+            throw CooksyError.importFailed(errorBody)
+        }
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        return try decoder.decode(ImportJobResponse.self, from: data)
+    }
+
+    /// Polls the `import-status` Edge Function for the current status of a job.
+    func checkImportStatus(jobId: String) async throws -> ImportStatusResponse {
+        guard let url = baseURL(path: "/functions/v1/import-status?job_id=\(jobId)") else {
+            throw CooksyError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.allHTTPHeaderFields = makeHeaders()
+
+        let (data, response) = try await urlSession.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw CooksyError.networkError(URLError(.badServerResponse))
+        }
+
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            let errorBody = String(data: data, encoding: .utf8) ?? "Status check failed"
+            throw CooksyError.importFailed(errorBody)
+        }
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        return try decoder.decode(ImportStatusResponse.self, from: data)
+    }
+
+    /// Retrieves the completed recipe DTO after an import job succeeds.
+    func completeImport(jobId: String) async throws -> RecipeDTO {
+        guard let url = baseURL(path: "/functions/v1/import-complete?job_id=\(jobId)") else {
+            throw CooksyError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.allHTTPHeaderFields = makeHeaders()
+
+        let (data, response) = try await urlSession.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw CooksyError.networkError(URLError(.badServerResponse))
+        }
+
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            if httpResponse.statusCode == 404 {
+                throw CooksyError.recipeNotFound
+            }
+            let errorBody = String(data: data, encoding: .utf8) ?? "Failed to complete import"
+            throw CooksyError.importFailed(errorBody)
+        }
+
+        let decoder = Self.makeDecoder()
+        return try decoder.decode(RecipeDTO.self, from: data)
+    }
+
+    // MARK: - Push Notifications
+
+    /// Registers the device push token with Supabase for the current user.
+    func registerPushToken(_ token: String) async throws {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { return }
+        guard let url = baseURL(path: "/rest/v1/user_push_tokens") else {
+            throw CooksyError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = makeHeaders()
+
+        let body: [String: Any] = [
+            "token": token,
+            "platform": "ios",
+            "updated_at": ISO8601DateFormatter().string(from: Date())
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (_, response) = try await urlSession.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200..<300).contains(httpResponse.statusCode) else {
+            throw CooksyError.serverError(statusCode: 0, message: "Failed to register push token")
+        }
+    }
+
+    /// Unregisters the device push token when the user signs out.
+    func unregisterPushToken(_ token: String) async throws {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { return }
+        guard let url = baseURL(path: "/rest/v1/user_push_tokens?token=eq.\(token)") else {
+            throw CooksyError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.allHTTPHeaderFields = makeHeaders()
+
+        let (_, _) = try await urlSession.data(for: request)
+    }
+
+    // MARK: - Content Moderation
+
+    /// Submits a content moderation report to Supabase.
+    func submitContentReport(recipeId: String, reason: String, details: String?) async throws {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else {
+            // In dev mode without Supabase configured, just print
+            print("[SupabaseService] Content report submitted (dev mode): recipe=\(recipeId), reason=\(reason)")
+            return
+        }
+        guard let url = baseURL(path: "/rest/v1/content_reports") else {
+            throw CooksyError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = makeHeaders()
+
+        var body: [String: Any] = [
+            "recipe_id": recipeId,
+            "reason": reason,
+            "status": "pending"
+        ]
+        if let details = details, !details.isEmpty {
+            body["details"] = details
+        }
+
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await urlSession.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200..<300).contains(httpResponse.statusCode) else {
+            let errorBody = String(data: data, encoding: .utf8) ?? "Unknown error"
+            throw CooksyError.serverError(statusCode: 0, message: "Failed to submit report: \(errorBody)")
+        }
+    }
+
+    // MARK: - User Data
+
+    /// Aggregates all user recipes from SwiftData and returns them as JSON.
+    /// Call this from `ProfileViewModel` which has access to `ModelContext`.
+    static func exportUserData(from recipes: [Recipe], userEmail: String) async throws -> Data {
+        struct ExportContainer: Encodable {
+            let app: String
+            let version: String
+            let exportedAt: String
+            let user: ExportUser
+            let recipes: [ExportRecipe]
+        }
+        struct ExportUser: Encodable {
+            let email: String
+        }
+        struct ExportRecipe: Encodable {
+            let id: String
+            let title: String
+            let heroNote: String
+            let servings: Int
+            let prepTimeMinutes: Int
+            let cookTimeMinutes: Int
+            let totalTimeMinutes: Int
+            let status: String
+            let confidence: String
+            let confidenceScore: Int
+            let ingredients: [ExportIngredient]
+            let steps: [ExportStep]
+            let sourceUrl: String
+            let sourcePlatform: String
+            let sourceCreator: String
+            let createdAt: String
+        }
+        struct ExportIngredient: Encodable {
+            let name: String
+            let quantity: String?
+            let unit: String?
+        }
+        struct ExportStep: Encodable {
+            let title: String
+            let instruction: String
+            let durationMinutes: Int?
+        }
+
+        let isoFormatter = ISO8601DateFormatter()
+        let exportRecipes = recipes.map { recipe in
+            ExportRecipe(
+                id: recipe.id.uuidString,
+                title: recipe.title,
+                heroNote: recipe.heroNote,
+                servings: recipe.servings,
+                prepTimeMinutes: recipe.prepTimeMinutes,
+                cookTimeMinutes: recipe.cookTimeMinutes,
+                totalTimeMinutes: recipe.totalTimeMinutes,
+                status: recipe.statusRawValue,
+                confidence: recipe.confidenceRawValue,
+                confidenceScore: recipe.confidenceScore,
+                ingredients: (recipe.ingredients ?? []).map {
+                    ExportIngredient(name: $0.name, quantity: $0.quantity, unit: $0.unit)
+                },
+                steps: (recipe.steps ?? []).map {
+                    ExportStep(title: $0.title, instruction: $0.instruction, durationMinutes: $0.durationMinutes)
+                },
+                sourceUrl: recipe.sourceUrl,
+                sourcePlatform: recipe.sourcePlatform,
+                sourceCreator: recipe.sourceCreator,
+                createdAt: isoFormatter.string(from: recipe.createdAt)
+            )
+        }
+
+        let container = ExportContainer(
+            app: "Cooksy",
+            version: "1.0.0",
+            exportedAt: isoFormatter.string(from: Date()),
+            user: ExportUser(email: userEmail),
+            recipes: exportRecipes
+        )
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        return try encoder.encode(container)
+    }
+}
