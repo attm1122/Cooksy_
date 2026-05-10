@@ -69,6 +69,10 @@ struct ContentView: View {
         }
         // SECURITY: Apply screen capture protection to all app content
         .screenProtection()
+        // SECURITY: Auto-lock after 5 minutes of inactivity — requires biometric/PIN to unlock
+        .appLock(timeout: 300)
+        // SECURITY: Hide sensitive content in iOS app switcher snapshot
+        .backgroundSnapshotProtection()
         // SECURITY: Jailbreak detection - show warning if device appears compromised
         .onAppear {
             #if !DEBUG

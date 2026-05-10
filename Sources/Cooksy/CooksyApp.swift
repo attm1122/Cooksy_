@@ -39,6 +39,16 @@ struct CooksyApp: App {
         // Apply runtime security protections FIRST, before any other initialization.
         RuntimeProtection.applyAll()
 
+        // SECURITY: Verify bundle integrity — detect tampering of the app binary.
+        // First run stores the hash; subsequent runs verify against it.
+        // In a hardened build, failure here could trigger an exit or server alert.
+        let bundleIntegrityOk = BundleIntegrityVerifier.verify()
+        #if DEBUG
+        if !bundleIntegrityOk {
+            print("[Security] Bundle integrity check failed — binary may have been tampered with.")
+        }
+        #endif
+
         // URL uses env var or default. The anon key is reconstructed from
         // XOR-obfuscated fragments — it never appears as a plain string in the binary.
         let supabaseUrl = ProcessInfo.processInfo.environment["SUPABASE_URL"] ?? Self.defaultSupabaseUrl
