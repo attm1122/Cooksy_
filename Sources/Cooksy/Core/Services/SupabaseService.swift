@@ -23,6 +23,10 @@ protocol SupabaseProtocol: Sendable {
     /// Signs out the current user and clears local session state.
     func signOut() async throws
 
+    /// Permanently deletes the user's account and all associated data.
+    /// This calls a server-side RPC that must be configured in Supabase.
+    func deleteAccount() async throws
+
     // MARK: - Push Notifications
 
     /// Registers a push notification device token for the current user.
@@ -291,6 +295,34 @@ final class SupabaseService: SupabaseProtocol {
         }
 
         // Clear all local auth state from Keychain
+        sessionToken = nil
+        currentUser = nil
+        KeychainService.shared.clearAll()
+    }
+
+    /// Permanently deletes the user's account by calling the `delete_user` RPC
+    /// in Supabase. This RPC must be configured with SECURITY DEFINER.
+    func deleteAccount() async throws {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else {
+            throw CooksyError.serverError(statusCode: 0, message: "Supabase not configured")
+        }
+
+        guard let url = baseURL(path: "/rest/v1/rpc/delete_user") else {
+            throw CooksyError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = makeHeaders()
+
+        let (_, response) = try await urlSession.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw CooksyError.serverError(statusCode: 0, message: "Account deletion failed on server")
+        }
+
+        // Clear all local state after successful server deletion
         sessionToken = nil
         currentUser = nil
         KeychainService.shared.clearAll()

@@ -77,6 +77,29 @@ final class AuthViewModel {
 
     deinit {
         countdownTask?.cancel()
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    /// Starts observing Apple credential revocation notifications.
+    /// Call once after initialization. If the user revokes Sign in with Apple
+    /// in Settings, they are automatically signed out of Cooksy.
+    func observeAppleCredentialRevocation() {
+        NotificationCenter.default.addObserver(
+            forName: ASAuthorizationAppleIDProvider.credentialRevokedNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                // Sign out the user — their Apple credential was revoked
+                KeychainService.shared.clearAll()
+                do {
+                    try await self?.supabase.signOut()
+                } catch {
+                    // Even if signOut fails, local state is cleared
+                }
+                self?.goBackToEmail()
+            }
+        }
     }
 
     // MARK: - Public Methods
@@ -157,6 +180,25 @@ final class AuthViewModel {
         clearError()
         countdownTask?.cancel()
         resendCountdown = 0
+    }
+
+    // MARK: - Sign In with Apple (SwiftUI Bridge)
+
+    /// Handles the result from SwiftUI's `SignInWithAppleButton`.
+    /// Bridges the SwiftUI completion handler to the `ASAuthorizationControllerDelegate` flow.
+    func handleAppleSignInResult(_ result: Result<ASAuthorization, Error>) {
+        switch result {
+        case .success(let authorization):
+            authorizationController(
+                controller: ASAuthorizationController(authorizationRequests: []),
+                didCompleteWithAuthorization: authorization
+            )
+        case .failure(let error):
+            authorizationController(
+                controller: ASAuthorizationController(authorizationRequests: []),
+                didCompleteWithError: error
+            )
+        }
     }
 
     // MARK: - Countdown

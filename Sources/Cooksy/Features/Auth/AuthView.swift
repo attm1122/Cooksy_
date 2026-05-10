@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import AuthenticationServices
 
 // MARK: - Auth View
 /// Complete authentication flow view that handles both email entry
@@ -19,7 +20,7 @@ struct AuthView: View {
     
     init(onAuthenticated: @escaping () -> Void = {}) {
         self.onAuthenticated = onAuthenticated
-        // Temporary initialization - will be replaced in body via task
+        // Placeholder: reconfigured with real supabase in .task
         _viewModel = State(wrappedValue: AuthViewModel(
             supabase: MockSupabaseService(),
             onAuthenticated: onAuthenticated
@@ -53,7 +54,10 @@ struct AuthView: View {
             .overlay(loadingOverlay)
             .accessibilityIdentifier(AccessibilityID.authView)
         }
-
+        .onAppear {
+            // Observe Apple credential revocation (user disabled Sign in with Apple in Settings)
+            viewModel.observeAppleCredentialRevocation()
+        }
     }
     
     // MARK: - Email Step
@@ -117,10 +121,41 @@ struct AuthView: View {
                     .accessibilityLabel("Continue to verification code")
                     .accessibilityHint("Sends a verification code to your email address")
                     .accessibilityIdentifier(AccessibilityID.continueButton)
+
+                    // Divider
+                    HStack(spacing: 12) {
+                        Rectangle()
+                            .fill(Color.cooksLine)
+                            .frame(height: 1)
+                        Text("or")
+                            .font(.cooksCaption)
+                            .foregroundStyle(.muted)
+                        Rectangle()
+                            .fill(Color.cooksLine)
+                            .frame(height: 1)
+                    }
+                    .padding(.vertical, 4)
+
+                    // Sign in with Apple — required by Apple when offering third-party sign-in
+                    SignInWithAppleButton(
+                        .signIn,
+                        onRequest: { request in
+                            request.requestedScopes = [.email, .fullName]
+                        },
+                        onCompletion: { result in
+                            viewModel.handleAppleSignInResult(result)
+                        }
+                    )
+                    .signInWithAppleButtonStyle(.black)
+                    .frame(height: 50)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .accessibilityLabel("Sign in with Apple")
+                    .accessibilityHint("Authenticate using your Apple ID")
+                    .accessibilityIdentifier(AccessibilityID.signInWithAppleButton)
                 }
-                
+
                 Spacer()
-                
+
                 // Terms text
                 Text("By continuing, you agree to our Terms of Service and Privacy Policy.")
                     .font(.caption)

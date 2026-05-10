@@ -1,43 +1,5 @@
 import Foundation
 
-// MARK: - Supporting Types (Stubs for compilation)
-
-/// Represents a recipe with steps to be synced to video.
-/// In the full Cooksy app, this is a full SwiftData model.
-struct Recipe: Identifiable, Sendable {
-    let id: UUID
-    let title: String
-    let steps: [RecipeStep]
-}
-
-/// A single step in a recipe.
-/// In the full Cooksy app, this is part of the Recipe model.
-struct RecipeStep: Identifiable, Sendable {
-    let id: UUID
-    let index: Int
-    let instruction: String
-    let ingredients: [String]
-}
-
-/// Supported video source platforms.
-enum SourcePlatform: String, Codable, Sendable, CaseIterable {
-    case youtube
-    case tiktok
-    case instagram
-}
-
-/// Cooksy-specific errors.
-enum CooksyError: Error, Sendable {
-    case unknown
-    case networkFailure(underlying: Error)
-    case transcriptionFailed(reason: String)
-    case invalidVideoURL
-    case syncMapNotFound
-    case cacheFailure
-    case whisperAPIFailure(statusCode: Int, message: String)
-    case noMatchingStepsFound
-}
-
 // MARK: - TimestampExtractionService
 
 /// Extracts timestamps from a video by transcribing audio and matching

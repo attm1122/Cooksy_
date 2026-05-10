@@ -62,6 +62,13 @@ final class MockSupabaseService: SupabaseProtocol {
         KeychainService.shared.clearAll()
     }
 
+    func deleteAccount() async throws {
+        try await Task.sleep(nanoseconds: simulatedDelayNanoseconds)
+        currentUser = nil
+        KeychainService.shared.clearAll()
+        // In mock mode, account deletion simulates success
+    }
+
     // MARK: - Push Notifications
 
     func registerPushToken(_ token: String) async throws {

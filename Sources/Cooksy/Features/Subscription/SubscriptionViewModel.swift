@@ -65,7 +65,7 @@ final class SubscriptionViewModel {
             switch self {
             case .free: return nil
             case .monthly: return nil
-            case .yearly: return "Save 30%"
+            case .yearly: return nil  // Dynamic savings computed from RevenueCat prices
             case .lifetime: return "Best Deal"
             }
         }

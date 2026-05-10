@@ -83,7 +83,6 @@ struct ContentView: View {
         }
         .alert("Security Warning", isPresented: $showJailbreakWarning) {
             Button("Continue", role: .cancel) { }
-            Button("Exit App", role: .destructive) { exit(0) }
         } message: {
             Text("This device appears to be jailbroken. For your security, some features may be limited. We recommend using Cooksy on a non-jailbroken device.")
         }

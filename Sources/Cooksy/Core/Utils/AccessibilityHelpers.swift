@@ -237,6 +237,7 @@ enum AccessibilityID {
     static let verifyButton = "verifyButton"
     static let resendCodeButton = "resendCodeButton"
     static let changeEmailButton = "changeEmailButton"
+    static let signInWithAppleButton = "signInWithAppleButton"
 
     // Profile
     static let profileView = "profileView"
