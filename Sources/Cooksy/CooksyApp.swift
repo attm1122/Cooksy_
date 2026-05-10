@@ -32,18 +32,22 @@ struct CooksyApp: App {
 
     // MARK: - Initialization
 
+    /// Production Supabase URL — provided by the project owner.
+    private static let defaultSupabaseUrl = "https://qirjjbmrgtailifhmakp.supabase.co"
+
     init() {
-        let supabaseUrl = ProcessInfo.processInfo.environment["SUPABASE_URL"] ?? ""
+        // Use environment variable if available (for CI/development flexibility),
+        // otherwise fall back to the production URL.
+        let supabaseUrl = ProcessInfo.processInfo.environment["SUPABASE_URL"] ?? Self.defaultSupabaseUrl
         let supabaseKey = ProcessInfo.processInfo.environment["SUPABASE_ANON_KEY"] ?? ""
 
-        if supabaseUrl.isEmpty || supabaseKey.isEmpty {
-            print("[Cooksy] WARNING: SUPABASE_URL and SUPABASE_ANON_KEY environment variables not set. Set them in your Xcode scheme or CI environment.")
+        if supabaseKey.isEmpty {
+            print("[Cooksy] WARNING: SUPABASE_ANON_KEY environment variable not set. Set it in your Xcode scheme (Run → Environment Variables) or CI environment. The Supabase URL is configured.")
         }
 
         // Always use the real service. It will throw clear errors at runtime if misconfigured.
-        let resolvedUrl = supabaseUrl.isEmpty ? "https://placeholder.supabase.co" : supabaseUrl
         let resolvedKey = supabaseKey.isEmpty ? "placeholder-key" : supabaseKey
-        supabaseService = SupabaseService(url: resolvedUrl, key: resolvedKey)
+        supabaseService = SupabaseService(url: supabaseUrl, key: resolvedKey)
 
         // Configure RevenueCat for subscriptions
         configureRevenueCat()
