@@ -23,7 +23,10 @@ let package = Package(
                 .product(name: "Supabase", package: "supabase-swift"),
                 .product(name: "RevenueCat", package: "purchases-ios")
             ],
-            path: "Sources/Cooksy"
+            path: "Sources/Cooksy",
+            resources: [
+                .process("Resources")
+            ]
         ),
         .testTarget(
             name: "CooksyTests",
