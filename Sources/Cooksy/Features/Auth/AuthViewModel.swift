@@ -256,6 +256,7 @@ extension AuthViewModel: ASAuthorizationControllerDelegate {
         }
         if let givenName = fullName?.givenName, let familyName = fullName?.familyName {
             UserDefaults.standard.set("\(givenName) \(familyName)", forKey: "userDisplayName")
+            UserDefaults.standard.set(givenName, forKey: "userFirstName")
         }
 
         // In a full implementation, you would:

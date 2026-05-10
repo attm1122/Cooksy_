@@ -26,6 +26,9 @@ final class RecipeDetailViewModel {
     /// Whether the cooking mode full-screen presentation is active.
     var showCookingMode: Bool = false
 
+    /// Whether the cook-along video sync sheet is active.
+    var showCookAlong: Bool = false
+
     /// Whether the edit sheet is presented.
     var showEditSheet: Bool = false
 
@@ -89,6 +92,14 @@ final class RecipeDetailViewModel {
     func startCooking() {
         HapticsService.medium()
         showCookingMode = true
+    }
+
+    /// Opens the cook-along video sync experience.
+    ///
+    /// Sets `showCookAlong` to `true` and triggers a medium haptic.
+    func startCookAlong() {
+        HapticsService.medium()
+        showCookAlong = true
     }
 
     /// Opens the recipe edit sheet.

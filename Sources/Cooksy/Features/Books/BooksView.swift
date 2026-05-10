@@ -30,7 +30,7 @@ struct BooksView: View {
                     EmptyStateView(
                         icon: "folder",
                         title: "No books yet",
-                        message: "Create your first book to organize your favorite recipes into collections."
+                        message: "Create a book to organize your recipes."
                     )
                     .padding(.vertical, 80)
                     .accessibilityLabel("No recipe books yet")
@@ -108,13 +108,13 @@ struct BooksView: View {
                     .accessibilityLabel("Create new recipe book")
 
                 // Description
-                Text("Organize your recipes into collections. Give your book a name to get started.")
+                Text("Give your collection a name to get started.")
                     .font(.cooksCallout)
                     .foregroundStyle(Color.muted)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 24)
                     .scalableText()
-                    .accessibilityLabel("Organize your recipes into collections. Give your book a name to get started.")
+                    .accessibilityLabel("Give your collection a name to get started.")
 
                 // Text Field
                 TextField("Book name", text: $viewModel.newBookName)

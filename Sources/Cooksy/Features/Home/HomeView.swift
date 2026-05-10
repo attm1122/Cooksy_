@@ -22,6 +22,9 @@ struct HomeView: View {
             ScrollView {
                 LazyVStack(spacing: 20) {
 
+                    // MARK: - Greeting
+                    greetingBar
+
                     // MARK: - Hero Card
                     heroCard
 
@@ -59,6 +62,19 @@ struct HomeView: View {
         }
     }
 
+    // MARK: - Greeting Bar
+
+    private var greetingBar: some View {
+        HStack {
+            let name = viewModel.userFirstName
+            Text(name.isEmpty ? viewModel.greeting : "\(viewModel.greeting), \(name)")
+                .font(.cooksCallout)
+                .foregroundStyle(Color.muted)
+
+            Spacer()
+        }
+    }
+
     // MARK: - Hero Card
 
     private var heroCard: some View {
@@ -69,12 +85,13 @@ struct HomeView: View {
                     .foregroundStyle(.brand)
 
                 VStack(spacing: 6) {
-                    Text("Save the food you discover")
+                    let name = viewModel.userFirstName
+                    Text(name.isEmpty ? "Save recipes from anywhere. Cook them later." : "\(name), save recipes from anywhere. Cook them later.")
                         .font(.cooksH2)
                         .foregroundStyle(.ink)
                         .multilineTextAlignment(.center)
 
-                    Text("Paste a link from YouTube, TikTok, or Instagram and we'll turn it into a recipe.")
+                    Text("Paste a link and we'll extract the ingredients, steps, and timings.")
                         .font(.cooksCallout)
                         .foregroundStyle(.muted)
                         .multilineTextAlignment(.center)

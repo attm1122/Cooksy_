@@ -81,14 +81,24 @@ struct ProfileView: View {
                     .fill(Color.brand)
                     .frame(width: 64, height: 64)
 
-                Image(systemName: "person.crop.circle.fill")
-                    .font(.system(size: 40))
+                Text(viewModel.userDisplayName.isEmpty ? "👤" : String(viewModel.userDisplayName.prefix(1)))
+                    .font(.system(size: 28, weight: .bold))
                     .foregroundStyle(.white)
             }
 
-            Text(viewModel.userEmail)
-                .font(.cooksH3)
-                .foregroundStyle(Color.ink)
+            if viewModel.userDisplayName.isEmpty {
+                Text(viewModel.userEmail)
+                    .font(.cooksH3)
+                    .foregroundStyle(Color.ink)
+            } else {
+                Text(viewModel.userDisplayName)
+                    .font(.cooksH3)
+                    .foregroundStyle(Color.ink)
+
+                Text(viewModel.userEmail)
+                    .font(.cooksCallout)
+                    .foregroundStyle(Color.muted)
+            }
 
             Text("Member since \(viewModel.memberSinceDate)")
                 .font(.cooksCaption)

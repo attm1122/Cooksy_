@@ -43,6 +43,21 @@ final class HomeViewModel {
 
     // MARK: - Computed
 
+    /// The user's first name for personalized greetings.
+    var userFirstName: String {
+        UserDefaults.standard.string(forKey: "userFirstName") ?? ""
+    }
+
+    /// Time-aware greeting: "Good morning", "Good afternoon", or "Good evening".
+    var greeting: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        switch hour {
+        case 5..<12: return "Good morning"
+        case 12..<17: return "Good afternoon"
+        default: return "Good evening"
+        }
+    }
+
     /// Whether an import is currently in flight.
     var isImporting: Bool {
         importService?.isImporting ?? false

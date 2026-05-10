@@ -30,6 +30,16 @@ final class ProfileViewModel {
     /// User's email address (from auth session).
     private(set) var userEmail: String = ""
 
+    /// User's display name (first + last) from Sign In with Apple.
+    var userDisplayName: String {
+        UserDefaults.standard.string(forKey: "userDisplayName") ?? ""
+    }
+
+    /// User's first name for personalized greetings.
+    var userFirstName: String {
+        UserDefaults.standard.string(forKey: "userFirstName") ?? ""
+    }
+
     /// Whether the user has an active premium subscription.
     /// Checks RevenueCat entitlements for the "premium" entitlement.
     private(set) var isPremium: Bool = false
