@@ -125,7 +125,7 @@ struct ProfileView: View {
 
                     Spacer()
 
-                    if viewModel.isPremium {
+                    if viewModel.isPro {
                         Image(systemName: "crown.fill")
                             .foregroundStyle(Color.brand)
                     }
@@ -137,7 +137,7 @@ struct ProfileView: View {
 
                 NavigationLink(value: "subscription") {
                     HStack {
-                        Text(viewModel.isPremium ? "Manage Subscription" : "Upgrade to Premium")
+                        Text(viewModel.isPro ? "Manage Subscription" : "Upgrade to Cooksy Pro")
                             .font(.cooksCallout)
                             .fontWeight(.medium)
 

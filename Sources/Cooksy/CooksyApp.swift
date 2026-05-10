@@ -16,13 +16,18 @@ import RevenueCat
 /// Set the required environment variables (via Xcode scheme settings or CI secrets):
 /// - `SUPABASE_URL` - Your Supabase project URL
 /// - `SUPABASE_ANON_KEY` - Your Supabase anon key
-/// - `REVENUECAT_API_KEY` - Your RevenueCat public API key
+///
+/// ## RevenueCat Setup
+/// Products are configured in the RevenueCat dashboard:
+/// - Offering: "default"
+/// - Products: `monthly`, `yearly`, `lifetime`
+/// - Entitlement: `cooksy_pro`
 @main
 struct CooksyApp: App {
 
     // MARK: - Dependencies
 
-    /// The Supabase service (or mock) that powers all backend operations.
+    /// The Supabase service that powers all backend operations.
     private let supabaseService: any SupabaseProtocol
 
     // MARK: - Initialization
@@ -32,16 +37,15 @@ struct CooksyApp: App {
         let supabaseKey = ProcessInfo.processInfo.environment["SUPABASE_ANON_KEY"] ?? ""
 
         if supabaseUrl.isEmpty || supabaseKey.isEmpty {
-            print("[Cooksy] ERROR: SUPABASE_URL and SUPABASE_ANON_KEY environment variables must be set. Set them in your Xcode scheme or CI environment.")
+            print("[Cooksy] WARNING: SUPABASE_URL and SUPABASE_ANON_KEY environment variables not set. Set them in your Xcode scheme or CI environment.")
         }
 
         // Always use the real service. It will throw clear errors at runtime if misconfigured.
-        // MockSupabaseService is available explicitly for previews and tests only.
         let resolvedUrl = supabaseUrl.isEmpty ? "https://placeholder.supabase.co" : supabaseUrl
         let resolvedKey = supabaseKey.isEmpty ? "placeholder-key" : supabaseKey
         supabaseService = SupabaseService(url: resolvedUrl, key: resolvedKey)
 
-        // Configure RevenueCat
+        // Configure RevenueCat for subscriptions
         configureRevenueCat()
 
         // Register notification categories and inject dependencies
@@ -64,23 +68,53 @@ struct CooksyApp: App {
 
     // MARK: - RevenueCat Configuration
 
+    /// Configures the RevenueCat SDK with the Cooksy API key.
+    ///
+    /// Uses the public API key for the `test_dFOvkzkolHCcofaTGPtfkIGyWjL` project.
+    /// In production, RevenueCat automatically switches to the production environment.
+    ///
+    /// Products configured in the RevenueCat dashboard:
+    /// - `monthly` — Monthly recurring subscription
+    /// - `yearly` — Annual recurring subscription (best value)
+    /// - `lifetime` — One-time purchase, permanent access
+    ///
+    /// Entitlement: `cooksy_pro` — Grants access to all premium features.
     private func configureRevenueCat() {
-        // Load RevenueCat API key from environment
-        let revenueCatKey = ProcessInfo.processInfo.environment["REVENUECAT_API_KEY"] ?? ""
+        Purchases.configure(
+            with: Configuration.builder(withAPIKey: "test_dFOvkzkolHCcofaTGPtfkIGyWjL")
+                .with(appUserID: nil)
+                .build()
+        )
 
-        if !revenueCatKey.isEmpty {
-            Purchases.configure(withAPIKey: revenueCatKey)
-        } else {
-            // In development without a key, configure with empty key
-            // RevenueCat will operate in a limited mode (no actual purchases)
-            Purchases.configure(withAPIKey: "appl_dev_placeholder_key")
+        // Sync user ID with RevenueCat after authentication
+        NotificationCenter.default.addObserver(
+            forName: .userDidAuthenticate,
+            object: nil,
+            queue: .main
+        ) { notification in
+            if let userId = notification.userInfo?["userId"] as? String {
+                Purchases.shared.logIn(userId) { _, _, _ in }
+            }
         }
 
-        // Optional: Set user ID if already authenticated
-        if let userEmail = UserDefaults.standard.string(forKey: "userEmail") {
-            Purchases.shared.logIn(userEmail) { _, _, _ in }
+        // Clear RevenueCat user ID on sign out
+        NotificationCenter.default.addObserver(
+            forName: .userDidSignOut,
+            object: nil,
+            queue: .main
+        ) { _ in
+            Purchases.shared.logOut { _, _ in }
         }
     }
+}
+
+// MARK: - Notification Names
+
+extension Notification.Name {
+    /// Posted when the user successfully authenticates.
+    static let userDidAuthenticate = Notification.Name("com.cooksy.userDidAuthenticate")
+    /// Posted when the user signs out.
+    static let userDidSignOut = Notification.Name("com.cooksy.userDidSignOut")
 }
 
 // MARK: - Environment Key
@@ -91,7 +125,7 @@ private struct SupabaseKey: EnvironmentKey {
 }
 
 extension EnvironmentValues {
-    /// The Supabase backend service (real or mock) for the current view hierarchy.
+    /// The Supabase backend service for the current view hierarchy.
     var supabase: any SupabaseProtocol {
         get { self[SupabaseKey.self] }
         set { self[SupabaseKey.self] = newValue }
@@ -124,7 +158,6 @@ class CooksyAppDelegate: NSObject, UIApplicationDelegate {
         didReceiveRemoteNotification userInfo: [AnyHashable: Any],
         fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
     ) {
-        // Handle silent push notifications for background processing
         if let deepLinkString = userInfo["deepLink"] as? String,
            let url = URL(string: deepLinkString) {
             DeepLinkService.shared.handle(url: url)

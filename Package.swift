@@ -21,7 +21,8 @@ let package = Package(
             name: "Cooksy",
             dependencies: [
                 .product(name: "Supabase", package: "supabase-swift"),
-                .product(name: "RevenueCat", package: "purchases-ios")
+                .product(name: "RevenueCat", package: "purchases-ios"),
+                .product(name: "RevenueCatUI", package: "purchases-ios")
             ],
             path: "Sources/Cooksy",
             resources: [

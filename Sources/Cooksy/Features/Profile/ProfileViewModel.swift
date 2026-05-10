@@ -40,9 +40,9 @@ final class ProfileViewModel {
         UserDefaults.standard.string(forKey: "userFirstName") ?? ""
     }
 
-    /// Whether the user has an active premium subscription.
-    /// Checks RevenueCat entitlements for the "premium" entitlement.
-    private(set) var isPremium: Bool = false
+    /// Whether the user has an active Cooksy Pro subscription.
+    /// Checks RevenueCat entitlements for the "cooksy_pro" entitlement.
+    private(set) var isPro: Bool = false
 
     /// Total number of recipes in SwiftData.
     private(set) var recipeCount: Int = 0
@@ -93,8 +93,8 @@ final class ProfileViewModel {
         // Load user email from UserDefaults (set during auth)
         userEmail = UserDefaults.standard.string(forKey: "userEmail") ?? supabase.currentUser?.email ?? ""
 
-        // Load premium status from RevenueCat
-        await checkPremiumStatus()
+        // Load Cooksy Pro status from RevenueCat
+        await checkProStatus()
 
         // Load counts from SwiftData
         await loadCountsFromSwiftData()
@@ -201,10 +201,10 @@ final class ProfileViewModel {
 
         do {
             let customerInfo = try await Purchases.shared.restorePurchases()
-            let hasPremium = customerInfo.entitlements["premium"]?.isActive == true
-            isPremium = hasPremium
+            let hasPro = customerInfo.entitlements[SubscriptionViewModel.entitlementIdentifier]?.isActive == true
+            isPro = hasPro
 
-            if !hasPremium {
+            if !hasPro {
                 errorMessage = "No previous purchases found."
             } else {
                 HapticsService.success()
@@ -230,19 +230,19 @@ final class ProfileViewModel {
 
     /// The current plan display name.
     var planName: String {
-        isPremium ? "Cooksy Premium" : "Free Plan"
+        isPro ? "Cooksy Pro" : "Free Plan"
     }
 
     // MARK: - Private Methods
 
-    /// Checks premium status from RevenueCat entitlements.
-    private func checkPremiumStatus() async {
+    /// Checks Cooksy Pro status from RevenueCat entitlements.
+    private func checkProStatus() async {
         do {
             let customerInfo = try await Purchases.shared.customerInfo()
-            isPremium = customerInfo.entitlements["premium"]?.isActive == true
+            isPro = customerInfo.entitlements[SubscriptionViewModel.entitlementIdentifier]?.isActive == true
         } catch {
             // Fallback to cached value if RevenueCat check fails
-            isPremium = UserDefaults.standard.bool(forKey: "isPremium")
+            isPro = UserDefaults.standard.bool(forKey: "isPro")
         }
     }
 
@@ -314,3 +314,4 @@ final class ProfileViewModel {
         errorMessage = nil
     }
 }
+       }
