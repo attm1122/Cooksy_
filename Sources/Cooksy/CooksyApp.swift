@@ -35,6 +35,13 @@ struct CooksyApp: App {
     /// Production Supabase URL — provided by the project owner.
     private static let defaultSupabaseUrl = "https://qirjjbmrgtailifhmakp.supabase.co"
 
+    /// Production Supabase anon key — provided by the project owner.
+    ///
+    /// SECURITY NOTE: This is the public anon key (not the service_role key).
+    /// It is safe to embed in the client as it has limited permissions.
+    /// For production builds, override via SUPABASE_ANON_KEY environment variable.
+    private static let defaultSupabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpcmpqYm1yZ3RhaWxpZmhtYWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyODk1ODgsImV4cCI6MjA5MDg2NTU4OH0.F2uXHw6STtQojZKpSPcKFV_5C31NBJy3E3XqgFRUj1o"
+
     init() {
         // Apply runtime security protections FIRST, before any other initialization.
         // This includes: anti-debugging (ptrace PT_DENY_ATTACH), code injection
@@ -44,17 +51,9 @@ struct CooksyApp: App {
         // Use environment variable if available (for CI/development flexibility),
         // otherwise fall back to the production URL.
         let supabaseUrl = ProcessInfo.processInfo.environment["SUPABASE_URL"] ?? Self.defaultSupabaseUrl
-        let supabaseKey = ProcessInfo.processInfo.environment["SUPABASE_ANON_KEY"] ?? ""
-
-        if supabaseKey.isEmpty {
-            #if DEBUG
-            print("[Cooksy] WARNING: SUPABASE_ANON_KEY environment variable not set. Set it in your Xcode scheme (Run → Environment Variables) or CI environment. The Supabase URL is configured.")
-            #endif
-        }
-
-        // Always use the real service. It will throw clear errors at runtime if misconfigured.
-        let resolvedKey = supabaseKey.isEmpty ? "placeholder-key" : supabaseKey
-        supabaseService = SupabaseService(url: supabaseUrl, key: resolvedKey)
+        // Use environment variable if available, otherwise fall back to the default key.
+        let supabaseKey = ProcessInfo.processInfo.environment["SUPABASE_ANON_KEY"] ?? Self.defaultSupabaseAnonKey
+        supabaseService = SupabaseService(url: supabaseUrl, key: supabaseKey)
 
         // Configure RevenueCat for subscriptions
         configureRevenueCat()
