@@ -30,6 +30,9 @@ struct ContentView: View {
     /// Whether to show the onboarding flow. Only true for first-time users.
     @State private var showOnboarding = !UserDefaults.standard.bool(forKey: "hasSeenOnboarding")
 
+    /// Whether to show the jailbreak security warning alert.
+    @State private var showJailbreakWarning = false
+
     // MARK: - Body
 
     var body: some View {
@@ -66,6 +69,20 @@ struct ContentView: View {
         }
         // SECURITY: Apply screen capture protection to all app content
         .screenProtection()
+        // SECURITY: Jailbreak detection - show warning if device appears compromised
+        .onAppear {
+            #if !DEBUG
+            if JailbreakDetection.isDeviceJailbroken() {
+                showJailbreakWarning = true
+            }
+            #endif
+        }
+        .alert("Security Warning", isPresented: $showJailbreakWarning) {
+            Button("Continue", role: .cancel) { }
+            Button("Exit App", role: .destructive) { exit(0) }
+        } message: {
+            Text("This device appears to be jailbroken. For your security, some features may be limited. We recommend using Cooksy on a non-jailbroken device.")
+        }
     }
 
     // MARK: - Splash View

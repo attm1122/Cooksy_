@@ -225,6 +225,13 @@ struct SubscriptionView: View {
                 PrimaryButton(subscribeButtonTitle) {
                     HapticsService.heavy()
                     Task {
+                        // Require biometric auth for subscription purchase
+                        let authenticated = await BiometricAuthService.shared.authenticate(
+                            reason: "Authenticate to confirm your Cooksy Pro subscription."
+                        )
+                        guard authenticated else { return }
+
+                        // Then proceed with purchase
                         await viewModel.purchase(plan: viewModel.selectedPlan)
                     }
                 }

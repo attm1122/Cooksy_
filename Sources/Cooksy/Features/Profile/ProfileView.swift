@@ -187,8 +187,18 @@ struct ProfileView: View {
                     ProfileRow(icon: "square.and.arrow.up.fill", title: "Export Data", color: .brand)
                 }
 
-                Button {
-                    showDeleteConfirmation = true
+                Button(role: .destructive) {
+                    Task {
+                        // Require biometric auth before account deletion
+                        let authenticated = await BiometricAuthService.shared.authenticate(
+                            reason: "Authenticate to delete your Cooksy account. This action cannot be undone."
+                        )
+                        guard authenticated else {
+                            HapticsService.error()
+                            return
+                        }
+                        showDeleteConfirmation = true
+                    }
                 } label: {
                     ProfileRow(icon: "trash.fill", title: "Delete Account", color: .cooksDanger)
                 }

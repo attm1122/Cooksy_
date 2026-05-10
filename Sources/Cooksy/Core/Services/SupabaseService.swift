@@ -88,13 +88,22 @@ final class SupabaseService: SupabaseProtocol {
         set { KeychainService.shared.sessionToken = newValue }
     }
 
+    // MARK: - SSL Pinning
+
+    /// Certificate pinning service that validates Supabase TLS certificates.
+    /// Prevents MITM attacks by rejecting connections with unexpected certificates.
+    private static let pinningService = SSLPinningService()
+
     // MARK: - HTTP Client
 
+    /// URLSession with SSL certificate pinning for Supabase connections.
+    ///
+    /// This session uses `SSLPinningService` to validate the server's TLS
+    /// certificate against a set of pinned public key hashes. Connections
+    /// to non-Supabase hosts fall back to default system validation.
     private lazy var urlSession: URLSession = {
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 30
-        config.timeoutIntervalForResource = 300
-        return URLSession(configuration: config)
+        // Use the pinned session from SSLPinningService
+        return Self.pinningService.urlSession
     }()
 
     // MARK: - Initialization
@@ -455,9 +464,32 @@ final class SupabaseService: SupabaseProtocol {
         let (_, _) = try await urlSession.data(for: request)
     }
 
+    // MARK: - DeviceCheck Attestation
+
+    /// Includes DeviceCheck attestation token in requests that require
+    /// verified app integrity (subscription validation, content reporting).
+    private func attestationHeaders() async -> [String: String] {
+        do {
+            let attestation = try await RuntimeProtection.requestAttestation()
+            return ["X-Cooksy-Attestation": attestation]
+        } catch {
+            // Attestation is best-effort; don't block requests if it fails
+            return [:]
+        }
+    }
+
+    /// Merges the standard API headers with optional DeviceCheck attestation headers.
+    private func makeHeadersWithAttestation() async -> [String: String] {
+        var headers = makeHeaders()
+        let attestation = await attestationHeaders()
+        headers.merge(attestation) { _, new in new }
+        return headers
+    }
+
     // MARK: - Content Moderation
 
     /// Submits a content moderation report to Supabase.
+    /// Includes DeviceCheck attestation to verify the request comes from an unmodified app.
     func submitContentReport(recipeId: String, reason: String, details: String?) async throws {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else {
             // In dev mode without Supabase configured, just print
@@ -472,7 +504,7 @@ final class SupabaseService: SupabaseProtocol {
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = makeHeaders()
+        request.allHTTPHeaderFields = await makeHeadersWithAttestation()
 
         var body: [String: Any] = [
             "recipe_id": recipeId,
@@ -574,4 +606,6 @@ final class SupabaseService: SupabaseProtocol {
 
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-        return try enco
+        return try encoder.encode(container)
+    }
+}

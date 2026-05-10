@@ -84,5 +84,7 @@
     <string>Light</string>
     <key>NSUserTrackingUsageDescription</key>
     <string>Cooksy uses analytics to understand which features help you cook better. You can opt out anytime in Settings.</string>
+    <key>NSFaceIDUsageDescription</key>
+    <string>Cooksy uses Face ID to protect your saved recipes and subscription details.</string>
 </dict>
 </plist>

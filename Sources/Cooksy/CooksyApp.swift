@@ -36,6 +36,11 @@ struct CooksyApp: App {
     private static let defaultSupabaseUrl = "https://qirjjbmrgtailifhmakp.supabase.co"
 
     init() {
+        // Apply runtime security protections FIRST, before any other initialization.
+        // This includes: anti-debugging (ptrace PT_DENY_ATTACH), code injection
+        // detection, method swizzling detection, and periodic debugger checks.
+        RuntimeProtection.applyAll()
+
         // Use environment variable if available (for CI/development flexibility),
         // otherwise fall back to the production URL.
         let supabaseUrl = ProcessInfo.processInfo.environment["SUPABASE_URL"] ?? Self.defaultSupabaseUrl
