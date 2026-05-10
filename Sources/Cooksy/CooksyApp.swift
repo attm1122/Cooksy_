@@ -32,28 +32,23 @@ struct CooksyApp: App {
 
     // MARK: - Initialization
 
-    /// Production Supabase URL — provided by the project owner.
+    /// Production Supabase URL — less sensitive than keys but kept minimal.
     private static let defaultSupabaseUrl = "https://qirjjbmrgtailifhmakp.supabase.co"
-
-    /// Production Supabase anon key — provided by the project owner.
-    ///
-    /// SECURITY NOTE: This is the public anon key (not the service_role key).
-    /// It is safe to embed in the client as it has limited permissions.
-    /// For production builds, override via SUPABASE_ANON_KEY environment variable.
-    private static let defaultSupabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpcmpqYm1yZ3RhaWxpZmhtYWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyODk1ODgsImV4cCI6MjA5MDg2NTU4OH0.F2uXHw6STtQojZKpSPcKFV_5C31NBJy3E3XqgFRUj1o"
 
     init() {
         // Apply runtime security protections FIRST, before any other initialization.
-        // This includes: anti-debugging (ptrace PT_DENY_ATTACH), code injection
-        // detection, method swizzling detection, and periodic debugger checks.
         RuntimeProtection.applyAll()
 
-        // Use environment variable if available (for CI/development flexibility),
-        // otherwise fall back to the production URL.
+        // URL uses env var or default. The anon key is reconstructed from
+        // XOR-obfuscated fragments — it never appears as a plain string in the binary.
         let supabaseUrl = ProcessInfo.processInfo.environment["SUPABASE_URL"] ?? Self.defaultSupabaseUrl
-        // Use environment variable if available, otherwise fall back to the default key.
-        let supabaseKey = ProcessInfo.processInfo.environment["SUPABASE_ANON_KEY"] ?? Self.defaultSupabaseAnonKey
+
+        var supabaseKey = ""
+        ObfuscatedKeys.withKeyString(.supabaseAnon) { key in
+            supabaseKey = key
+        }
         supabaseService = SupabaseService(url: supabaseUrl, key: supabaseKey)
+        supabaseKey = String(repeating: "\0", count: supabaseKey.count)
 
         // Configure RevenueCat for subscriptions
         configureRevenueCat()
@@ -92,8 +87,8 @@ struct CooksyApp: App {
 
     /// Configures the RevenueCat SDK with the Cooksy API key.
     ///
-    /// Uses the public API key for the `test_dFOvkzkolHCcofaTGPtfkIGyWjL` project.
-    /// In production, RevenueCat automatically switches to the production environment.
+    /// Configures RevenueCat with the obfuscated API key.
+    /// The key is reconstructed at runtime from XOR-obfuscated fragments.
     ///
     /// Products configured in the RevenueCat dashboard:
     /// - `monthly` — Monthly recurring subscription
@@ -102,8 +97,12 @@ struct CooksyApp: App {
     ///
     /// Entitlement: `cooksy_pro` — Grants access to all premium features.
     private func configureRevenueCat() {
+        var rcKey = ""
+        ObfuscatedKeys.withKeyString(.revenueCat) { key in
+            rcKey = key
+        }
         Purchases.configure(
-            with: Configuration.builder(withAPIKey: "test_dFOvkzkolHCcofaTGPtfkIGyWjL")
+            with: Configuration.builder(withAPIKey: rcKey)
                 .with(appUserID: nil)
                 .build()
         )
