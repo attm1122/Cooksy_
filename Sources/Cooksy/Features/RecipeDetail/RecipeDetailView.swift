@@ -85,6 +85,10 @@ struct RecipeDetailView: View {
         .sheet(isPresented: $viewModel.showCookAlong) {
             CookAlongView(viewModel: CookAlongViewModel(recipe: viewModel.recipe))
         }
+        .sheet(isPresented: $viewModel.showShareSheet) {
+            ShareSheet(items: viewModel.shareItems)
+                .accessibilityLabel("Share recipe sheet")
+        }
     }
 
     // MARK: - Header Section
@@ -233,6 +237,22 @@ struct RecipeDetailView: View {
             .buttonStyle(TertiaryActionButtonStyle())
             .accessibilityLabel("Edit recipe")
             .accessibilityIdentifier(AccessibilityID.editRecipeButton)
+
+            // Secondary: Share
+            Button {
+                viewModel.prepareShare()
+                announceToVoiceOver("Opening share sheet for \(viewModel.recipe.title)")
+            } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 13, weight: .medium))
+                        .decorative()
+                    Text("Share")
+                }
+            }
+            .buttonStyle(TertiaryActionButtonStyle())
+            .accessibilityLabel("Share recipe \(viewModel.recipe.title)")
+            .accessibilityIdentifier(AccessibilityID.shareRecipeButton)
         }
     }
 
@@ -498,6 +518,34 @@ private struct AccessibleIngredientRow: View {
         .accessibilityHint("Double tap to toggle \(ingredient.isChecked ? "uncheck" : "check") this ingredient")
         .accessibilityAddTraits(.isButton)
     }
+}
+
+// MARK: - Share Sheet
+
+/// A SwiftUI wrapper around `UIActivityViewController` for sharing recipe content.
+///
+/// Presents the system share sheet with the recipe title and a deep-link URL.
+/// Automatically excludes unnecessary activity types for a cleaner sharing experience.
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+    var excludedActivityTypes: [UIActivity.ActivityType]? = [
+        .assignToContact,
+        .addToReadingList,
+        .postToFlickr,
+        .postToVimeo,
+        .print
+    ]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(
+            activityItems: items,
+            applicationActivities: nil
+        )
+        controller.excludedActivityTypes = excludedActivityTypes
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 // MARK: - Preview

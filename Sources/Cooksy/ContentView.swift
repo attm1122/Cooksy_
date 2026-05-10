@@ -3,14 +3,15 @@ import SwiftUI
 // MARK: - ContentView
 /// The root view of the Cooksy app.
 ///
-/// Handles the splash screen sequence and routes between auth and main app flows
+/// Handles the splash screen sequence and routes between onboarding, auth, and main app flows
 /// based on the current authentication state from the injected `SupabaseProtocol`.
 ///
 /// ## Flow
 /// 1. Shows a branded splash screen for 1.5 seconds.
-/// 2. Checks `supabase.currentUser` to determine auth state.
-/// 3. Presents `AuthView` if no user is signed in.
-/// 4. Presents `MainTabView` once authenticated.
+/// 2. Shows onboarding for first-time users (can be skipped).
+/// 3. Checks `supabase.currentUser` to determine auth state.
+/// 4. Presents `AuthView` if no user is signed in.
+/// 5. Presents `MainTabView` once authenticated.
 ///
 /// ## Auth State Changes
 /// The view listens for changes to `supabase.currentUser` (via `@Observable`)
@@ -26,6 +27,9 @@ struct ContentView: View {
     /// Whether the splash screen is currently visible.
     @State private var showSplash = true
 
+    /// Whether to show the onboarding flow. Only true for first-time users.
+    @State private var showOnboarding = !UserDefaults.standard.bool(forKey: "hasSeenOnboarding")
+
     // MARK: - Body
 
     var body: some View {
@@ -33,6 +37,14 @@ struct ContentView: View {
             if showSplash {
                 splashView
                     .accessibilityLabel("Cooksy splash screen, loading")
+            } else if showOnboarding {
+                OnboardingView {
+                    withAnimation(.easeOut(duration: 0.3)) {
+                        showOnboarding = false
+                    }
+                }
+                .accessibilityLabel("Cooksy onboarding")
+                .transition(.opacity)
             } else if supabase.currentUser != nil {
                 MainTabView()
                     .accessibilityLabel("Cooksy main app")
@@ -44,6 +56,7 @@ struct ContentView: View {
             }
         }
         .animation(.easeInOut(duration: 0.35), value: showSplash)
+        .animation(.easeInOut(duration: 0.35), value: showOnboarding)
         .animation(.easeInOut(duration: 0.35), value: supabase.currentUser != nil)
         .task {
             try? await Task.sleep(for: .seconds(1.5))

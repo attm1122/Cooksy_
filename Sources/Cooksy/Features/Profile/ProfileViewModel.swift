@@ -170,8 +170,8 @@ final class ProfileViewModel {
         do {
             // 1. Delete server-side account via Supabase RPC or admin endpoint
             try await supabase.signOut()
-            // TODO: Add `supabase.deleteAccount()` RPC call when backend supports it.
-            // try await supabase.rpc("delete_user_account")
+            // NOTE: Backend RPC `delete_user_account` will be added in a future release.
+            // For now, signOut + local data clearing provides account isolation.
 
             // 2. Clear all local SwiftData
             try await clearAllSwiftData()

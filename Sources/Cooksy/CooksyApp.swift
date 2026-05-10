@@ -28,19 +28,18 @@ struct CooksyApp: App {
     // MARK: - Initialization
 
     init() {
-        // Attempt to load Supabase credentials from environment variables.
         let supabaseUrl = ProcessInfo.processInfo.environment["SUPABASE_URL"] ?? ""
         let supabaseKey = ProcessInfo.processInfo.environment["SUPABASE_ANON_KEY"] ?? ""
 
-        // Use the real service only when both URL and key are present and valid.
-        if !supabaseUrl.isEmpty,
-           !supabaseKey.isEmpty,
-           URL(string: supabaseUrl) != nil {
-            supabaseService = SupabaseService(url: supabaseUrl, key: supabaseKey)
-        } else {
-            // Fallback to mock for previews, tests, and unconfigured builds.
-            supabaseService = MockSupabaseService()
+        if supabaseUrl.isEmpty || supabaseKey.isEmpty {
+            print("[Cooksy] ERROR: SUPABASE_URL and SUPABASE_ANON_KEY environment variables must be set. Set them in your Xcode scheme or CI environment.")
         }
+
+        // Always use the real service. It will throw clear errors at runtime if misconfigured.
+        // MockSupabaseService is available explicitly for previews and tests only.
+        let resolvedUrl = supabaseUrl.isEmpty ? "https://placeholder.supabase.co" : supabaseUrl
+        let resolvedKey = supabaseKey.isEmpty ? "placeholder-key" : supabaseKey
+        supabaseService = SupabaseService(url: resolvedUrl, key: resolvedKey)
 
         // Configure RevenueCat
         configureRevenueCat()

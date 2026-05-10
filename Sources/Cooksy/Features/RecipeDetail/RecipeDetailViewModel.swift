@@ -35,6 +35,10 @@ final class RecipeDetailViewModel {
     /// Whether the share sheet is presented.
     var showShareSheet: Bool = false
 
+    /// The items to share via `UIActivityViewController`.
+    /// Populated by `prepareShare()` before the sheet is presented.
+    var shareItems: [Any] = []
+
     // MARK: - Initialization
 
     /// Creates a new view model for the given recipe.
@@ -109,8 +113,15 @@ final class RecipeDetailViewModel {
         showEditSheet = true
     }
 
-    /// Presents the system share sheet with a summary of the recipe.
-    func shareRecipe() {
+    /// Prepares share items and presents the system share sheet.
+    ///
+    /// Generates a shareable text + URL combination and triggers a medium haptic.
+    /// Call this from the share button in the UI.
+    func prepareShare() {
+        HapticsService.medium()
+        let text = "Check out this recipe on Cooksy: \(recipe.title)"
+        let url = URL(string: DeepLinkService.recipeWebLink(recipeId: recipe.id))!
+        shareItems = [text, url]
         showShareSheet = true
     }
 

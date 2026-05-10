@@ -3,6 +3,12 @@ import SwiftData
 
 // MARK: - Home View
 
+/// The main home screen for the Cooksy app.
+/// Displays a personalized greeting, hero card, recipe import section,
+/// and a list of recently saved recipes.
+///
+/// During import, shows skeleton loading placeholders while the recipe
+/// is being processed. All loading states respect Reduce Motion settings.
 struct HomeView: View {
 
     // MARK: - Dependencies
@@ -107,18 +113,23 @@ struct HomeView: View {
         VStack(spacing: 16) {
             // URL Input
             URLInputField(text: $viewModel.sourceUrl)
+                .disabled(viewModel.isImporting)
+                .opacity(viewModel.isImporting ? 0.6 : 1.0)
 
             // URL Error
             if let error = viewModel.urlError {
                 HStack(spacing: 6) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 12))
+                        .decorative()
                     Text(error)
                         .font(.cooksCaption)
                 }
                 .foregroundStyle(.cooksDanger)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 4)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+                .accessibilityLabel("Error: \(error)")
             }
 
             // Platform Badges
@@ -128,6 +139,8 @@ struct HomeView: View {
                 PlatformBadge(platform: .instagram)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .opacity(viewModel.isImporting ? 0.5 : 1.0)
+            .accessibleAnimation(.easeInOut(duration: 0.2), value: viewModel.isImporting)
 
             // Import Button
             Button {
@@ -151,6 +164,7 @@ struct HomeView: View {
             .primaryButton()
             .disabled(!viewModel.canImport)
             .opacity(viewModel.canImport ? 1.0 : 0.6)
+            .accessibilityIdentifier(AccessibilityID.saveRecipeButton)
         }
     }
 
@@ -164,6 +178,7 @@ struct HomeView: View {
                 Text("Recently saved")
                     .font(.cooksH3)
                     .foregroundStyle(.ink)
+                    .accessibleHeading(.h2)
 
                 Spacer()
 
@@ -175,20 +190,35 @@ struct HomeView: View {
                             .font(.cooksCallout.weight(.semibold))
                         Image(systemName: "chevron.right")
                             .font(.system(size: 12, weight: .semibold))
+                            .decorative()
                     }
                     .foregroundStyle(.brand)
                 }
+                .accessibilityLabel("See all recipes")
+                .accessibilityIdentifier(AccessibilityID.seeAllRecipesLink)
+                .accessibilityHint("Double tap to view all saved recipes")
             }
             .padding(.bottom, 12)
 
-            // Recipe List or Empty State
-            if viewModel.recipes.isEmpty {
+            // Skeleton Loading — shown during import
+            if viewModel.isImporting {
+                HeroSkeleton()
+                    .padding(.bottom, 8)
+                SkeletonLoadingView(cardCount: 3)
+                    .accessibleAnimation(.easeInOut(duration: 0.2), value: viewModel.isImporting)
+                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
+
+            } else if viewModel.recipes.isEmpty {
+                // Empty State
                 EmptyStateView(
                     icon: "bookmark.slash",
                     title: "No saved recipes",
                     description: "Paste a recipe video link above to save your first recipe."
                 )
+                .accessibilityLabel("No saved recipes. Paste a recipe video link above to save your first recipe.")
+
             } else {
+                // Recipe List
                 LazyVStack(spacing: 12) {
                     ForEach(viewModel.recipes.prefix(5)) { recipe in
                         NavigationLink {
@@ -202,16 +232,20 @@ struct HomeView: View {
                                 .opacity(phase.isIdentity ? 1 : 0.6)
                                 .offset(y: phase.isIdentity ? 0 : 10)
                         }
+                        .accessibilityHint("Double tap to view recipe details")
                     }
                 }
             }
         }
+        .accessibleAnimation(.easeInOut(duration: 0.25), value: viewModel.isImporting)
+        .accessibleAnimation(.easeInOut(duration: 0.25), value: viewModel.recipes.isEmpty)
     }
 }
 
 // MARK: - Recipe Ready Banner
 
-/// A simple inline banner shown when a recipe has been successfully imported.
+/// A banner shown when a recipe has been successfully imported.
+/// Slides in from the top of the screen with a success indicator.
 private struct RecipeReadyBanner: View {
     @Binding var isVisible: Bool
     var recipe: Recipe?
@@ -223,54 +257,6 @@ private struct RecipeReadyBanner: View {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.title3)
                     .foregroundStyle(.cooksSuccess)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Recipe saved!")
-                        .font(.cooksCallout.weight(.semibold))
-                        .foregroundStyle(.ink)
-
-                    Text(recipe.title)
-                        .font(.cooksCaption)
-                        .foregroundStyle(.muted)
-                        .lineLimit(1)
-                }
-
-                Spacer()
-
-                Button {
-                    onDismiss()
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(.muted)
-                        .frame(width: 28, height: 28)
-                        .background(Circle().fill(Color.cooksLine))
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .background(
-                RoundedRectangle(cornerRadius: 18)
-                    .fill(Color.surface)
-                    .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 4)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 18)
-                    .stroke(Color.cooksSuccess.opacity(0.3), lineWidth: 1)
-            )
-            .padding(.horizontal, 20)
-            .padding(.top, 8)
-            .transition(.move(edge: .top).combined(with: .opacity))
-        }
-    }
-}
-
-// MARK: - Preview
-
-#Preview {
-    HomeView()
-}
-roundStyle(.cooksSuccess)
                     .decorative()
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -323,6 +309,8 @@ roundStyle(.cooksSuccess)
 
 // MARK: - Accessibility Announcement Modifier
 
+/// Announces a layout change to VoiceOver when the banner appears.
+/// Ensures screen reader users are notified of the success state.
 private struct AccessibilityAnnouncementModifier: ViewModifier {
     @State private var hasAnnounced = false
 
@@ -341,6 +329,7 @@ private struct AccessibilityAnnouncementModifier: ViewModifier {
 }
 
 private extension View {
+    /// Posts a layout-changed notification to VoiceOver after a short delay.
     func accessibilityAnnouncement() -> some View {
         modifier(AccessibilityAnnouncementModifier())
     }

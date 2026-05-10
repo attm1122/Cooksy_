@@ -82,5 +82,7 @@
     <string>Cooksy sends notifications when your recipe imports are complete.</string>
     <key>UIUserInterfaceStyle</key>
     <string>Light</string>
+    <key>NSUserTrackingUsageDescription</key>
+    <string>Cooksy uses analytics to understand which features help you cook better. You can opt out anytime in Settings.</string>
 </dict>
 </plist>

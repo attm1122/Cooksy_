@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import SwiftData
 
 // MARK: - Deep Link Service
 /// Handles all deep linking into the Cooksy app including:
@@ -171,12 +172,18 @@ final class DeepLinkService {
 // MARK: - View Modifier for Deep Link Handling
 
 /// A view modifier that enables deep link handling within a navigation stack.
+///
+/// Fetches recipes from SwiftData for `cooksy://recipe/{id}` links and presents
+/// `RecipeDetailView` when found. Shows an accessible error state when the recipe
+/// is unavailable, plus a follow-up alert for screen-reader users.
 struct DeepLinkHandler: ViewModifier {
+    @Environment(\.modelContext) private var modelContext
     @State private var deepLinkService = DeepLinkService.shared
     @State private var navigateToRecipe: String?
     @State private var navigateToSubscription = false
     @State private var navigateToProfile = false
-    
+    @State private var showRecipeNotFound = false
+
     func body(content: Content) -> some View {
         content
             .onOpenURL { url in
@@ -195,11 +202,38 @@ struct DeepLinkHandler: ViewModifier {
                 SubscriptionView()
             }
             .navigationDestination(item: $navigateToRecipe) { recipeId in
-                // In a real app, you'd fetch the recipe and show RecipeDetailView
-                Text("Recipe: \(recipeId)")
+                recipeDestinationView(for: recipeId)
+            }
+            .alert("Recipe Not Found", isPresented: $showRecipeNotFound) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("This recipe may have been deleted or is no longer available.")
             }
     }
-    
+
+    /// Builds the destination view for a recipe deep link.
+    /// - Parameter recipeId: The unique identifier of the recipe to display.
+    @ViewBuilder
+    private func recipeDestinationView(for recipeId: String) -> some View {
+        if let recipe = findRecipe(id: recipeId) {
+            RecipeDetailView(recipe: recipe)
+        } else {
+            RecipeNotFoundView()
+                .onAppear { showRecipeNotFound = true }
+        }
+    }
+
+    /// Looks up a recipe in the local SwiftData store by its UUID string.
+    /// - Parameter id: The recipe's UUID as a string.
+    /// - Returns: The matching `Recipe` model, or `nil` if not found or the ID is malformed.
+    private func findRecipe(id: String) -> Recipe? {
+        guard let uuid = UUID(uuidString: id) else { return nil }
+        let descriptor = FetchDescriptor<Recipe>(predicate: #Predicate { $0.id == uuid })
+        return try? modelContext.fetch(descriptor).first
+    }
+
+    /// Converts a parsed deep-link target into navigation state.
+    /// - Parameter target: The `DeepLinkTarget` produced by `DeepLinkService`.
     private func handleTarget(_ target: DeepLinkService.DeepLinkTarget) {
         switch target {
         case .recipe(let id):
@@ -209,13 +243,42 @@ struct DeepLinkHandler: ViewModifier {
         case .profile:
             navigateToProfile = true
         case .importVideo(let url):
-            // Handle import - would trigger the import flow
             print("[DeepLinkService] Import video: \(url)")
         case .settings:
             navigateToProfile = true
         }
-        
         DeepLinkService.shared.clearTarget()
+    }
+}
+
+// MARK: - Recipe Not Found View
+
+/// An accessible error state shown when a deep-linked recipe cannot be found.
+private struct RecipeNotFoundView: View {
+    var body: some View {
+        Color.cooksBackground
+            .ignoresSafeArea()
+            .overlay {
+                VStack(spacing: 16) {
+                    Image(systemName: "doc.questionmark")
+                        .font(.system(size: 48))
+                        .foregroundStyle(Color.muted)
+                        .decorative()
+
+                    Text("Recipe not found")
+                        .font(.cooksH2)
+                        .foregroundStyle(Color.ink)
+                        .accessibleHeading(.h2)
+
+                    Text("This recipe may have been deleted.")
+                        .font(.cooksCallout)
+                        .foregroundStyle(Color.muted)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.horizontal, 40)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Recipe not found. This recipe may have been deleted or is no longer available.")
+            }
     }
 }
 

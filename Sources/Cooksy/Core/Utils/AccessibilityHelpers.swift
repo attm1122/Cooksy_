@@ -214,6 +214,7 @@ enum AccessibilityID {
     static let cookingModeButton = "cookingModeButton"
     static let cookAlongButton = "cookAlongButton"
     static let editRecipeButton = "editRecipeButton"
+    static let shareRecipeButton = "shareRecipeButton"
     static let ingredientsSection = "ingredientsSection"
     static let ingredientRowPrefix = "ingredientRow_"
     static let stepsSection = "stepsSection"

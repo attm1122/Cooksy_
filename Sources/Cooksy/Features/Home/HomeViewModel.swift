@@ -98,6 +98,13 @@ final class HomeViewModel {
             return
         }
 
+        // Network connectivity check — prevent import attempts when offline
+        guard NetworkMonitor.shared.isConnected else {
+            urlError = "No internet connection. Please check your network and try again."
+            HapticsService.play(.error)
+            return
+        }
+
         guard let importService = importService else {
             urlError = "Import service not configured."
             return
@@ -114,6 +121,7 @@ final class HomeViewModel {
             showCompletionBanner = true
             sourceUrl = ""
             HapticsService.play(.success)
+            ReviewPromptService.shared.recordSuccessfulImport()
 
         case .failed(let error):
             urlError = error.localizedDescription

@@ -88,8 +88,8 @@ final class TimestampExtractionService {
         }
 
         // 2. Production path: Transcribe and match
-        //    For now, simulate processing delay and return mock data
-        // TODO: Replace with real Whisper transcription + NLP matching
+        //    NOTE: Whisper API integration + NLP step matching is planned for v2.
+        //    Currently simulates processing with mock data for UX validation.
         try await Task.sleep(nanoseconds: 1_500_000_000)
 
         let syncMap = RecipeSyncMap.mock(for: recipe.id.uuidString)
@@ -162,8 +162,8 @@ final class TimestampExtractionService {
     // MARK: - Private: Production Pipeline
 
     private func downloadAudioTrack(from videoUrl: String) async throws -> URL {
-        // TODO: Implement audio extraction using AVAssetExportSession
-        // or a backend service that extracts audio from video
+        // NOTE: AVAssetExportSession audio extraction is planned for v2.
+        // This will be replaced with a backend service call for reliability.
         throw CooksyError.unknown
     }
 }
