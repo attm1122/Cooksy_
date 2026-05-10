@@ -1557,6 +1557,41 @@ body {
       <div class="splash-title">Cooksy</div>
     </div>
 
+    <!-- ONBOARDING SCREEN -->
+    <div class="screen" id="onboardingScreen" style="padding:0; display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--bg);">
+      <div style="position:absolute; top:16px; right:20px; z-index:10;">
+        <button id="onboardingSkip" style="background:none; border:none; font-family:var(--font-ui); font-size:14px; font-weight:600; color:var(--muted); cursor:pointer; padding:8px;">Skip</button>
+      </div>
+      <div id="onboardingSlides" style="width:100%; flex:1; position:relative; overflow:hidden;">
+        <!-- Slide 1: Save -->
+        <div class="onboarding-slide active" data-slide="0" style="position:absolute; top:0; left:0; right:0; bottom:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 32px; transition:opacity 0.4s ease, transform 0.4s var(--spring);">
+          <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:32px;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/><circle cx="18" cy="6" r="4" fill="var(--primary)" stroke="none"/><path d="M18 4v4M16 6h4" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <h2 style="font-family:var(--font-display); font-size:28px; font-weight:800; color:var(--ink); text-align:center; margin-bottom:12px; letter-spacing:-0.03em;">Save Recipes from Anywhere</h2>
+          <p style="font-family:var(--font-ui); font-size:16px; color:var(--muted); text-align:center; line-height:1.5; max-width:300px;">Paste a link from YouTube, TikTok, or Instagram. We'll extract the ingredients, steps, and timings.</p>
+        </div>
+        <!-- Slide 2: Cook Along -->
+        <div class="onboarding-slide" data-slide="1" style="position:absolute; top:0; left:0; right:0; bottom:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 32px; opacity:0; pointer-events:none; transform:translateX(40px); transition:opacity 0.4s ease, transform 0.4s var(--spring);">
+          <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:32px;"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/><polygon points="10 9 16 12 10 15 10 9" fill="var(--primary)" stroke="none" opacity="0.3"/></svg>
+          <h2 style="font-family:var(--font-display); font-size:28px; font-weight:800; color:var(--ink); text-align:center; margin-bottom:12px; letter-spacing:-0.03em;">Cook Along with Video</h2>
+          <p style="font-family:var(--font-ui); font-size:16px; color:var(--muted); text-align:center; line-height:1.5; max-width:300px;">Your recipe steps sync automatically with the video. Tap any step to jump to that moment.</p>
+        </div>
+        <!-- Slide 3: Organize -->
+        <div class="onboarding-slide" data-slide="2" style="position:absolute; top:0; left:0; right:0; bottom:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 32px; opacity:0; pointer-events:none; transform:translateX(40px); transition:opacity 0.4s ease, transform 0.4s var(--spring);">
+          <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:32px;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><circle cx="16" cy="13" r="4" fill="var(--primary)" stroke="none" opacity="0.3"/><path d="M16 11v4M14 13h4" stroke="var(--ink)" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <h2 style="font-family:var(--font-display); font-size:28px; font-weight:800; color:var(--ink); text-align:center; margin-bottom:12px; letter-spacing:-0.03em;">Organize Your Kitchen</h2>
+          <p style="font-family:var(--font-ui); font-size:16px; color:var(--muted); text-align:center; line-height:1.5; max-width:300px;">Group recipes into collections. Find what to cook in seconds.</p>
+        </div>
+      </div>
+      <!-- Page Indicator -->
+      <div style="display:flex; gap:8px; justify-content:center; margin-bottom:20px;">
+        <div class="onboarding-dot active" data-dot="0" style="width:10px; height:10px; border-radius:50%; background:var(--primary); transition:all 0.3s ease;"></div>
+        <div class="onboarding-dot" data-dot="1" style="width:8px; height:8px; border-radius:50%; background:var(--border); transition:all 0.3s ease;"></div>
+        <div class="onboarding-dot" data-dot="2" style="width:8px; height:8px; border-radius:50%; background:var(--border); transition:all 0.3s ease;"></div>
+      </div>
+      <!-- Next/Get Started Button -->
+      <button id="onboardingNext" style="width:calc(100% - 40px); max-width:335px; margin:0 20px 40px; padding:16px 0; background:var(--primary); color:var(--ink); border:none; border-radius:16px; font-family:var(--font-ui); font-size:16px; font-weight:700; cursor:pointer; transition:all 0.2s ease; letter-spacing:-0.01em;">Next</button>
+    </div>
+
     <!-- HOME SCREEN -->
     <div class="screen" id="homeScreen">
       <div id="homeGreeting" style="font-size:13px; color:var(--muted); margin-bottom:2px;">Good morning</div>
@@ -2347,9 +2382,55 @@ updateGreeting();
 
 setTimeout(() => {
   document.getElementById('splashScreen').classList.add('hidden');
-  showScreen('home');
-  updateTabs('home');
+  const hasSeenOnboarding = localStorage.getItem('cooksy_onboarding_seen');
+  if (hasSeenOnboarding) {
+    showScreen('home');
+    updateGreeting();
+    document.querySelector('.tab-bar').style.display = 'flex';
+    updateTabs('home');
+  } else {
+    showScreen('onboarding');
+    document.querySelector('.tab-bar').style.display = 'none';
+  }
 }, 2000);
+
+// ================================================
+//  ONBOARDING
+// ================================================
+let onboardingPage = 0;
+const totalOnboardingPages = 3;
+
+function updateOnboarding() {
+  document.querySelectorAll('.onboarding-slide').forEach((slide, i) => {
+    if (i === onboardingPage) {
+      slide.style.opacity = '1'; slide.style.pointerEvents = 'auto'; slide.style.transform = 'translateX(0)';
+    } else if (i < onboardingPage) {
+      slide.style.opacity = '0'; slide.style.pointerEvents = 'none'; slide.style.transform = 'translateX(-40px)';
+    } else {
+      slide.style.opacity = '0'; slide.style.pointerEvents = 'none'; slide.style.transform = 'translateX(40px)';
+    }
+  });
+  document.querySelectorAll('.onboarding-dot').forEach((dot, i) => {
+    if (i === onboardingPage) { dot.style.width = '10px'; dot.style.height = '10px'; dot.style.background = 'var(--primary)';
+    } else { dot.style.width = '8px'; dot.style.height = '8px'; dot.style.background = 'var(--border)'; }
+  });
+  const nextBtn = document.getElementById('onboardingNext');
+  if (onboardingPage === totalOnboardingPages - 1) nextBtn.textContent = 'Get Started';
+  else nextBtn.textContent = 'Next';
+}
+
+document.getElementById('onboardingNext').addEventListener('click', () => {
+  if (onboardingPage < totalOnboardingPages - 1) { onboardingPage++; updateOnboarding(); }
+  else {
+    localStorage.setItem('cooksy_onboarding_seen', 'true');
+    showScreen('home'); updateGreeting(); document.querySelector('.tab-bar').style.display = 'flex'; updateTabs('home');
+  }
+});
+
+document.getElementById('onboardingSkip').addEventListener('click', () => {
+  localStorage.setItem('cooksy_onboarding_seen', 'true');
+  showScreen('home'); updateGreeting(); document.querySelector('.tab-bar').style.display = 'flex'; updateTabs('home');
+});
 
 // ================================================
 //  GREETING & USER INFO
@@ -2404,7 +2485,7 @@ function showScreen(name) {
   if (name === 'profile') updateProfileInfo();
   
   // Tab bar visibility
-  const noTabScreens = ['splash', 'detail'];
+  const noTabScreens = ['splash', 'onboarding', 'detail'];
   document.getElementById('tabBar').style.display = noTabScreens.includes(name) ? 'none' : 'flex';
   
   // FAB visibility

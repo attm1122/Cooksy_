@@ -87,17 +87,20 @@ final class TimestampExtractionService {
             return cached
         }
 
-        // 2. Production path: Transcribe and match
+        // 2. Validate API key is configured
+        guard !apiKey.isEmpty else {
+            throw CooksyError.transcriptionUnavailable(
+                "Cook-along requires a transcription service. This feature will be available in a future update."
+            )
+        }
+
+        // 3. Production path: Transcribe and match
         //    NOTE: Whisper API integration + NLP step matching is planned for v2.
-        //    Currently simulates processing with mock data for UX validation.
-        try await Task.sleep(nanoseconds: 1_500_000_000)
-
-        let syncMap = RecipeSyncMap.mock(for: recipe.id.uuidString)
-
-        // 3. Cache the result
-        try? await cache.save(syncMap)
-
-        return syncMap
+        return try await extractTimestampsProduction(
+            for: recipe,
+            videoUrl: videoUrl,
+            videoDuration: 0
+        )
     }
 
     /// Extract timestamps using the full production pipeline:

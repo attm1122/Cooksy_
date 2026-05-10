@@ -34,20 +34,15 @@ final class SubscriptionViewModel {
 
         var name: String { rawValue }
 
-        var price: String {
-            switch self {
-            case .free: return "$0/month"
-            case .monthly: return "$6.99/month"
-            case .annual: return "$4.99/month"
-            }
+        /// Display price — sourced from RevenueCat offerings when available.
+        /// Falls back to hardcoded defaults if offerings haven't loaded.
+        func price(from prices: [Plan: String]) -> String {
+            prices[self] ?? SubscriptionViewModel.defaultPrices[self] ?? "$0/month"
         }
 
-        var annualPrice: String {
-            switch self {
-            case .free: return "Free forever"
-            case .monthly: return "$83.88/year"
-            case .annual: return "$59.88/year"
-            }
+        /// Annual equivalent price — sourced from RevenueCat when available.
+        func annualPrice(from prices: [Plan: String]) -> String {
+            prices[self] ?? SubscriptionViewModel.defaultAnnualPrices[self] ?? "$0/year"
         }
 
         var savings: String? {
@@ -124,6 +119,23 @@ final class SubscriptionViewModel {
         customerInfo?.entitlements["premium"]?.isActive == true
     }
 
+    /// Price strings fetched from RevenueCat offerings, keyed by plan.
+    /// Falls back to hardcoded defaults if offerings haven't loaded yet.
+    @ObservationIgnored private var offeringPrices: [Plan: String] = [:]
+    @ObservationIgnored private var offeringAnnualPrices: [Plan: String] = [:]
+
+    /// Fallback prices used when RevenueCat offerings haven't loaded.
+    private static let defaultPrices: [Plan: String] = [
+        .free: "$0/month",
+        .monthly: "$6.99/month",
+        .annual: "$4.99/month"
+    ]
+    private static let defaultAnnualPrices: [Plan: String] = [
+        .free: "Free forever",
+        .monthly: "$83.88/year",
+        .annual: "$59.88/year"
+    ]
+
     // MARK: - RevenueCat API
 
     /// Loads offerings and customer info from RevenueCat.
@@ -138,6 +150,22 @@ final class SubscriptionViewModel {
             let offerings = try await Purchases.shared.offerings()
             if let current = offerings.current {
                 self.offerings = current.availablePackages
+                // Extract localized prices from RevenueCat offerings
+                for package in current.availablePackages {
+                    let priceString = package.localizedPriceString
+                    if let period = package.storeProduct.subscriptionPeriod {
+                        switch period.unit {
+                        case .month where period.value == 1:
+                            self.offeringPrices[.monthly] = "\(priceString)/month"
+                            self.offeringAnnualPrices[.monthly] = package.localizedPriceString
+                        case .year where period.value == 1:
+                            self.offeringPrices[.annual] = "\(priceString)/year"
+                            self.offeringAnnualPrices[.annual] = package.localizedPriceString
+                        default:
+                            break
+                        }
+                    }
+                }
             }
         } catch {
             self.error = "Unable to load subscription options. Please check your connection."

@@ -9,7 +9,14 @@ struct SubscriptionView: View {
     
     /// Dismiss action for navigation
     @Environment(\.dismiss) private var dismiss
-    
+
+    /// URLs for legal documents
+    private let termsURL = URL(string: "https://cooksy.app/terms")!
+    private let privacyURL = URL(string: "https://cooksy.app/privacy")!
+
+    @State private var showTerms = false
+    @State private var showPrivacy = false
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -58,6 +65,12 @@ struct SubscriptionView: View {
         .task {
             await viewModel.load()
         }
+        .sheet(isPresented: $showTerms) {
+            SafariView(url: termsURL)
+        }
+        .sheet(isPresented: $showPrivacy) {
+            SafariView(url: privacyURL)
+        }
         .overlay(loadingOverlay)
     }
     
@@ -105,7 +118,7 @@ struct SubscriptionView: View {
                     withAnimation(.easeInOut(duration: 0.25)) {
                         viewModel.selectedPlan = plan
                     }
-                    announceToVoiceOver("\(plan.rawValue) plan selected, \(plan.price) per month")
+                    announceToVoiceOver("\(plan.rawValue) plan selected, \(plan.price(from: viewModel.offeringPrices)) per month")
                 }
                 .accessibilityIdentifier("\(AccessibilityID.planCardPrefix)\(plan.rawValue)")
             }
@@ -225,7 +238,7 @@ struct SubscriptionView: View {
                 .accessibilityLabel("Subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current period. Your account will be charged for renewal within 24 hours prior to the end of the current period.")
             
             HStack(spacing: 4) {
-                Button("Terms of Service") {}
+                Button("Terms of Service") { showTerms = true }
                     .font(.cooksMicro)
                     .foregroundStyle(.brand)
                     .accessibilityLabel("View Terms of Service")
@@ -235,7 +248,7 @@ struct SubscriptionView: View {
                     .foregroundStyle(.muted)
                     .decorative()
 
-                Button("Privacy Policy") {}
+                Button("Privacy Policy") { showPrivacy = true }
                     .font(.cooksMicro)
                     .foregroundStyle(.brand)
                     .accessibilityLabel("View Privacy Policy")
@@ -301,13 +314,13 @@ struct AccessiblePlanCard: View {
                     .scalableText()
                 
                 // Price
-                Text(plan.price)
+                Text(plan.price(from: viewModel.offeringPrices))
                     .font(.cooksBodyBold)
                     .foregroundStyle(isSelected ? .brand : .ink)
                     .scalableText()
 
                 // Annual price detail
-                Text(plan.annualPrice)
+                Text(plan.annualPrice(from: viewModel.offeringAnnualPrices))
                     .font(.cooksMicro)
                     .foregroundStyle(.muted)
                     .scalableText()
@@ -352,7 +365,7 @@ struct AccessiblePlanCard: View {
         .buttonStyle(.plain)
         .disabled(plan == .free && !isPremium && isSelected)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(plan.rawValue) plan, \(plan.price) per month\(plan.savings.map { ", save \($0)" } ?? "")")
+        .accessibilityLabel("\(plan.rawValue) plan, \(plan.price(from: viewModel.offeringPrices)) per month\(plan.savings.map { ", save \($0)" } ?? "")")
         .accessibilityValue(isSelected ? "Selected" : "Not selected")
         .accessibilityHint("Double tap to select the \(plan.rawValue) plan")
     }

@@ -10,6 +10,7 @@ enum CooksyError: Error, LocalizedError {
     case importFailed(String)
     case subscriptionError(String)
     case validationError(String)
+    case transcriptionUnavailable(String)
     case unknown
 
     var errorDescription: String? {
@@ -23,6 +24,7 @@ enum CooksyError: Error, LocalizedError {
         case .importFailed(let msg): return msg
         case .subscriptionError(let msg): return msg
         case .validationError(let msg): return msg
+        case .transcriptionUnavailable(let msg): return msg
         case .unknown: return "Something went wrong"
         }
     }
