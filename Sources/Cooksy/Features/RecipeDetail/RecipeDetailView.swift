@@ -165,75 +165,74 @@ struct RecipeDetailView: View {
     }
 
     // MARK: - Actions Section
-
+    /// Two-tier visual hierarchy grid:
+    /// - Primary row: Cook Along (hero) + Save
+    /// - Secondary row: Cooking Mode + Edit (compact, de-emphasized)
     private func actionsSection(viewModel: RecipeDetailViewModel) -> some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
-                // Save button
-                Button {
-                    viewModel.toggleSave()
-                    announceToVoiceOver(viewModel.recipe.isSaved ? "Recipe saved" : "Recipe unsaved")
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: viewModel.recipe.isSaved ? "bookmark.fill" : "bookmark")
-                            .font(.system(size: 14, weight: .semibold))
-                            .decorative()
-                        Text(viewModel.recipe.isSaved ? "Saved" : "Save")
-                    }
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+            // Primary: Cook Along (hero feature)
+            Button {
+                viewModel.startCookAlong()
+                announceToVoiceOver("Starting cook along")
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 15, weight: .semibold))
+                        .decorative()
+                    Text("Cook Along")
                 }
-                .buttonStyle(ActionButtonStyle(isPrimary: true))
-                .accessibilityLabel(viewModel.recipe.isSaved ? "Unsave recipe" : "Save recipe")
-                .accessibilityIdentifier(AccessibilityID.saveRecipeDetailButton)
-
-                // Cooking Mode button
-                Button {
-                    viewModel.startCooking()
-                    announceToVoiceOver("Starting cooking mode")
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "flame.fill")
-                            .font(.system(size: 14, weight: .semibold))
-                            .decorative()
-                        Text("Cooking Mode")
-                    }
-                }
-                .buttonStyle(ActionButtonStyle(isPrimary: false))
-                .accessibilityLabel("Start cooking mode")
-                .accessibilityIdentifier(AccessibilityID.cookingModeButton)
-
-                // Cook Along button
-                Button {
-                    viewModel.startCookAlong()
-                    announceToVoiceOver("Starting cook along")
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "play.fill")
-                            .font(.system(size: 14, weight: .semibold))
-                            .decorative()
-                        Text("Cook Along")
-                    }
-                }
-                .buttonStyle(ActionButtonStyle(isPrimary: true))
-                .accessibilityLabel("Start cook along with video")
-                .accessibilityIdentifier(AccessibilityID.cookAlongButton)
-
-                // Edit button
-                Button {
-                    HapticsService.light()
-                    viewModel.editRecipe()
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "pencil")
-                            .font(.system(size: 14, weight: .semibold))
-                            .decorative()
-                        Text("Edit")
-                    }
-                }
-                .buttonStyle(ActionButtonStyle(isPrimary: false))
-                .accessibilityLabel("Edit recipe")
-                .accessibilityIdentifier(AccessibilityID.editRecipeButton)
             }
-            .padding(.horizontal, 2)
+            .buttonStyle(PrimaryActionButtonStyle())
+            .accessibilityLabel("Start cook along with video")
+            .accessibilityIdentifier(AccessibilityID.cookAlongButton)
+
+            // Primary: Save
+            Button {
+                viewModel.toggleSave()
+                announceToVoiceOver(viewModel.recipe.isSaved ? "Recipe saved" : "Recipe unsaved")
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: viewModel.recipe.isSaved ? "bookmark.fill" : "bookmark")
+                        .font(.system(size: 15, weight: .semibold))
+                        .decorative()
+                    Text(viewModel.recipe.isSaved ? "Saved" : "Save")
+                }
+            }
+            .buttonStyle(SecondaryActionButtonStyle())
+            .accessibilityLabel(viewModel.recipe.isSaved ? "Unsave recipe" : "Save recipe")
+            .accessibilityIdentifier(AccessibilityID.saveRecipeDetailButton)
+
+            // Secondary: Cooking Mode
+            Button {
+                viewModel.startCooking()
+                announceToVoiceOver("Starting cooking mode")
+            } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 13, weight: .medium))
+                        .decorative()
+                    Text("Cooking Mode")
+                }
+            }
+            .buttonStyle(TertiaryActionButtonStyle())
+            .accessibilityLabel("Start cooking mode")
+            .accessibilityIdentifier(AccessibilityID.cookingModeButton)
+
+            // Secondary: Edit
+            Button {
+                HapticsService.light()
+                viewModel.editRecipe()
+            } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: "pencil")
+                        .font(.system(size: 13, weight: .medium))
+                        .decorative()
+                    Text("Edit")
+                }
+            }
+            .buttonStyle(TertiaryActionButtonStyle())
+            .accessibilityLabel("Edit recipe")
+            .accessibilityIdentifier(AccessibilityID.editRecipeButton)
         }
     }
 
@@ -331,29 +330,56 @@ struct RecipeDetailView: View {
     }
 }
 
-// MARK: - Action Button Style
+// MARK: - Action Button Styles
 
-/// A compact pill-style button for the action row.
-/// Primary variant uses brand fill; secondary uses outlined style.
-private struct ActionButtonStyle: ButtonStyle {
-    let isPrimary: Bool
-
+/// Primary action — brand-filled pill (hero actions: Cook Along).
+private struct PrimaryActionButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 14, weight: .semibold, design: .default))
-            .foregroundStyle(isPrimary ? Color.ink : Color.softInk)
-            .padding(.horizontal, 18)
-            .padding(.vertical, 12)
-            .background(
-                Capsule()
-                    .fill(isPrimary ? Color.brand : Color.surface)
-            )
+            .font(.system(size: 15, weight: .bold, design: .default))
+            .foregroundStyle(Color.ink)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 13)
+            .background(Color.brand)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .opacity(configuration.isPressed ? 0.8 : 1.0)
+            .scaleEffect(configuration.isPressed ? (isReduceMotionEnabled ? 1.0 : 0.97) : 1.0)
+            .accessibleAnimation(.easeOut(duration: 0.15), value: configuration.isPressed)
+    }
+}
+
+/// Secondary action — outlined pill (important but not hero: Save).
+private struct SecondaryActionButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 15, weight: .semibold, design: .default))
+            .foregroundStyle(Color.softInk)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 13)
+            .background(Color.surface)
             .overlay(
-                Capsule()
-                    .stroke(isPrimary ? Color.clear : Color.cooksLine, lineWidth: 1)
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.cooksLine, lineWidth: 1)
             )
+            .clipShape(RoundedRectangle(cornerRadius: 16))
             .opacity(configuration.isPressed ? 0.7 : 1.0)
-            .scaleEffect(configuration.isPressed ? (isReduceMotionEnabled ? 1.0 : 0.96) : 1.0)
+            .accessibleAnimation(.easeOut(duration: 0.15), value: configuration.isPressed)
+    }
+}
+
+/// Tertiary action — compact ghost pill (secondary actions: Cooking Mode, Edit).
+private struct TertiaryActionButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 13, weight: .medium, design: .default))
+            .foregroundStyle(Color.muted)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(Color.cooksLine.opacity(0.6), lineWidth: 1)
+            )
+            .opacity(configuration.isPressed ? 0.6 : 1.0)
             .accessibleAnimation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
 }
