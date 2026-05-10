@@ -48,7 +48,21 @@ struct BooksView: View {
                     .padding(.vertical, 16)
                 }
             }
-            .background(Color.cooksBackground)
+            .background(
+                Color.cooksBackground
+                    .overlay(
+                        // Subtle warm radial glow — mirrors demo's desaturated background texture
+                        RadialGradient(
+                            gradient: Gradient(colors: [
+                                Color.brand.opacity(0.04),
+                                Color.clear
+                            ]),
+                            center: .topLeading,
+                            startRadius: 0,
+                            endRadius: 400
+                        )
+                    )
+            )
             .navigationTitle("Books")
             .navigationBarTitleDisplayMode(.large)
             .accessibilityIdentifier(AccessibilityID.booksView)
