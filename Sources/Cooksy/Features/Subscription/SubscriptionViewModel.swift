@@ -246,7 +246,9 @@ final class SubscriptionViewModel {
         do {
             customerInfo = try await Purchases.shared.customerInfo()
         } catch {
+            #if DEBUG
             print("[SubscriptionViewModel] Failed to refresh customer info: \(error.localizedDescription)")
+            #endif
         }
     }
 

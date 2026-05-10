@@ -54,7 +54,9 @@ final class PushNotificationService: NSObject {
             
             return granted
         } catch {
+            #if DEBUG
             print("[PushNotificationService] Failed to request authorization: \(error.localizedDescription)")
+            #endif
             isAuthorized = false
             return false
         }
@@ -87,9 +89,13 @@ final class PushNotificationService: NSObject {
         Task {
             do {
                 try await supabase?.registerPushToken(token)
+                #if DEBUG
                 print("[PushNotificationService] Device token registered successfully")
+                #endif
             } catch {
+                #if DEBUG
                 print("[PushNotificationService] Failed to register token: \(error.localizedDescription)")
+                #endif
             }
         }
     }
@@ -103,7 +109,9 @@ final class PushNotificationService: NSObject {
             do {
                 try await supabase?.unregisterPushToken(token)
             } catch {
+                #if DEBUG
                 print("[PushNotificationService] Failed to unregister token: \(error.localizedDescription)")
+                #endif
             }
         }
     }
@@ -136,7 +144,9 @@ final class PushNotificationService: NSObject {
         
         notificationCenter.add(request) { error in
             if let error {
+                #if DEBUG
                 print("[PushNotificationService] Failed to schedule notification: \(error.localizedDescription)")
+                #endif
             }
         }
     }

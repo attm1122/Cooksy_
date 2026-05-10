@@ -9,8 +9,9 @@ import RevenueCat
 /// including full ingredient and step details.
 ///
 /// ## Real Account Deletion
-/// `deleteAccount()` calls `supabase.deleteAccount()` to remove the server-side
-/// user record, then clears all local SwiftData and UserDefaults state.
+/// `deleteAccount()` calls `supabase.signOut()` to remove the server-side
+/// session, then clears all local SwiftData, Keychain (sensitive data), and
+/// UserDefaults (non-sensitive preferences) state.
 ///
 /// ## Dependencies
 /// - `SupabaseProtocol` — for sign out and account deletion.
@@ -32,12 +33,12 @@ final class ProfileViewModel {
 
     /// User's display name (first + last) from Sign In with Apple.
     var userDisplayName: String {
-        UserDefaults.standard.string(forKey: "userDisplayName") ?? ""
+        KeychainService.shared.displayName ?? ""
     }
 
     /// User's first name for personalized greetings.
     var userFirstName: String {
-        UserDefaults.standard.string(forKey: "userFirstName") ?? ""
+        KeychainService.shared.firstName ?? ""
     }
 
     /// Whether the user has an active Cooksy Pro subscription.
@@ -90,8 +91,8 @@ final class ProfileViewModel {
         setLoading(true)
         clearError()
 
-        // Load user email from UserDefaults (set during auth)
-        userEmail = UserDefaults.standard.string(forKey: "userEmail") ?? supabase.currentUser?.email ?? ""
+        // Load user email securely from Keychain (set during auth)
+        userEmail = KeychainService.shared.userEmail ?? supabase.currentUser?.email ?? ""
 
         // Load Cooksy Pro status from RevenueCat
         await checkProStatus()
@@ -116,18 +117,13 @@ final class ProfileViewModel {
             // Log out from RevenueCat
             Purchases.shared.logOut()
 
-            // Clear all local auth state
-            UserDefaults.standard.removeObject(forKey: "isAuthenticated")
-            UserDefaults.standard.removeObject(forKey: "userEmail")
-            UserDefaults.standard.removeObject(forKey: "appleUserID")
-            UserDefaults.standard.removeObject(forKey: "userDisplayName")
-            UserDefaults.standard.removeObject(forKey: "supabase_session_token")
+            // Clear all local auth state from Keychain
+            KeychainService.shared.clearAll()
         } catch let err as CooksyError {
             errorMessage = err.localizedDescription
         } catch {
-            // Even if the server call fails, clear local state
-            UserDefaults.standard.removeObject(forKey: "isAuthenticated")
-            UserDefaults.standard.removeObject(forKey: "userEmail")
+            // Even if the server call fails, clear local state from Keychain
+            KeychainService.shared.clearAll()
         }
 
         setLoading(false)
@@ -160,7 +156,7 @@ final class ProfileViewModel {
     ///
     /// 1. Calls `supabase` to delete the server-side account.
     /// 2. Clears all SwiftData stores.
-    /// 3. Clears all UserDefaults.
+    /// 3. Clears all sensitive data from Keychain and preferences from UserDefaults.
     ///
     /// - Warning: This action is **irreversible**.
     func deleteAccount() async {
@@ -176,14 +172,17 @@ final class ProfileViewModel {
             // 2. Clear all local SwiftData
             try await clearAllSwiftData()
 
-            // 3. Clear all UserDefaults
+            // 3. Clear all sensitive data from Keychain
+            KeychainService.shared.clearAll()
+
+            // 4. Clear all non-sensitive preferences from UserDefaults
             let defaults = UserDefaults.standard
             let keys = Array(defaults.dictionaryRepresentation().keys)
             for key in keys {
                 defaults.removeObject(forKey: key)
             }
 
-            // 4. Log out from RevenueCat
+            // 5. Log out from RevenueCat
             Purchases.shared.logOut()
         } catch {
             errorMessage = "Failed to delete account. Please contact support."

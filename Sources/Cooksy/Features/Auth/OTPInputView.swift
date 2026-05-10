@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - OTP Input View
 /// A clean 6-digit OTP input with individual digit boxes.
@@ -39,6 +40,12 @@ struct OTPInputView: View {
                     // Haptic on digit entry
                     if filtered.count > oldValue.count, filtered.count < digitCount {
                         HapticsService.light()
+                    }
+                    // Security: clear clipboard after OTP is fully entered to prevent shoulder surfing
+                    if filtered.count == digitCount {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                            UIPasteboard.general.string = ""
+                        }
                     }
                 }
 

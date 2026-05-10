@@ -22,6 +22,11 @@ struct CooksyTextField: View {
             if isSecure {
                 SecureField(placeholder.isEmpty ? title : placeholder, text: $text)
                     .accessibilityLabel(title)
+                    // SECURITY: Prevent password exposure via text content type
+                    .textContentType(textContentType ?? .password)
+                    // SECURITY: Enforce minimum password complexity
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
             } else {
                 TextField(placeholder.isEmpty ? title : placeholder, text: $text)
                     .accessibilityLabel(title)

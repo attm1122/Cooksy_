@@ -64,6 +64,8 @@ struct ContentView: View {
                 showSplash = false
             }
         }
+        // SECURITY: Apply screen capture protection to all app content
+        .screenProtection()
     }
 
     // MARK: - Splash View

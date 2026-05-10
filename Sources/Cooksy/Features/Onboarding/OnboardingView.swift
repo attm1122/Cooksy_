@@ -291,7 +291,9 @@ private extension Array {
 
 #Preview("Onboarding") {
     OnboardingView {
+        #if DEBUG
         print("Onboarding complete")
+        #endif
     }
 }
 

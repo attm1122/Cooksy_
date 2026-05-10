@@ -243,7 +243,9 @@ struct DeepLinkHandler: ViewModifier {
         case .profile:
             navigateToProfile = true
         case .importVideo(let url):
+            #if DEBUG
             print("[DeepLinkService] Import video: \(url)")
+            #endif
         case .settings:
             navigateToProfile = true
         }

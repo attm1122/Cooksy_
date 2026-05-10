@@ -82,17 +82,10 @@ final class SupabaseService: SupabaseProtocol {
     /// The currently signed-in user. Updated after successful `verifyOTP` or `signOut`.
     private(set) var currentUser: User?
 
-    /// Cached session token. Stored in `UserDefaults` for now.
-    /// - Important: Migrate to Keychain for production security.
+    /// Cached session token. Stored in the Keychain for production security.
     private var sessionToken: String? {
-        get { UserDefaults.standard.string(forKey: "supabase_session_token") }
-        set {
-            if let token = newValue {
-                UserDefaults.standard.set(token, forKey: "supabase_session_token")
-            } else {
-                UserDefaults.standard.removeObject(forKey: "supabase_session_token")
-            }
-        }
+        get { KeychainService.shared.sessionToken }
+        set { KeychainService.shared.sessionToken = newValue }
     }
 
     // MARK: - HTTP Client
@@ -266,9 +259,8 @@ final class SupabaseService: SupabaseProtocol {
         let user = User(id: userData.id, email: userEmail, createdAt: createdAt)
         currentUser = user
 
-        // Persist minimal auth state
-        UserDefaults.standard.set(userEmail, forKey: "userEmail")
-        UserDefaults.standard.set(true, forKey: "isAuthenticated")
+        // Persist minimal auth state securely
+        KeychainService.shared.userEmail = userEmail
 
         return user
     }
@@ -289,11 +281,10 @@ final class SupabaseService: SupabaseProtocol {
             // Even if the server call fails, clear local state
         }
 
-        // Clear all local auth state
+        // Clear all local auth state from Keychain
         sessionToken = nil
         currentUser = nil
-        UserDefaults.standard.removeObject(forKey: "isAuthenticated")
-        UserDefaults.standard.removeObject(forKey: "userEmail")
+        KeychainService.shared.clearAll()
     }
 
     // MARK: - Recipes
@@ -470,7 +461,9 @@ final class SupabaseService: SupabaseProtocol {
     func submitContentReport(recipeId: String, reason: String, details: String?) async throws {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else {
             // In dev mode without Supabase configured, just print
-            print("[SupabaseService] Content report submitted (dev mode): recipe=\(recipeId), reason=\(reason)")
+            #if DEBUG
+            print("[SupabaseService] Content report submitted: recipe=\(recipeId), reason=\(reason)")
+            #endif
             return
         }
         guard let url = baseURL(path: "/rest/v1/content_reports") else {
@@ -581,6 +574,4 @@ final class SupabaseService: SupabaseProtocol {
 
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-        return try encoder.encode(container)
-    }
-}
+        return try enco

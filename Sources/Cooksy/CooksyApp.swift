@@ -42,7 +42,9 @@ struct CooksyApp: App {
         let supabaseKey = ProcessInfo.processInfo.environment["SUPABASE_ANON_KEY"] ?? ""
 
         if supabaseKey.isEmpty {
+            #if DEBUG
             print("[Cooksy] WARNING: SUPABASE_ANON_KEY environment variable not set. Set it in your Xcode scheme (Run → Environment Variables) or CI environment. The Supabase URL is configured.")
+            #endif
         }
 
         // Always use the real service. It will throw clear errors at runtime if misconfigured.
@@ -55,6 +57,18 @@ struct CooksyApp: App {
         // Register notification categories and inject dependencies
         PushNotificationService.shared.registerNotificationCategories()
         PushNotificationService.shared.configure(supabase: supabaseService)
+
+        // SECURITY: Clear sensitive in-memory data on memory warning
+        // This reduces the attack surface by purging cached responses
+        // that may contain sensitive recipe data or auth tokens.
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.didReceiveMemoryWarningNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            // Clear URL cache to remove potentially sensitive cached responses
+            URLCache.shared.removeAllCachedResponses()
+        }
     }
 
     // MARK: - Scene
@@ -154,7 +168,9 @@ class CooksyAppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFailToRegisterForRemoteNotificationsWithError error: Error
     ) {
+        #if DEBUG
         print("[CooksyAppDelegate] Failed to register for push notifications: \(error.localizedDescription)")
+        #endif
     }
 
     func application(

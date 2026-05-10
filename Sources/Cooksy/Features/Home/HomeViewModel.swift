@@ -43,9 +43,9 @@ final class HomeViewModel {
 
     // MARK: - Computed
 
-    /// The user's first name for personalized greetings.
+    /// The user's first name for personalized greetings (securely from Keychain).
     var userFirstName: String {
-        UserDefaults.standard.string(forKey: "userFirstName") ?? ""
+        KeychainService.shared.firstName ?? ""
     }
 
     /// Time-aware greeting: "Good morning", "Good afternoon", or "Good evening".

@@ -52,16 +52,14 @@ final class MockSupabaseService: SupabaseProtocol {
             createdAt: Date().addingTimeInterval(-86400 * 30)
         )
         currentUser = user
-        UserDefaults.standard.set(email, forKey: "userEmail")
-        UserDefaults.standard.set(true, forKey: "isAuthenticated")
+        KeychainService.shared.userEmail = email
         return user
     }
 
     func signOut() async throws {
         try await Task.sleep(nanoseconds: simulatedDelayNanoseconds)
         currentUser = nil
-        UserDefaults.standard.removeObject(forKey: "isAuthenticated")
-        UserDefaults.standard.removeObject(forKey: "userEmail")
+        KeychainService.shared.clearAll()
     }
 
     // MARK: - Push Notifications
@@ -80,7 +78,9 @@ final class MockSupabaseService: SupabaseProtocol {
 
     func submitContentReport(recipeId: String, reason: String, details: String?) async throws {
         try await Task.sleep(nanoseconds: simulatedDelayNanoseconds)
+        #if DEBUG
         print("[MockSupabaseService] Content report submitted: recipe=\(recipeId), reason=\(reason)")
+        #endif
     }
 
     // MARK: - Recipes
@@ -159,3 +159,8 @@ final class MockSupabaseService: SupabaseProtocol {
         )
     }
 }
+n the user taps on a notification.
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+       

@@ -24,6 +24,21 @@ struct VideoPlatformPlayer: UIViewRepresentable {
     var onReady: ((TimeInterval) -> Void)?
     var onStateChange: ((PlaybackState) -> Void)?
 
+    // MARK: - Domain Allowlist (OWASP M2: Insecure Data Storage / Injection Prevention)
+
+    /// Trusted video platform domains.
+    private static let allowedDomains = [
+        "youtube.com", "youtu.be",           // YouTube
+        "tiktok.com", "vm.tiktok.com",       // TikTok
+        "instagram.com", "instagr.am"         // Instagram
+    ]
+
+    /// Validates that a URL belongs to a trusted video platform.
+    private func isAllowedURL(_ url: URL) -> Bool {
+        guard let host = url.host?.lowercased() else { return false }
+        return Self.allowedDomains.contains { host == $0 || host.hasSuffix(".\($0)") }
+    }
+
     // MARK: - Playback State
 
     enum PlaybackState: Int, Sendable {
@@ -42,6 +57,10 @@ struct VideoPlatformPlayer: UIViewRepresentable {
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
 
+        // Security: prevent file access from file URLs (OWASP M7: Client Code Quality)
+        config.preferences.setValue(false, forKey: "allowFileAccessFromFileURLs")
+        config.preferences.setValue(false, forKey: "allowUniversalAccessFromFileURLs")
+
         // Add script message handler for JS → Swift communication
         config.userContentController.add(context.coordinator, name: "videoBridge")
 
@@ -51,6 +70,12 @@ struct VideoPlatformPlayer: UIViewRepresentable {
         webView.isOpaque = false
         webView.scrollView.isScrollEnabled = false
         webView.scrollView.bounces = false
+
+        // Validate the video URL against the domain allowlist before loading
+        guard let url = URL(string: videoUrl), isAllowedURL(url) else {
+            print("[VideoPlatformPlayer] Blocked load of untrusted domain: \(videoUrl)")
+            return webView
+        }
 
         // Load the appropriate embed HTML
         let html = embedHTML(for: videoUrl, platform: platform)
@@ -429,6 +454,27 @@ extension VideoPlatformPlayer {
         }
 
         // MARK: - WKNavigationDelegate
+
+        func webView(
+            _ webView: WKWebView,
+            decidePolicyFor navigationAction: WKNavigationAction,
+            decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+        ) {
+            // Allow the initial HTML load and about:blank
+            guard let url = navigationAction.request.url else {
+                decisionHandler(.allow)
+                return
+            }
+            // Allow embedded resource loads (scripts, iframes) from allowlisted domains
+            if let host = url.host, !host.isEmpty {
+                guard parent.isAllowedURL(url) else {
+                    logError("Blocked navigation to untrusted domain: \(host)")
+                    decisionHandler(.cancel)
+                    return
+                }
+            }
+            decisionHandler(.allow)
+        }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             // Page loaded — embed scripts may still be initializing

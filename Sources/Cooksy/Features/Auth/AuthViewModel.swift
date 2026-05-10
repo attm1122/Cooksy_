@@ -8,8 +8,7 @@ import AuthenticationServices
 /// - `SupabaseProtocol` — for real `signInWithOTP` and `verifyOTP` calls.
 ///
 /// ## Session Storage
-/// The auth token is stored in `UserDefaults` for rapid prototyping.
-/// **For production, migrate to the Keychain using a library like KeychainAccess.**
+/// All auth tokens and PII are stored securely in the iOS Keychain via `KeychainService`.
 ///
 /// ## Resend Countdown
 /// A cancellable `Task` manages the 60-second resend cooldown. The task is
@@ -117,9 +116,8 @@ final class AuthViewModel {
         do {
             let user = try await supabase.verifyOTP(email: email, token: code)
 
-            // Store session token in UserDefaults (see note above about Keychain migration)
-            UserDefaults.standard.set(user.email, forKey: "userEmail")
-            UserDefaults.standard.set(true, forKey: "isAuthenticated")
+            // Store session securely in Keychain
+            KeychainService.shared.userEmail = user.email
 
             countdownTask?.cancel()
             onAuthenticated()
@@ -249,14 +247,16 @@ extension AuthViewModel: ASAuthorizationControllerDelegate {
         let email = credential.email
         let fullName = credential.fullName
 
-        // Store the Apple user ID for future sign-ins
-        UserDefaults.standard.set(userID, forKey: "appleUserID")
+        // Store Sign in with Apple credentials securely in Keychain
+        if let userID = credential.user {
+            KeychainService.shared.appleUserID = userID
+        }
         if let email = email {
-            UserDefaults.standard.set(email, forKey: "userEmail")
+            KeychainService.shared.userEmail = email
         }
         if let givenName = fullName?.givenName, let familyName = fullName?.familyName {
-            UserDefaults.standard.set("\(givenName) \(familyName)", forKey: "userDisplayName")
-            UserDefaults.standard.set(givenName, forKey: "userFirstName")
+            KeychainService.shared.displayName = "\(givenName) \(familyName)"
+            KeychainService.shared.firstName = givenName
         }
 
         // In a full implementation, you would:
@@ -264,11 +264,8 @@ extension AuthViewModel: ASAuthorizationControllerDelegate {
         // 2. Create/link the user account server-side
         // 3. Receive a session token and store it
 
-        // For now, mark the user as authenticated
-        UserDefaults.standard.set(true, forKey: "isAuthenticated")
-
         // Clear any OTP-related state
-        self.email = email ?? UserDefaults.standard.string(forKey: "userEmail") ?? ""
+        self.email = email ?? KeychainService.shared.userEmail ?? ""
 
         onAuthenticated()
     }

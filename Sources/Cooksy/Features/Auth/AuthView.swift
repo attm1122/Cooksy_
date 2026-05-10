@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Auth View
 /// Complete authentication flow view that handles both email entry
@@ -93,6 +94,9 @@ struct AuthView: View {
                         textContentType: .emailAddress,
                         autocapitalization: .never
                     )
+                    // SECURITY: Prevent email from being leaked via autocorrect
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
                     .focused($emailFocused)
                     .accessibilityLabel("Email address for sign in")
                     .accessibilityHint("Enter the email address associated with your account")
@@ -172,6 +176,10 @@ struct AuthView: View {
                         .onChange(of: viewModel.code) { _, newCode in
                             if newCode.count == 6 {
                                 announceToVoiceOver("Code entered, verifying...")
+                                // Security: clear clipboard after OTP paste to prevent shoulder surfing
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                                    UIPasteboard.general.string = ""
+                                }
                                 Task { await viewModel.verifyCode() }
                             }
                         }
@@ -330,7 +338,12 @@ struct AccessibleOTPInputView: View {
         .background(
             TextField("", text: $internalText)
                 .keyboardType(.numberPad)
+                // SECURITY: Mark as one-time code to enable SMS auto-fill
+                // and prevent OTP from being stored or suggested
                 .textContentType(.oneTimeCode)
+                // SECURITY: Prevent OTP digits from being leaked via autocorrect
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
                 .focused($isTextFieldFocused)
                 .opacity(0)
                 .frame(width: 0, height: 0)
