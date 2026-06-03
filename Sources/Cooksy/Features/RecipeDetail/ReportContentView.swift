@@ -86,7 +86,7 @@ struct ReportContentView: View {
                     .frame(width: 48, height: 48)
                     .overlay(
                         Image(systemName: "doc.text.fill")
-                            .foregroundStyle(.brand)
+                            .foregroundStyle(Color.brand)
                             .decorative()
                     )
                     .accessibilityHidden(true)

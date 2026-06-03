@@ -150,6 +150,7 @@ extension Notification.Name {
 // MARK: - Environment Key
 
 /// The `@Environment` key used to inject `SupabaseProtocol` throughout the view hierarchy.
+@MainActor
 private struct SupabaseKey: EnvironmentKey {
     static let defaultValue: any SupabaseProtocol = MockSupabaseService()
 }

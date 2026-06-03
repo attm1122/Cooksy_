@@ -152,8 +152,8 @@ struct StepCard: View {
             step: RecipeStep(
                 title: "Make the dough",
                 instruction: "Combine flour, water, salt, and yeast. Knead for 10 minutes until smooth and elastic.",
-                displayOrder: 0,
-                durationMinutes: 15
+                durationMinutes: 15,
+                displayOrder: 0
             ),
             isFirst: true,
             isLast: false
@@ -163,8 +163,8 @@ struct StepCard: View {
             step: RecipeStep(
                 title: "Let it rise",
                 instruction: "Cover and let rise in a warm place for 1 hour until doubled in size.",
-                displayOrder: 1,
-                durationMinutes: 60
+                durationMinutes: 60,
+                displayOrder: 1
             ),
             isFirst: false,
             isLast: false
@@ -174,8 +174,8 @@ struct StepCard: View {
             step: RecipeStep(
                 title: "Shape and bake",
                 instruction: "Shape into a round, add toppings, and bake at 500°F for 8 minutes.",
-                displayOrder: 2,
-                durationMinutes: 8
+                durationMinutes: 8,
+                displayOrder: 2
             ),
             isFirst: false,
             isLast: true

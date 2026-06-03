@@ -40,17 +40,11 @@ struct AuthView: View {
                 switch viewModel.currentStep {
                 case .email:
                     emailStepView
-                        .accessibleAnimation(.asymmetric(
-                            insertion: .move(edge: .trailing),
-                            removal: .move(edge: .leading)
-                        ), value: viewModel.currentStep)
+                        .accessibleAnimation(.easeInOut(duration: 0.3), value: viewModel.currentStep)
                     
                 case .code(let email):
                     codeStepView(email: email)
-                        .accessibleAnimation(.asymmetric(
-                            insertion: .move(edge: .trailing),
-                            removal: .move(edge: .leading)
-                        ), value: viewModel.currentStep)
+                        .accessibleAnimation(.easeInOut(duration: 0.3), value: viewModel.currentStep)
                 }
             }
             .accessibleAnimation(.easeInOut(duration: 0.3), value: viewModel.currentStep)
@@ -80,12 +74,12 @@ struct AuthView: View {
                     
                     Text("Sign In")
                         .font(.system(size: 34, weight: .bold))
-                        .foregroundStyle(.textPrimary)
+                        .foregroundStyle(Color.textPrimary)
                         .accessibleHeading(.h1)
                     
                     Text("Enter your email to get started")
                         .font(.system(size: 15))
-                        .foregroundStyle(.textMuted)
+                        .foregroundStyle(Color.textMuted)
                         .multilineTextAlignment(.center)
                         .scalableText()
                 }
@@ -94,7 +88,7 @@ struct AuthView: View {
                 // Error banner
                 if let error = viewModel.errorMessage {
                     AccessibleErrorBanner(message: error)
-                        .accessibleAnimation(.move(edge: .top).combined(with: .opacity), value: viewModel.errorMessage)
+                        .accessibleAnimation(.easeInOut(duration: 0.2), value: viewModel.errorMessage)
                 }
                 
                 // Email input
@@ -138,7 +132,7 @@ struct AuthView: View {
                             .frame(height: 1)
                         Text("or")
                             .font(.cooksCaption)
-                            .foregroundStyle(.muted)
+                            .foregroundStyle(Color.muted)
                         Rectangle()
                             .fill(Color.cooksLine)
                             .frame(height: 1)
@@ -168,7 +162,7 @@ struct AuthView: View {
                 VStack(spacing: 8) {
                     Text("By continuing, you agree to our Terms of Service and Privacy Policy.")
                         .font(.caption)
-                        .foregroundStyle(.textMuted)
+                        .foregroundStyle(Color.textMuted)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 32)
                         .scalableText()
@@ -176,13 +170,13 @@ struct AuthView: View {
                     HStack(spacing: 12) {
                         Button("Terms") { showTerms = true }
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(.brand)
+                            .foregroundStyle(Color.brand)
                             .frame(minHeight: 44)
                             .accessibilityLabel("View Terms of Service")
 
                         Button("Privacy") { showPrivacy = true }
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(.brand)
+                            .foregroundStyle(Color.brand)
                             .frame(minHeight: 44)
                             .accessibilityLabel("View Privacy Policy")
                     }
@@ -204,17 +198,17 @@ struct AuthView: View {
                 VStack(spacing: 16) {
                     Image(systemName: "envelope.badge.shield.half.filled.fill")
                         .font(.system(size: 48))
-                        .foregroundStyle(.brand)
+                        .foregroundStyle(Color.brand)
                         .decorative()
                     
                     Text("Check your email")
                         .font(.system(size: 28, weight: .bold))
-                        .foregroundStyle(.textPrimary)
+                        .foregroundStyle(Color.textPrimary)
                         .accessibleHeading(.h1)
                     
                     Text("Enter the 6-digit code sent to \(email)")
                         .font(.system(size: 15))
-                        .foregroundStyle(.textMuted)
+                        .foregroundStyle(Color.textMuted)
                         .multilineTextAlignment(.center)
                         .scalableText()
                         .accessibilityLabel("Enter the 6 digit verification code sent to \(email)")
@@ -224,7 +218,7 @@ struct AuthView: View {
                 // Error banner
                 if let error = viewModel.errorMessage {
                     AccessibleErrorBanner(message: error)
-                        .accessibleAnimation(.move(edge: .top).combined(with: .opacity), value: viewModel.errorMessage)
+                        .accessibleAnimation(.easeInOut(duration: 0.2), value: viewModel.errorMessage)
                 }
                 
                 // OTP Input
@@ -280,12 +274,12 @@ struct AuthView: View {
         HStack(spacing: 4) {
             Text("Didn't receive it?")
                 .font(.subheadline)
-                .foregroundStyle(.textMuted)
+                .foregroundStyle(Color.textMuted)
             
             if viewModel.resendCountdown > 0 {
                 Text("Resend in \(viewModel.resendCountdown)s")
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.textMuted)
+                    .foregroundStyle(Color.textMuted)
                     .accessibilityLabel("Resend verification code, \(AccessibilityFormatter.countdown(viewModel.resendCountdown))")
             } else {
                 TertiaryButton("Resend code") {
@@ -309,7 +303,7 @@ struct AuthView: View {
                     .overlay(
                         ProgressView()
                             .scaleEffect(1.4)
-                            .tint(.brand)
+                            .tint(Color.brand)
                             .accessibilityLabel("Loading, please wait")
                     )
                     .transition(.opacity)
@@ -334,7 +328,7 @@ struct AccessibleErrorBanner: View {
             
             Text(message)
                 .font(.subheadline)
-                .foregroundStyle(.textPrimary)
+                .foregroundStyle(Color.textPrimary)
                 .multilineTextAlignment(.leading)
                 .scalableText()
             

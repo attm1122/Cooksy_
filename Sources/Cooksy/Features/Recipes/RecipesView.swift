@@ -73,7 +73,7 @@ struct RecipesView: View {
             title: viewModel.searchQuery.isEmpty && viewModel.selectedFilter == nil
                 ? "No recipes yet"
                 : "No recipes found",
-            message: viewModel.searchQuery.isEmpty && viewModel.selectedFilter == nil
+            description: viewModel.searchQuery.isEmpty && viewModel.selectedFilter == nil
                 ? "Save a recipe to get started."
                 : "Try adjusting your search or filters."
         )

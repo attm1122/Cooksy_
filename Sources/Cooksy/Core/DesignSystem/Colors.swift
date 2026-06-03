@@ -138,14 +138,10 @@ extension Color {
     private static func adaptive(light: Color, dark: Color) -> Color {
         Color(
             UIColor { traitCollection in
-                UIColor(light.resolveColor(in: .init(traitCollection: .init(userInterfaceStyle: .light)))
-                    ?? light.cgColor ?? UIColor.white.cgColor)
                 if traitCollection.userInterfaceStyle == .dark {
-                    return UIColor(dark.resolveColor(in: .init(traitCollection: .init(userInterfaceStyle: .dark)))
-                        ?? dark.cgColor ?? UIColor.black.cgColor)
+                    return UIColor(dark)
                 } else {
-                    return UIColor(light.resolveColor(in: .init(traitCollection: .init(userInterfaceStyle: .light)))
-                        ?? light.cgColor ?? UIColor.white.cgColor)
+                    return UIColor(light)
                 }
             }
         )

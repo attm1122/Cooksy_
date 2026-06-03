@@ -18,7 +18,7 @@ final class RecipeEditViewModel {
     // MARK: - Dependencies
 
     /// The SwiftData context for persisting changes.
-    private let modelContext: ModelContext?
+    private var modelContext: ModelContext?
 
     // MARK: - State
 

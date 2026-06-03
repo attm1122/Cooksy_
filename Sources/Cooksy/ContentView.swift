@@ -99,7 +99,7 @@ struct ContentView: View {
 
                 Text("Cooksy")
                     .font(.cooksHero)
-                    .foregroundStyle(.ink)
+                    .foregroundStyle(Color.ink)
             }
         }
     }

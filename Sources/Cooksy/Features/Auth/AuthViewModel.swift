@@ -16,7 +16,7 @@ import AuthenticationServices
 /// view model is deinitialized.
 @MainActor
 @Observable
-final class AuthViewModel {
+final class AuthViewModel: NSObject {
 
     // MARK: - Types
 
@@ -75,11 +75,7 @@ final class AuthViewModel {
     ) {
         self.supabase = supabase
         self.onAuthenticated = onAuthenticated
-    }
-
-    deinit {
-        countdownTask?.cancel()
-        NotificationCenter.default.removeObserver(self)
+        super.init()
     }
 
     /// Starts observing Apple credential revocation notifications.
@@ -300,14 +296,11 @@ extension AuthViewModel: ASAuthorizationControllerDelegate {
         self.appleIDCredential = credential
 
         // Extract user info from Apple credential
-        let userID = credential.user
         let email = credential.email
         let fullName = credential.fullName
 
         // Store Sign in with Apple credentials securely in Keychain
-        if let userID = credential.user {
-            KeychainService.shared.appleUserID = userID
-        }
+        KeychainService.shared.appleUserID = credential.user
         if let email = email {
             KeychainService.shared.userEmail = email
         }
@@ -342,8 +335,8 @@ extension AuthViewModel: ASAuthorizationControllerDelegate {
                 showError("Request not handled. Please try again.")
             case .failed:
                 showError("Sign in failed. Please try again.")
-            @unknown default:
-                showError("An unknown error occurred. Please try again.")
+            default:
+                showError("Sign in failed. Please try again.")
             }
         } else {
             showError("Sign in failed: \(error.localizedDescription)")

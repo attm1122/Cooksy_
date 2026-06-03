@@ -137,7 +137,8 @@ struct ConfidenceBanner: View {
         confidenceNote: "All ingredients and steps clearly verbalized in the video.",
         sourceUrl: "https://youtube.com/watch?v=example",
         sourcePlatform: .youtube,
-        sourceCreator: "Chef"
+        sourceCreator: "Chef",
+        sourceTitle: "Pizza tutorial"
     ))
     .padding()
 }
@@ -152,7 +153,8 @@ struct ConfidenceBanner: View {
         confidenceNote: "Some ingredients were mentioned quickly and may be incomplete.",
         sourceUrl: "https://youtube.com/watch?v=example",
         sourcePlatform: .youtube,
-        sourceCreator: "Chef"
+        sourceCreator: "Chef",
+        sourceTitle: "Pizza tutorial"
     ))
     .padding()
 }
@@ -167,7 +169,8 @@ struct ConfidenceBanner: View {
         confidenceNote: "Video is mostly music with minimal verbal instructions.",
         sourceUrl: "https://youtube.com/watch?v=example",
         sourcePlatform: .youtube,
-        sourceCreator: "Chef"
+        sourceCreator: "Chef",
+        sourceTitle: "Pizza tutorial"
     ))
     .padding()
 }

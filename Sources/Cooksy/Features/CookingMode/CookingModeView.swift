@@ -59,10 +59,7 @@ struct CookingModeView: View {
                         stepIndex: viewModel.currentStepIndex,
                         totalSteps: viewModel.recipe.sortedSteps.count
                     )
-                    .accessibleAnimation(.asymmetric(
-                        insertion: .move(edge: .trailing).combined(with: .opacity),
-                        removal: .move(edge: .leading).combined(with: .opacity)
-                    ), value: viewModel.currentStepIndex)
+                    .accessibleAnimation(.easeInOut(duration: 0.25), value: viewModel.currentStepIndex)
                 }
 
                 Spacer()

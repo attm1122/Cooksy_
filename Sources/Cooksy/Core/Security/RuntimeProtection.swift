@@ -4,6 +4,7 @@ import Darwin
 import CryptoKit
 import DeviceCheck
 import ObjectiveC
+import MachO
 
 // MARK: - RuntimeProtection
 
@@ -19,6 +20,7 @@ import ObjectiveC
 /// ## Usage
 /// Call `RuntimeProtection.applyAll()` early in app launch (CooksyApp.init).
 enum RuntimeProtection {
+    private static let ptraceDenyAttach: CInt = 31
 
     // MARK: - Apply All Protections
 
@@ -45,7 +47,7 @@ enum RuntimeProtection {
         guard let ptraceSymbol = dlsym(handle, "ptrace") else { return }
         typealias PtraceFunc = @convention(c) (CInt, pid_t, caddr_t?, CInt) -> CInt
         let ptrace = unsafeBitCast(ptraceSymbol, to: PtraceFunc.self)
-        _ = ptrace(PT_DENY_ATTACH, 0, nil, 0)
+        _ = ptrace(ptraceDenyAttach, 0, nil, 0)
         #endif
     }
 
@@ -189,8 +191,7 @@ enum RuntimeProtection {
     static func detectJailbreak() -> Bool {
         #if targetEnvironment(simulator)
         return false
-        #endif
-
+        #else
         // Check for common jailbreak files
         let jailbreakPaths = [
             "/Applications/Cydia.app",
@@ -223,6 +224,7 @@ enum RuntimeProtection {
         }
 
         return false
+        #endif
     }
 
     // MARK: - App Attestation
@@ -247,7 +249,7 @@ enum RuntimeProtection {
     private static func generateRandomChallenge() -> Data {
         var bytes = [UInt8](repeating: 0, count: 32)
         let status = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
-        guard status == errSecSuccess else {
+        if status != errSecSuccess {
             // Fallback: use less secure random generation
             for i in 0..<bytes.count {
                 bytes[i] = UInt8.random(in: 0...255)
@@ -263,9 +265,11 @@ enum RuntimeProtection {
     private static func handleThreat(_ message: String) {
         #if !DEBUG
         // Report to analytics (without exposing sensitive details)
-        AnalyticsService.shared.track("security_threat_detected", properties: [
-            "type": "runtime_protection"
-        ])
+        Task { @MainActor in
+            AnalyticsService.shared.track("security_threat_detected", properties: [
+                "type": "runtime_protection"
+            ])
+        }
 
         // In a production app, you might:
         // 1. Clear cached session data from memory

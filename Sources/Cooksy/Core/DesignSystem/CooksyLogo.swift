@@ -98,7 +98,7 @@ struct CooksyInlineLogo: View {
             CooksyLogo(color: color, size: 24)
             Text("Cooksy")
                 .font(.cooksH3)
-                .foregroundStyle(.ink)
+                .foregroundStyle(Color.ink)
                 .scalableText()
         }
         .accessibilityElement(children: .combine)

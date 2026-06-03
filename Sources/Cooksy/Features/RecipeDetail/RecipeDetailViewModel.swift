@@ -1,3 +1,4 @@
+import Foundation
 import SwiftData
 
 // MARK: - RecipeDetailViewModel
@@ -120,7 +121,7 @@ final class RecipeDetailViewModel {
     func prepareShare() {
         HapticsService.medium()
         let text = "Check out this recipe on Cooksy: \(recipe.title)"
-        let url = URL(string: DeepLinkService.recipeWebLink(recipeId: recipe.id))!
+        let url = URL(string: DeepLinkService.recipeWebLink(recipeId: recipe.id.uuidString))!
         shareItems = [text, url]
         showShareSheet = true
     }

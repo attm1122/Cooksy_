@@ -22,7 +22,7 @@ import SwiftData
 /// )
 /// ```
 @Model
-public final class Ingredient {
+public final class Ingredient: Hashable {
 
     // MARK: Identity
 

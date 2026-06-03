@@ -76,16 +76,37 @@ struct RecipeDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle("Recipe")
         .accessibilityIdentifier(AccessibilityID.recipeDetailView)
-        .sheet(isPresented: $viewModel.showEditSheet) {
+        .sheet(isPresented: Binding(
+            get: { viewModel.showEditSheet },
+            set: { viewModel.showEditSheet = $0 }
+        )) {
             RecipeEditView(recipe: viewModel.recipe, onFinish: {})
         }
-        .fullScreenCover(isPresented: $viewModel.showCookingMode) {
+        .fullScreenCover(isPresented: Binding(
+            get: { viewModel.showCookingMode },
+            set: { viewModel.showCookingMode = $0 }
+        )) {
             CookingModeView(recipe: viewModel.recipe)
         }
-        .sheet(isPresented: $viewModel.showCookAlong) {
-            CookAlongView(viewModel: CookAlongViewModel(recipe: viewModel.recipe))
+        .sheet(isPresented: Binding(
+            get: { viewModel.showCookAlong },
+            set: { viewModel.showCookAlong = $0 }
+        )) {
+            CookAlongView(viewModel: CookAlongViewModel(
+                recipe: viewModel.recipe,
+                syncMap: RecipeSyncMap(
+                    recipeId: viewModel.recipe.id.uuidString,
+                    videoUrl: viewModel.recipe.sourceUrl,
+                    videoDuration: 0,
+                    timestamps: [],
+                    generatedAt: Date()
+                )
+            ))
         }
-        .sheet(isPresented: $viewModel.showShareSheet) {
+        .sheet(isPresented: Binding(
+            get: { viewModel.showShareSheet },
+            set: { viewModel.showShareSheet = $0 }
+        )) {
             ShareSheet(items: viewModel.shareItems)
                 .accessibilityLabel("Share recipe sheet")
         }

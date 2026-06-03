@@ -69,35 +69,31 @@ extension View {
         regular: @escaping (Self) -> T,
         large: @escaping (Self) -> T
     ) -> some View {
-        self.modifier(AdaptiveSizeModifier(compact: compact, regular: regular, large: large))
+        AdaptiveSizeView(
+            content: self,
+            compact: compact,
+            regular: regular,
+            large: large
+        )
     }
 }
 
-/// Modifier that applies different view configurations based on Dynamic Type size category.
-private struct AdaptiveSizeModifier<T: View>: ViewModifier {
+/// View wrapper that applies different configurations based on Dynamic Type size category.
+private struct AdaptiveSizeView<Content: View, Output: View>: View {
     @Environment(\.dynamicTypeSize) var dynamicTypeSize
 
-    var compact: (EmptyView) -> T
-    var regular: (EmptyView) -> T
-    var large: (EmptyView) -> T
+    let content: Content
+    let compact: (Content) -> Output
+    let regular: (Content) -> Output
+    let large: (Content) -> Output
 
-    init(
-        @ViewBuilder compact: @escaping (EmptyView) -> T,
-        @ViewBuilder regular: @escaping (EmptyView) -> T,
-        @ViewBuilder large: @escaping (EmptyView) -> T
-    ) {
-        self.compact = compact
-        self.regular = regular
-        self.large = large
-    }
-
-    func body(content: Content) -> some View {
+    var body: some View {
         if dynamicTypeSize <= .medium {
-            compact(EmptyView())
+            compact(content)
         } else if dynamicTypeSize <= .xxLarge {
-            regular(EmptyView())
+            regular(content)
         } else {
-            large(EmptyView())
+            large(content)
         }
     }
 }

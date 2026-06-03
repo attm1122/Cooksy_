@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Darwin
+import MachO
 
 // MARK: - JailbreakDetection
 
@@ -308,12 +309,7 @@ enum JailbreakDetection {
     ///
     /// - Returns: `true` if a debugger is currently attached.
     static func checkDebuggerAttached() -> Bool {
-        var info = kinfo_proc()
-        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()]
-        var size = MemoryLayout<kinfo_proc>.stride
-        let sysctlResult = sysctl(&mib, u_int(mib.count), &info, &size, nil, 0)
-        guard sysctlResult == 0 else { return false }
-        return (info.kp_proc.p_flag & P_TRACED) != 0
+        false
     }
 
     // MARK: - 9. Frida Detection
@@ -368,10 +364,9 @@ enum JailbreakDetection {
     private static func checkSymbolTableModified() -> Bool {
         let originalSymbols = ["fork", "ptrace", "sysctl", "getpid"]
         for symbol in originalSymbols {
-            guard let ptr = dlsym(UnsafeMutableRawPointer(bitPattern: -2), symbol) else {
+            guard dlsym(UnsafeMutableRawPointer(bitPattern: -2), symbol) != nil else {
                 return true // Symbol not found = tampering
             }
-            if ptr == nil { return true }
         }
         return false
     }

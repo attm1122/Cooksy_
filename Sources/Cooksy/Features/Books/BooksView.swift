@@ -30,7 +30,7 @@ struct BooksView: View {
                     EmptyStateView(
                         icon: "folder",
                         title: "No books yet",
-                        message: "Create a book to organize your recipes."
+                        description: "Create a book to organize your recipes."
                     )
                     .padding(.vertical, 80)
                     .accessibilityLabel("No recipe books yet")

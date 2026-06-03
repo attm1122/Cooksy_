@@ -111,10 +111,9 @@ final class SupabaseService: SupabaseProtocol {
     /// This session uses `SSLPinningService` to validate the server's TLS
     /// certificate against a set of pinned public key hashes. Connections
     /// to non-Supabase hosts fall back to default system validation.
-    private lazy var urlSession: URLSession = {
-        // Use the pinned session from SSLPinningService
-        return Self.pinningService.urlSession
-    }()
+    private var urlSession: URLSession {
+        Self.pinningService.urlSession
+    }
 
     // MARK: - Initialization
 
@@ -684,10 +683,10 @@ final class SupabaseService: SupabaseProtocol {
                 status: recipe.statusRawValue,
                 confidence: recipe.confidenceRawValue,
                 confidenceScore: recipe.confidenceScore,
-                ingredients: (recipe.ingredients ?? []).map {
+                ingredients: recipe.sortedIngredients.map {
                     ExportIngredient(name: $0.name, quantity: $0.quantity, unit: $0.unit)
                 },
-                steps: (recipe.steps ?? []).map {
+                steps: recipe.sortedSteps.map {
                     ExportStep(title: $0.title, instruction: $0.instruction, durationMinutes: $0.durationMinutes)
                 },
                 sourceUrl: recipe.sourceUrl,

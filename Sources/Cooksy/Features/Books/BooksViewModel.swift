@@ -1,3 +1,4 @@
+import Foundation
 import SwiftData
 
 // MARK: - BooksViewModel
@@ -51,7 +52,7 @@ final class BooksViewModel {
         errorMessage = nil
 
         let descriptor = FetchDescriptor<RecipeBook>(
-            sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
+            sortBy: [SortDescriptor<RecipeBook>(\.createdAt, order: .reverse)]
         )
 
         do {

@@ -23,7 +23,7 @@ import SwiftData
 /// )
 /// ```
 @Model
-public final class RecipeStep {
+public final class RecipeStep: Hashable {
 
     // MARK: Identity
 

@@ -33,7 +33,7 @@ struct CooksyTextField: View {
             }
         }
         .font(.cooksCallout)
-        .foregroundStyle(.softInk)
+        .foregroundStyle(Color.softInk)
         .padding(.horizontal, 16)
         .padding(.vertical, 16)
         .background(Color.cooksBackground)
@@ -89,7 +89,7 @@ struct URLInputField: View {
                 } label: {
                     Text("Paste")
                         .font(.cooksCaption.weight(.semibold))
-                        .foregroundStyle(.brand)
+                        .foregroundStyle(Color.brand)
                         .padding(.trailing, 8)
                 }
                 .accessibilityLabel("Paste URL from clipboard")

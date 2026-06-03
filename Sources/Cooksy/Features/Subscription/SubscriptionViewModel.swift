@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import RevenueCat
 
 // MARK: - Subscription ViewModel
@@ -92,7 +93,7 @@ final class SubscriptionViewModel {
     private(set) var error: String?
 
     /// Whether an error alert should be shown.
-    private(set) var showError: Bool = false
+    var showError: Bool = false
 
     /// Feature comparison data for the subscription view.
     var allFeatures: [PlanFeature] = [
@@ -257,7 +258,7 @@ final class SubscriptionViewModel {
     // MARK: - RevenueCat Paywall
 
     /// Whether the RevenueCat Paywall should be shown.
-    private(set) var showPaywall: Bool = false
+    var showPaywall: Bool = false
 
     /// Presents the RevenueCat Paywall for the current offering.
     func presentPaywall() {
@@ -273,7 +274,7 @@ final class SubscriptionViewModel {
     // MARK: - Customer Center
 
     /// Whether the Customer Center should be shown.
-    private(set) var showCustomerCenter: Bool = false
+    var showCustomerCenter: Bool = false
 
     /// Presents the RevenueCat Customer Center.
     ///
@@ -350,7 +351,7 @@ final class SubscriptionViewModel {
             setError("This product is not available for purchase. It may have been discontinued.")
         case .customerInfoError:
             setError("Unable to verify your subscription status. Please try again later.")
-        @unknown default:
+        default:
             setError("Something went wrong. Please try again.")
         }
     }

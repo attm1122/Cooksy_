@@ -21,7 +21,7 @@ import SwiftData
 /// print(book.recipeCount) // 2
 /// ```
 @Model
-public final class RecipeBook {
+public final class RecipeBook: Hashable {
 
     // MARK: Identity
 
@@ -124,11 +124,11 @@ extension RecipeBook {
 extension RecipeBook {
     /// Sort descriptor for ordering recipe books by name alphabetically.
     public static var sortByName: SortDescriptor<RecipeBook> {
-        SortDescriptor(\.name, order: .forward)
+        SortDescriptor<RecipeBook>(\.name, order: .forward)
     }
 
     /// Sort descriptor for ordering recipe books by creation date (newest first).
     public static var sortByDate: SortDescriptor<RecipeBook> {
-        SortDescriptor(\.createdAt, order: .reverse)
+        SortDescriptor<RecipeBook>(\.createdAt, order: .reverse)
     }
 }

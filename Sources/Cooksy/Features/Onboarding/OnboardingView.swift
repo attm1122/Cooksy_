@@ -130,7 +130,7 @@ struct OnboardingView: View {
             } label: {
                 Text("Skip")
                     .font(.cooksBodyBold)
-                    .foregroundStyle(.muted)
+                    .foregroundStyle(Color.muted)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
             }
@@ -148,7 +148,7 @@ struct OnboardingView: View {
         } label: {
             Text(pages[currentPage].buttonTitle)
                 .font(.cooksBodyBold)
-                .foregroundStyle(.ink)
+                .foregroundStyle(Color.ink)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
                 .background(Color.brand)
@@ -229,7 +229,7 @@ private struct OnboardingPageView: View {
                 // Headline
                 Text(page.headline)
                     .font(.cooksH1)
-                    .foregroundStyle(.ink)
+                    .foregroundStyle(Color.ink)
                     .multilineTextAlignment(.center)
                     .scalableText()
                     .accessibilityAddTraits(.isHeader)
@@ -237,7 +237,7 @@ private struct OnboardingPageView: View {
                 // Subtitle
                 Text(page.subtitle)
                     .font(.cooksBody)
-                    .foregroundStyle(.muted)
+                    .foregroundStyle(Color.muted)
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
                     .scalableText()
@@ -274,7 +274,6 @@ private struct PageIndicator: View {
         }
         .frame(height: 20)
         .accessibilityLabel("Page \(currentPage + 1) of \(pageCount)")
-        .accessibilityLiveRegion(.polite)
     }
 }
 

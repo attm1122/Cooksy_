@@ -29,14 +29,14 @@ struct LaunchScreen: View {
                 
                 Text("Cooksy")
                     .font(.system(size: 36, weight: .bold, design: .rounded))
-                    .foregroundStyle(.ink)
+                    .foregroundStyle(Color.ink)
                     .accessibleHeading(.h1)
                     .scalableText(minScale: 0.5)
                     .accessibilityLabel("Cooksy")
                 
                 Text("Recipe Intelligence")
                     .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(.muted)
+                    .foregroundStyle(Color.muted)
                     .opacity(0.8)
                     .scalableText()
                     .accessibilityLabel("Recipe Intelligence")
@@ -44,7 +44,7 @@ struct LaunchScreen: View {
                 // Hidden progress indicator for VoiceOver users
                 if UIAccessibility.isVoiceOverRunning {
                     ProgressView()
-                        .tint(.brand)
+                        .tint(Color.brand)
                         .scaleEffect(0.8)
                         .padding(.top, 12)
                         .accessibilityLabel("Loading Cooksy, please wait")

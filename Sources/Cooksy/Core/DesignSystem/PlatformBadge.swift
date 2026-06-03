@@ -90,43 +90,7 @@ struct ConfidenceBadge: View {
 
 // MARK: - Supporting Types
 
-extension SourcePlatform {
-    /// SF Symbol icon name for each platform.
-    var iconName: String {
-        switch self {
-        case .youtube:   return "play.rectangle.fill"
-        case .tiktok:    return "music.note"
-        case .instagram: return "camera.fill"
-        }
-    }
-
-    /// Human-readable platform name.
-    var displayName: String {
-        switch self {
-        case .youtube:   return "YouTube"
-        case .tiktok:    return "TikTok"
-        case .instagram: return "Instagram"
-        }
-    }
-}
-
 extension ConfidenceLevel {
-    var displayName: String {
-        switch self {
-        case .high:   return "High"
-        case .medium: return "Medium"
-        case .low:    return "Low"
-        }
-    }
-
-    var iconName: String {
-        switch self {
-        case .high:   return "checkmark.shield.fill"
-        case .medium: return "exclamationmark.triangle.fill"
-        case .low:    return "questionmark.diamond.fill"
-        }
-    }
-
     var backgroundColor: Color {
         switch self {
         case .high:   return .confidenceHigh

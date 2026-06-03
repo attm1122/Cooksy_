@@ -38,7 +38,7 @@ import SwiftData
 /// )
 /// ```
 @Model
-public final class Recipe {
+public final class Recipe: Hashable {
 
     // MARK: Identity
 
@@ -200,7 +200,7 @@ public final class Recipe {
     /// a properly sorted, non-optional array.
     ///
     /// - Delete rule: `.cascade` — deleting the recipe removes all ingredients.
-    @Relationship(deleteRule: .cascade, inverse: \Ingredient.recipe)
+    @Relationship(deleteRule: .cascade)
     public var ingredients: [Ingredient]?
 
     /// The cooking steps for this recipe.
@@ -209,7 +209,7 @@ public final class Recipe {
     /// a properly sorted, non-optional array.
     ///
     /// - Delete rule: `.cascade` — deleting the recipe removes all steps.
-    @Relationship(deleteRule: .cascade, inverse: \RecipeStep.recipe)
+    @Relationship(deleteRule: .cascade)
     public var steps: [RecipeStep]?
 
     /// The recipe books this recipe is included in.
@@ -218,7 +218,7 @@ public final class Recipe {
     ///
     /// - Delete rule: `.nullify` — deleting the recipe removes it from books
     ///   but does not delete the books themselves.
-    @Relationship(deleteRule: .nullify, inverse: \RecipeBook.recipes)
+    @Relationship(deleteRule: .nullify)
     public var books: [RecipeBook]?
 
     // MARK: Initialization
@@ -413,7 +413,7 @@ extension Recipe {
         if totalTimeMinutes > 0 {
             parts.append(formattedTotalTime)
         }
-        parts.append("By \(sourceCreator) on \(source.displayName)")
+        parts.append("By \(sourceCreator) on \(source.platform.displayName)")
         return parts.joined(separator: " · ")
     }
 }
@@ -466,17 +466,17 @@ extension Recipe {
 extension Recipe {
     /// Sort descriptor for ordering recipes by title alphabetically.
     public static var sortByTitle: SortDescriptor<Recipe> {
-        SortDescriptor(\.title, order: .forward)
+        SortDescriptor<Recipe>(\.title, order: .forward)
     }
 
     /// Sort descriptor for ordering recipes by creation date (newest first).
     public static var sortByDate: SortDescriptor<Recipe> {
-        SortDescriptor(\.createdAt, order: .reverse)
+        SortDescriptor<Recipe>(\.createdAt, order: .reverse)
     }
 
     /// Sort descriptor for ordering recipes by last update (most recent first).
     public static var sortByUpdated: SortDescriptor<Recipe> {
-        SortDescriptor(\.updatedAt, order: .reverse)
+        SortDescriptor<Recipe>(\.updatedAt, order: .reverse)
     }
 }
 
@@ -490,5 +490,3 @@ extension Recipe {
         self.updatedAt = Date()
     }
 }
-
-

@@ -66,11 +66,14 @@ final class NetworkMonitor {
         isConnected = path.status == .satisfied
         isExpensive = path.isExpensive
 
-        switch path.usesInterfaceType {
-        case .wifi: connectionType = .wifi
-        case .cellular: connectionType = .cellular
-        case .wiredEthernet: connectionType = .ethernet
-        default: connectionType = .unknown
+        if path.usesInterfaceType(.wifi) {
+            connectionType = .wifi
+        } else if path.usesInterfaceType(.cellular) {
+            connectionType = .cellular
+        } else if path.usesInterfaceType(.wiredEthernet) {
+            connectionType = .ethernet
+        } else {
+            connectionType = .unknown
         }
 
         // Announce connectivity changes to VoiceOver

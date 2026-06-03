@@ -106,7 +106,8 @@ struct AccessibleIngredientChecklistRow: View {
         servings: 4,
         sourceUrl: "https://example.com",
         sourcePlatform: .youtube,
-        sourceCreator: "Chef"
+        sourceCreator: "Chef",
+        sourceTitle: "Pasta tutorial"
     )
 
     // Add some mock ingredients for preview
@@ -114,7 +115,7 @@ struct AccessibleIngredientChecklistRow: View {
         let ing1 = Ingredient(name: "All-purpose flour", quantity: "2", unit: "cups")
         let ing2 = Ingredient(name: "Eggs", quantity: "3", unit: "large")
         let ing3 = Ingredient(name: "Salt", quantity: "1", unit: "tsp")
-        recipe.ingredients.append(contentsOf: [ing1, ing2, ing3])
+        recipe.ingredients = [ing1, ing2, ing3]
     }()
 
     IngredientChecklist(recipe: recipe) { _ in }

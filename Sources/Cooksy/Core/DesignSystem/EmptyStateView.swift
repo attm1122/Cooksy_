@@ -16,18 +16,18 @@ struct EmptyStateView: View {
         VStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 40))
-                .foregroundStyle(.muted)
+                .foregroundStyle(Color.muted)
                 .decorative()
 
             Text(title)
                 .font(.cooksH2)
-                .foregroundStyle(.ink)
+                .foregroundStyle(Color.ink)
                 .accessibleHeading(.h2)
                 .scalableText()
 
             Text(description)
                 .font(.cooksCallout)
-                .foregroundStyle(.muted)
+                .foregroundStyle(Color.muted)
                 .multilineTextAlignment(.center)
                 .scalableText()
 
@@ -44,8 +44,10 @@ struct EmptyStateView: View {
         .background(
             RoundedRectangle(cornerRadius: 26)
                 .fill(Color.surfaceAlt)
-                .stroke(style: StrokeStyle(lineWidth: 1, dash: [6, 4]))
-                .foregroundColor(.cooksBorder)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 26)
+                .stroke(Color.cooksBorder, style: StrokeStyle(lineWidth: 1, dash: [6, 4]))
         )
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(title). \(description)")
@@ -62,12 +64,12 @@ struct LoadingStateView: View {
         VStack(spacing: 16) {
             ProgressView()
                 .scaleEffect(1.2)
-                .tint(.brand)
+                .tint(Color.brand)
                 .accessibilityLabel("Loading in progress")
 
             Text(message)
                 .font(.cooksCallout)
-                .foregroundStyle(.muted)
+                .foregroundStyle(Color.muted)
                 .scalableText()
                 .accessibilityLabel(message)
         }
@@ -90,12 +92,12 @@ struct ErrorStateView: View {
         VStack(spacing: 12) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 36))
-                .foregroundStyle(.cooksDanger)
+                .foregroundStyle(Color.cooksDanger)
                 .decorative()
 
             Text(message)
                 .font(.cooksCallout)
-                .foregroundStyle(.softInk)
+                .foregroundStyle(Color.softInk)
                 .multilineTextAlignment(.center)
                 .scalableText()
                 .accessibilityLabel("Error: \(message)")

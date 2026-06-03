@@ -105,18 +105,18 @@ struct HomeView: View {
             VStack(spacing: 16) {
                 Image(systemName: "sparkles")
                     .font(.system(size: 36, weight: .medium))
-                    .foregroundStyle(.brand)
+                    .foregroundStyle(Color.brand)
 
                 VStack(spacing: 6) {
                     let name = viewModel.userFirstName
                     Text(name.isEmpty ? "Save recipes from anywhere. Cook them later." : "\(name), save recipes from anywhere. Cook them later.")
                         .font(.cooksH2)
-                        .foregroundStyle(.ink)
+                        .foregroundStyle(Color.ink)
                         .multilineTextAlignment(.center)
 
                     Text("Paste a link and we'll extract the ingredients, steps, and timings.")
                         .font(.cooksCallout)
-                        .foregroundStyle(.muted)
+                        .foregroundStyle(Color.muted)
                         .multilineTextAlignment(.center)
                 }
             }
@@ -142,7 +142,7 @@ struct HomeView: View {
                     Text(error)
                         .font(.cooksCaption)
                 }
-                .foregroundStyle(.cooksDanger)
+                .foregroundStyle(Color.cooksDanger)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 4)
                 .transition(.opacity.combined(with: .move(edge: .top)))
@@ -202,7 +202,7 @@ struct HomeView: View {
             HStack {
                 Text("Recently saved")
                     .font(.cooksH3)
-                    .foregroundStyle(.ink)
+                    .foregroundStyle(Color.ink)
                     .accessibleHeading(.h2)
 
                 Spacer()
@@ -217,7 +217,7 @@ struct HomeView: View {
                             .font(.system(size: 12, weight: .semibold))
                             .decorative()
                     }
-                    .foregroundStyle(.brand)
+                    .foregroundStyle(Color.brand)
                 }
                 .accessibilityLabel("See all recipes")
                 .accessibilityIdentifier(AccessibilityID.seeAllRecipesLink)
@@ -281,17 +281,17 @@ private struct RecipeReadyBanner: View {
             HStack(spacing: 10) {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.title3)
-                    .foregroundStyle(.cooksSuccess)
+                    .foregroundStyle(Color.cooksSuccess)
                     .decorative()
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Recipe saved!")
                         .font(.cooksCallout.weight(.semibold))
-                        .foregroundStyle(.ink)
+                        .foregroundStyle(Color.ink)
 
                     Text(recipe.title)
                         .font(.cooksCaption)
-                        .foregroundStyle(.muted)
+                        .foregroundStyle(Color.muted)
                         .lineLimit(1)
                 }
 
@@ -302,7 +302,7 @@ private struct RecipeReadyBanner: View {
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(.muted)
+                        .foregroundStyle(Color.muted)
                         .frame(width: 28, height: 28)
                         .background(Circle().fill(Color.cooksLine))
                 }
@@ -336,7 +336,7 @@ private struct RecipeReadyBanner: View {
 
 /// Announces a layout change to VoiceOver when the banner appears.
 /// Ensures screen reader users are notified of the success state.
-private struct AccessibilityAnnouncementModifier: ViewModifier {
+private struct RecipeCompletionAnnouncementModifier: ViewModifier {
     @State private var hasAnnounced = false
 
     func body(content: Content) -> some View {
@@ -356,7 +356,7 @@ private struct AccessibilityAnnouncementModifier: ViewModifier {
 private extension View {
     /// Posts a layout-changed notification to VoiceOver after a short delay.
     func accessibilityAnnouncement() -> some View {
-        modifier(AccessibilityAnnouncementModifier())
+        modifier(RecipeCompletionAnnouncementModifier())
     }
 }
 

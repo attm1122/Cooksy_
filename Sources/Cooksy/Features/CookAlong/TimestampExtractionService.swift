@@ -57,13 +57,13 @@ final class TimestampExtractionService {
         }
 
         let timestamps = matchStepsToTranscription(
-            steps: recipe.steps,
+            steps: recipe.sortedSteps,
             transcription: transcript,
             videoDuration: videoDuration
         )
 
         guard !timestamps.isEmpty else {
-            throw CooksyError.noMatchingStepsFound
+            throw CooksyError.transcriptionUnavailable("No matching recipe steps were found in the transcript.")
         }
 
         let syncMap = RecipeSyncMap(
@@ -184,7 +184,7 @@ extension TimestampExtractionService {
 
         var timestamps: [RecipeTimestamp] = []
 
-        for step in steps.sorted(by: { $0.index < $1.index }) {
+        for step in steps.sorted(by: { $0.displayOrder < $1.displayOrder }) {
             let stepKeywords = extractKeywords(from: step)
             guard !stepKeywords.isEmpty else { continue }
 
@@ -196,7 +196,7 @@ extension TimestampExtractionService {
             var windowStart = 0
             while windowStart + windowSize <= allWords.count {
                 let window = Array(allWords[windowStart..<min(windowStart + windowSize, allWords.count)])
-                let windowText = window.map(\.word.lowercased())
+                let windowText = window.map { $0.word.lowercased() }
 
                 let score = scoreWindow(windowText: windowText, stepKeywords: stepKeywords)
 
@@ -212,7 +212,7 @@ extension TimestampExtractionService {
             // Handle remaining words at the end
             if windowStart < allWords.count {
                 let window = Array(allWords[windowStart...])
-                let windowText = window.map(\.word.lowercased())
+                let windowText = window.map { $0.word.lowercased() }
                 let score = scoreWindow(windowText: windowText, stepKeywords: stepKeywords)
                 if score > bestScore {
                     bestScore = score
@@ -228,7 +228,7 @@ extension TimestampExtractionService {
             let timestamp = RecipeTimestamp(
                 id: "\(step.id.uuidString)_ts",
                 recipeStepId: step.id.uuidString,
-                stepIndex: step.index,
+                stepIndex: step.displayOrder,
                 startTime: bestStart,
                 endTime: bestEnd,
                 triggerPhrase: allWords
@@ -251,9 +251,6 @@ extension TimestampExtractionService {
     /// Prioritizes ingredient names and cooking action verbs.
     private func extractKeywords(from step: RecipeStep) -> [String] {
         var keywords: [String] = []
-
-        // Add ingredient names
-        keywords.append(contentsOf: step.ingredients.map { $0.lowercased() })
 
         // Extract action verbs and key nouns from instruction
         let instruction = step.instruction.lowercased()

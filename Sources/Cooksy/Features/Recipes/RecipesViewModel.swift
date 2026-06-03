@@ -1,3 +1,4 @@
+import Foundation
 import SwiftData
 
 // MARK: - RecipesViewModel
@@ -89,7 +90,7 @@ final class RecipesViewModel {
         guard let modelContext = modelContext else { return }
 
         let descriptor = FetchDescriptor<Recipe>(
-            sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
+            sortBy: [SortDescriptor<Recipe>(\.createdAt, order: .reverse)]
         )
 
         do {
@@ -116,7 +117,7 @@ final class RecipesViewModel {
             try modelContext.save()
 
             // Refresh the list after merge
-            let descriptor = FetchDescriptor<Recipe>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
+            let descriptor = FetchDescriptor<Recipe>(sortBy: [SortDescriptor<Recipe>(\.createdAt, order: .reverse)])
             recipes = try modelContext.fetch(descriptor)
         } catch {
             // Silently fail — server sync is a background refresh.

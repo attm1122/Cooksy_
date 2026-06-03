@@ -11,7 +11,7 @@ enum Formatters {
     /// - 90  -> "1 hr 30 min"
     /// - 0   -> "—"
     static func formatTime(_ minutes: Int) -> String {
-        guard minutes > 0 else { return "\u2014" }
+        guard minutes > 0 else { return "\u{2014}" }
         if minutes < 60 {
             return "\(minutes) min"
         }

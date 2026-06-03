@@ -1,3 +1,4 @@
+import Foundation
 import SwiftData
 import RevenueCat
 
@@ -115,7 +116,7 @@ final class ProfileViewModel {
             PushNotificationService.shared.clearDeviceToken()
 
             // Log out from RevenueCat
-            Purchases.shared.logOut()
+            _ = try? await Purchases.shared.logOut()
 
             // Clear all local auth state from Keychain
             KeychainService.shared.clearAll()
@@ -189,7 +190,7 @@ final class ProfileViewModel {
             }
 
             // 5. Log out from RevenueCat
-            Purchases.shared.logOut()
+            _ = try? await Purchases.shared.logOut()
         } catch {
             errorMessage = "Failed to delete account. Please contact support."
         }
@@ -282,7 +283,7 @@ final class ProfileViewModel {
     /// Fetches all recipes from SwiftData for export.
     private func fetchAllRecipes() throws -> [Recipe] {
         guard let modelContext = modelContext else { return [] }
-        let descriptor = FetchDescriptor<Recipe>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
+        let descriptor = FetchDescriptor<Recipe>(sortBy: [SortDescriptor<Recipe>(\.createdAt, order: .reverse)])
         return try modelContext.fetch(descriptor)
     }
 

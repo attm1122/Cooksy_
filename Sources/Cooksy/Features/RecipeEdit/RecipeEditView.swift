@@ -394,13 +394,14 @@ struct AccessibleStepEditRow: View {
 
 #Preview {
     RecipeEditView(
-        viewModel: RecipeEditViewModel(recipe: Recipe(
+        recipe: Recipe(
             title: "Test Recipe",
             servings: 4,
             sourceUrl: "https://example.com",
             sourcePlatform: .youtube,
-            sourceCreator: "Chef"
-        )),
+            sourceCreator: "Chef",
+            sourceTitle: "Test tutorial"
+        ),
         onFinish: {}
     )
 }

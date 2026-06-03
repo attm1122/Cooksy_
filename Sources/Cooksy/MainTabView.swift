@@ -44,7 +44,7 @@ struct MainTabView: View {
                     }
                     .accessibilityLabel("Profile tab")
             }
-            .tint(.brand)
+            .tint(Color.brand)
             .accessibilityLabel("Main navigation")
             .accessibilityHint("Use tabs to switch between Home, Recipes, Books, and Profile")
 

@@ -47,7 +47,7 @@ struct SubscriptionView: View {
                         HapticsService.light()
                         dismiss()
                     }
-                    .foregroundStyle(.brand)
+                    .foregroundStyle(Color.brand)
                     .accessibilityLabel("Close subscription screen")
                 }
             }
@@ -62,20 +62,18 @@ struct SubscriptionView: View {
             SafariView(url: privacyURL)
         }
         // RevenueCat Paywall
-        .sheet(isPresented: $viewModel.showPaywall) {
+        .sheet(isPresented: $viewModel.showPaywall, onDismiss: {
+            viewModel.dismissPaywall()
+            Task { await viewModel.refreshCustomerInfo() }
+        }) {
             PaywallView()
-                .onDismiss {
-                    viewModel.dismissPaywall()
-                    Task { await viewModel.refreshCustomerInfo() }
-                }
         }
         // RevenueCat Customer Center
-        .sheet(isPresented: $viewModel.showCustomerCenter) {
+        .sheet(isPresented: $viewModel.showCustomerCenter, onDismiss: {
+            viewModel.dismissCustomerCenter()
+            Task { await viewModel.refreshCustomerInfo() }
+        }) {
             CustomerCenterView()
-                .onDismiss {
-                    viewModel.dismissCustomerCenter()
-                    Task { await viewModel.refreshCustomerInfo() }
-                }
         }
         // Error alert
         .alert("Subscription", isPresented: $viewModel.showError) {
@@ -92,31 +90,31 @@ struct SubscriptionView: View {
         HStack(spacing: 8) {
             if viewModel.isPro {
                 Image(systemName: "crown.fill")
-                    .foregroundStyle(.brand)
+                    .foregroundStyle(Color.brand)
                     .decorative()
                 if let expiry = viewModel.expirationDate, viewModel.willAutoRenew {
                     Text("Cooksy Pro — Renews \(expiry.formatted(date: .abbreviated, time: .omitted))")
                         .font(.cooksCallout.weight(.medium))
-                        .foregroundStyle(.ink)
+                        .foregroundStyle(Color.ink)
                         .scalableText()
                 } else if viewModel.willAutoRenew {
                     Text("Cooksy Pro Active")
                         .font(.cooksCallout.weight(.medium))
-                        .foregroundStyle(.ink)
+                        .foregroundStyle(Color.ink)
                         .scalableText()
                 } else {
                     Text("Cooksy Pro Active")
                         .font(.cooksCallout.weight(.medium))
-                        .foregroundStyle(.ink)
+                        .foregroundStyle(Color.ink)
                         .scalableText()
                 }
             } else {
                 Image(systemName: "sparkles")
-                    .foregroundStyle(.brand)
+                    .foregroundStyle(Color.brand)
                     .decorative()
                 Text("Upgrade to unlock all features")
                     .font(.cooksCallout.weight(.medium))
-                    .foregroundStyle(.ink)
+                    .foregroundStyle(Color.ink)
                     .scalableText()
             }
         }
@@ -160,7 +158,7 @@ struct SubscriptionView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("What's included")
                 .font(.cooksH3)
-                .foregroundStyle(.ink)
+                .foregroundStyle(Color.ink)
                 .accessibleHeading(.h2)
 
             VStack(spacing: 0) {
@@ -168,17 +166,17 @@ struct SubscriptionView: View {
                 HStack {
                     Text("Feature")
                         .font(.cooksCaption.weight(.medium))
-                        .foregroundStyle(.muted)
+                        .foregroundStyle(Color.muted)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                     Text("Free")
                         .font(.cooksCaption.weight(.medium))
-                        .foregroundStyle(.muted)
+                        .foregroundStyle(Color.muted)
                         .frame(width: 50, alignment: .center)
 
                     Text("Pro")
                         .font(.cooksCaption.weight(.medium))
-                        .foregroundStyle(.brand)
+                        .foregroundStyle(Color.brand)
                         .frame(width: 50, alignment: .center)
                 }
                 .padding(.horizontal, 16)
@@ -283,24 +281,24 @@ struct SubscriptionView: View {
         VStack(spacing: 12) {
             Text(finePrintText)
                 .font(.caption2)
-                .foregroundStyle(.muted.opacity(0.7))
+                .foregroundStyle(Color.muted.opacity(0.7))
                 .multilineTextAlignment(.center)
                 .scalableText()
 
             HStack(spacing: 4) {
                 Button("Terms of Service") { showTerms = true }
                     .font(.cooksMicro)
-                    .foregroundStyle(.brand)
+                    .foregroundStyle(Color.brand)
                     .accessibilityLabel("View Terms of Service")
 
                 Text("·")
                     .font(.cooksMicro)
-                    .foregroundStyle(.muted)
+                    .foregroundStyle(Color.muted)
                     .decorative()
 
                 Button("Privacy Policy") { showPrivacy = true }
                     .font(.cooksMicro)
-                    .foregroundStyle(.brand)
+                    .foregroundStyle(Color.brand)
                     .accessibilityLabel("View Privacy Policy")
             }
         }
@@ -324,7 +322,7 @@ struct SubscriptionView: View {
                     .overlay(
                         ProgressView()
                             .scaleEffect(1.3)
-                            .tint(.brand)
+                            .tint(Color.brand)
                             .accessibilityLabel("Loading subscription details")
                     )
                     .transition(.opacity)
@@ -389,19 +387,19 @@ struct AccessiblePlanCard: View {
                 // Plan name
                 Text(plan.rawValue)
                     .font(.cooksCallout.weight(.semibold))
-                    .foregroundStyle(isSelected ? .ink : .muted)
+                    .foregroundStyle(isSelected ? Color.ink : Color.muted)
                     .scalableText()
 
                 // Price from RevenueCat
                 Text(priceText)
                     .font(.cooksBodyBold)
-                    .foregroundStyle(isSelected ? .brand : .ink)
+                    .foregroundStyle(isSelected ? Color.brand : Color.ink)
                     .scalableText()
 
                 // Description
                 Text(plan.description)
                     .font(.cooksMicro)
-                    .foregroundStyle(.muted)
+                    .foregroundStyle(Color.muted)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
                     .frame(height: 28)
@@ -410,7 +408,7 @@ struct AccessiblePlanCard: View {
                 if let savings = plan.savings {
                     Text(savings)
                         .font(.cooksMicro.weight(.medium))
-                        .foregroundStyle(.cooksSuccess)
+                        .foregroundStyle(Color.cooksSuccess)
                         .scalableText()
                 } else {
                     Color.clear.frame(height: 14).decorative()
@@ -430,7 +428,7 @@ struct AccessiblePlanCard: View {
             .overlay(alignment: .topTrailing) {
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.brand)
+                        .foregroundStyle(Color.brand)
                         .font(.cooksCallout)
                         .offset(x: -6, y: 6)
                         .decorative()
@@ -477,7 +475,7 @@ struct AccessibleFeatureRow: View {
         HStack {
             Text(name)
                 .font(.cooksCallout)
-                .foregroundStyle(.ink)
+                .foregroundStyle(Color.ink)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .scalableText()
 

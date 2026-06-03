@@ -6,7 +6,7 @@ struct PrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.cooksBodyBold)
-            .foregroundStyle(.ink)
+            .foregroundStyle(Color.ink)
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
@@ -24,7 +24,7 @@ struct SecondaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.cooksBodyBold)
-            .foregroundStyle(.softInk)
+            .foregroundStyle(Color.softInk)
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
@@ -41,7 +41,7 @@ struct TertiaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.cooksCallout.weight(.semibold))
-            .foregroundStyle(.muted)
+            .foregroundStyle(Color.muted)
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .opacity(configuration.isPressed ? 0.6 : 1.0)
@@ -95,18 +95,32 @@ extension View {
 /// PrimaryButton("Save", isLoading: true) { ... }
 /// ```
 struct PrimaryButton: View {
-    var _title: String
+    var title: String
     var icon: String? = nil
     var isLoading: Bool = false
     var isEnabled: Bool = true
     let action: () -> Void
+
+    init(
+        _ title: String,
+        icon: String? = nil,
+        isLoading: Bool = false,
+        isEnabled: Bool = true,
+        action: @escaping () -> Void
+    ) {
+        self.title = title
+        self.icon = icon
+        self.isLoading = isLoading
+        self.isEnabled = isEnabled
+        self.action = action
+    }
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 8) {
                 if isLoading {
                     ProgressView()
-                        .tint(.ink)
+                        .tint(Color.ink)
                         .controlSize(.small)
                         .accessibilityLabel("Loading")
                 } else if let icon = icon {
@@ -114,14 +128,14 @@ struct PrimaryButton: View {
                         .font(.system(size: 14, weight: .semibold))
                         .decorative()
                 }
-                Text(_title)
+                Text(title)
                     .scalableText()
             }
         }
         .primaryButton()
         .disabled(!isEnabled || isLoading)
         .opacity(isEnabled && !isLoading ? 1.0 : 0.5)
-        .accessibilityLabel(_title)
+        .accessibilityLabel(title)
         .accessibilityHint(isEnabled ? "" : "This button is currently disabled")
     }
 }
@@ -142,12 +156,26 @@ struct SecondaryButton: View {
     var isEnabled: Bool = true
     let action: () -> Void
 
+    init(
+        _ title: String,
+        icon: String? = nil,
+        isLoading: Bool = false,
+        isEnabled: Bool = true,
+        action: @escaping () -> Void
+    ) {
+        self._title = title
+        self.icon = icon
+        self.isLoading = isLoading
+        self.isEnabled = isEnabled
+        self.action = action
+    }
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 8) {
                 if isLoading {
                     ProgressView()
-                        .tint(.softInk)
+                        .tint(Color.softInk)
                         .controlSize(.small)
                         .accessibilityLabel("Loading")
                 } else if let icon = icon {
@@ -181,6 +209,18 @@ struct TertiaryButton: View {
     var icon: String? = nil
     var isEnabled: Bool = true
     let action: () -> Void
+
+    init(
+        _ title: String,
+        icon: String? = nil,
+        isEnabled: Bool = true,
+        action: @escaping () -> Void
+    ) {
+        self._title = title
+        self.icon = icon
+        self.isEnabled = isEnabled
+        self.action = action
+    }
 
     var body: some View {
         Button(action: action) {
