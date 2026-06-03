@@ -20,7 +20,7 @@ import RevenueCat
 /// ## RevenueCat Setup
 /// Products are configured in the RevenueCat dashboard:
 /// - Offering: "default"
-/// - Products: `monthly`, `yearly`, `lifetime`
+/// - Products: `monthly`, `yearly`
 /// - Entitlement: `cooksy_pro`
 @main
 struct CooksyApp: App {
@@ -103,7 +103,6 @@ struct CooksyApp: App {
     /// Products configured in the RevenueCat dashboard:
     /// - `monthly` — Monthly recurring subscription
     /// - `yearly` — Annual recurring subscription (best value)
-    /// - `lifetime` — One-time purchase, permanent access
     ///
     /// Entitlement: `cooksy_pro` — Grants access to all premium features.
     private func configureRevenueCat() {

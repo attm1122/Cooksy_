@@ -6,7 +6,7 @@ import RevenueCat
 ///
 /// ## RevenueCat Configuration
 /// - **Offering**: `default` (configured in RevenueCat dashboard)
-/// - **Products**: `monthly`, `yearly`, `lifetime`
+/// - **Products**: `monthly`, `yearly`
 /// - **Entitlement**: `cooksy_pro`
 ///
 /// ## Supported Plans
@@ -15,7 +15,6 @@ import RevenueCat
 /// | Free | `free` | No purchase required |
 /// | Monthly | `monthly` | Auto-renewing subscription |
 /// | Yearly | `yearly` | Auto-renewing subscription (best value) |
-/// | Lifetime | `lifetime` | One-time purchase, permanent access |
 @MainActor
 @Observable
 final class SubscriptionViewModel {
@@ -27,7 +26,6 @@ final class SubscriptionViewModel {
         case free = "Free"
         case monthly = "Monthly"
         case yearly = "Yearly"
-        case lifetime = "Lifetime"
 
         var id: String { rawValue }
 
@@ -39,7 +37,6 @@ final class SubscriptionViewModel {
             case .free: return ""
             case .monthly: return "$rc_monthly"
             case .yearly: return "$rc_annual"
-            case .lifetime: return "$rc_lifetime"
             }
         }
 
@@ -48,7 +45,6 @@ final class SubscriptionViewModel {
             case .free: return "Basic recipe management"
             case .monthly: return "Full access, billed monthly"
             case .yearly: return "Full access, billed annually"
-            case .lifetime: return "Pay once, keep forever"
             }
         }
 
@@ -57,7 +53,6 @@ final class SubscriptionViewModel {
             case .free: return nil
             case .monthly: return nil
             case .yearly: return "Best Value"
-            case .lifetime: return "Forever"
             }
         }
 
@@ -66,7 +61,6 @@ final class SubscriptionViewModel {
             case .free: return nil
             case .monthly: return nil
             case .yearly: return nil  // Dynamic savings computed from RevenueCat prices
-            case .lifetime: return "Best Deal"
             }
         }
     }
@@ -312,20 +306,17 @@ final class SubscriptionViewModel {
         // Fall back to period-based matching
         return offerings.first { pkg in
             guard let period = pkg.storeProduct.subscriptionPeriod else {
-                // Lifetime products have no subscription period
-                return plan == .lifetime
+                return false
             }
             switch plan {
             case .monthly:
                 return period.unit == .month && period.value == 1
             case .yearly:
                 return period.unit == .year && period.value == 1
-            case .lifetime:
-                return false // Has period, so not lifetime
             case .free:
                 return false
             }
-        } ?? (plan == .lifetime ? offerings.first { $0.packageType == .lifetime } : nil)
+        }
     }
 
     // MARK: - Error Handling

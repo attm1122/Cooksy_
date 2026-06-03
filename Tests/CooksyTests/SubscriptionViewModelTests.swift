@@ -30,11 +30,10 @@ final class SubscriptionViewModelTests: XCTestCase {
 
     func test_planEnum_allCases() {
         let allCases = SubscriptionViewModel.Plan.allCases
-        XCTAssertEqual(allCases.count, 4)
+        XCTAssertEqual(allCases.count, 3)
         XCTAssertTrue(allCases.contains(.free))
         XCTAssertTrue(allCases.contains(.monthly))
         XCTAssertTrue(allCases.contains(.yearly))
-        XCTAssertTrue(allCases.contains(.lifetime))
     }
 
     func test_planEnum_freeRawValue() {
@@ -49,10 +48,6 @@ final class SubscriptionViewModelTests: XCTestCase {
         XCTAssertEqual(SubscriptionViewModel.Plan.yearly.rawValue, "Yearly")
     }
 
-    func test_planEnum_lifetimeRawValue() {
-        XCTAssertEqual(SubscriptionViewModel.Plan.lifetime.rawValue, "Lifetime")
-    }
-
     // MARK: - Plan Enum Identifiable
 
     func test_planEnum_freeId() {
@@ -65,10 +60,6 @@ final class SubscriptionViewModelTests: XCTestCase {
 
     func test_planEnum_yearlyId() {
         XCTAssertEqual(SubscriptionViewModel.Plan.yearly.id, "Yearly")
-    }
-
-    func test_planEnum_lifetimeId() {
-        XCTAssertEqual(SubscriptionViewModel.Plan.lifetime.id, "Lifetime")
     }
 
     func test_planEnum_idEqualsRawValue() {
@@ -91,10 +82,6 @@ final class SubscriptionViewModelTests: XCTestCase {
         XCTAssertEqual(SubscriptionViewModel.Plan.yearly.name, "Yearly")
     }
 
-    func test_planName_lifetime() {
-        XCTAssertEqual(SubscriptionViewModel.Plan.lifetime.name, "Lifetime")
-    }
-
     func test_planName_equalsRawValue() {
         for plan in SubscriptionViewModel.Plan.allCases {
             XCTAssertEqual(plan.name, plan.rawValue)
@@ -113,10 +100,6 @@ final class SubscriptionViewModelTests: XCTestCase {
 
     func test_planDescription_yearly() {
         XCTAssertEqual(SubscriptionViewModel.Plan.yearly.description, "Full access, billed annually")
-    }
-
-    func test_planDescription_lifetime() {
-        XCTAssertEqual(SubscriptionViewModel.Plan.lifetime.description, "Pay once, keep forever")
     }
 
     func test_allPlanDescriptions_areNonEmpty() {
@@ -139,10 +122,6 @@ final class SubscriptionViewModelTests: XCTestCase {
         XCTAssertEqual(SubscriptionViewModel.Plan.yearly.badge, "Best Value")
     }
 
-    func test_planBadge_lifetime() {
-        XCTAssertEqual(SubscriptionViewModel.Plan.lifetime.badge, "Forever")
-    }
-
     // MARK: - Plan Savings Tests
 
     func test_planSavings_freeIsNil() {
@@ -153,12 +132,8 @@ final class SubscriptionViewModelTests: XCTestCase {
         XCTAssertNil(SubscriptionViewModel.Plan.monthly.savings)
     }
 
-    func test_planSavings_yearly() {
-        XCTAssertEqual(SubscriptionViewModel.Plan.yearly.savings, "Save 30%")
-    }
-
-    func test_planSavings_lifetime() {
-        XCTAssertEqual(SubscriptionViewModel.Plan.lifetime.savings, "Best Deal")
+    func test_planSavings_yearlyIsNil() {
+        XCTAssertNil(SubscriptionViewModel.Plan.yearly.savings)
     }
 
     // MARK: - Plan Package Identifier Tests
@@ -173,10 +148,6 @@ final class SubscriptionViewModelTests: XCTestCase {
 
     func test_planPackageIdentifier_yearly() {
         XCTAssertEqual(SubscriptionViewModel.Plan.yearly.packageIdentifier, "$rc_annual")
-    }
-
-    func test_planPackageIdentifier_lifetime() {
-        XCTAssertEqual(SubscriptionViewModel.Plan.lifetime.packageIdentifier, "$rc_lifetime")
     }
 
     func test_planPackageIdentifiers_areUnique() {
@@ -419,18 +390,11 @@ final class SubscriptionViewModelTests: XCTestCase {
         XCTAssertEqual(sut.selectedPlan, .yearly)
     }
 
-    func test_selectedPlan_canChangeToLifetime() {
-        sut.selectedPlan = .lifetime
-        XCTAssertEqual(sut.selectedPlan, .lifetime)
-    }
-
     func test_selectedPlan_canCycle() {
         sut.selectedPlan = .monthly
         XCTAssertEqual(sut.selectedPlan, .monthly)
         sut.selectedPlan = .yearly
         XCTAssertEqual(sut.selectedPlan, .yearly)
-        sut.selectedPlan = .lifetime
-        XCTAssertEqual(sut.selectedPlan, .lifetime)
         sut.selectedPlan = .free
         XCTAssertEqual(sut.selectedPlan, .free)
     }
@@ -513,8 +477,7 @@ final class SubscriptionViewModelTests: XCTestCase {
         plans.insert(.free)
         plans.insert(.monthly)
         plans.insert(.yearly)
-        plans.insert(.lifetime)
-        XCTAssertEqual(plans.count, 4)
+        XCTAssertEqual(plans.count, 3)
     }
 
     func test_planEnum_equality() {
@@ -552,10 +515,6 @@ final class SubscriptionViewModelTests: XCTestCase {
 
     func test_yearlyPlanHasAnnualPackage() {
         XCTAssertEqual(SubscriptionViewModel.Plan.yearly.packageIdentifier, "$rc_annual")
-    }
-
-    func test_lifetimePlanHasLifetimePackage() {
-        XCTAssertEqual(SubscriptionViewModel.Plan.lifetime.packageIdentifier, "$rc_lifetime")
     }
 
     // MARK: - Feature Count Consistency

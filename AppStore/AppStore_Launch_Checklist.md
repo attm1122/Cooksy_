@@ -54,12 +54,11 @@
 | # | Task | Location | Done |
 |---|------|----------|------|
 | 2.2.1 | Create App in RevenueCat dashboard with your **Apple App-Specific Shared Secret** | RevenueCat Dashboard > + New App | [ ] |
-| 2.2.2 | Create **3 products** in App Store Connect first, then sync to RevenueCat: | App Store Connect > Features > In-App Purchases | [ ] |
-| | - `cooksy_monthly` — Consumable/Auto-Renewable, $4.99/month | | |
-| | - `cooksy_yearly` — Auto-Renewable, $39.99/year | | |
-| | - `cooksy_lifetime` — Non-Consumable, $99.99 one-time | | |
-| 2.2.3 | Create an **Offering** called `default` containing all 3 products | RevenueCat Dashboard > Offerings | [ ] |
-| 2.2.4 | Create an **Entitlement** called `cooksy_pro` linked to all 3 products | RevenueCat Dashboard > Entitlements | [ ] |
+| 2.2.2 | Create **2 products** in App Store Connect first, then sync to RevenueCat: | App Store Connect > Features > In-App Purchases | [ ] |
+| | - `com.attm1122.Cooksy.premium.monthly` — Auto-Renewable, $4.99/month | | |
+| | - `com.attm1122.Cooksy.premium.annual` — Auto-Renewable, $39.99/year | | |
+| 2.2.3 | Create an **Offering** called `default` containing the monthly and annual products | RevenueCat Dashboard > Offerings | [ ] |
+| 2.2.4 | Create an **Entitlement** called `cooksy_pro` linked to monthly and annual products | RevenueCat Dashboard > Entitlements | [ ] |
 | 2.2.5 | Add the **RevenueCat API key** to your Cooksy code (already obfuscated in `SecureKeyObfuscation.swift`) | Verify key matches dashboard | [ ] |
 | 2.2.6 | Configure **Apple Server Notifications** in RevenueCat (for subscription status updates) | RevenueCat > Project Settings > Apple | [ ] |
 
@@ -69,8 +68,8 @@
 
 | # | Task | Details | Done |
 |---|------|---------|------|
-| 3.1 | **Privacy Policy** — Host a privacy policy page at `https://cooksy.app/privacy` (or any public URL) | Required by App Store + ATT framework. Must disclose: email collection, anonymous analytics, local storage, Supabase backend, RevenueCat purchases. | [ ] |
-| 3.2 | **Terms of Service** — Host at `https://cooksy.app/terms` (or any public URL) | Required for subscription apps. Cover: subscription terms, cancellation, refund policy, user content, account termination. | [ ] |
+| 3.1 | **Privacy Policy** — Host a privacy policy page at `https://appstore-site-mu.vercel.app/privacy` | Required by App Store + ATT framework. Must disclose: email collection, anonymous analytics, local storage, Supabase backend, RevenueCat purchases. | [x] |
+| 3.2 | **Terms of Service** — Host at `https://appstore-site-mu.vercel.app/terms` | Required for subscription apps. Cover: subscription terms, cancellation, refund policy, user content, account termination. | [x] |
 | 3.3 | **App Store Privacy Questionnaire** — Answer Apple's privacy questions in App Store Connect | Categories: Contact Info (Email), User Content (Recipes), Purchases. Select "Data Not Linked to Identity" where applicable. | [ ] |
 
 ---
@@ -79,12 +78,12 @@
 
 | # | Task | Detailed Steps | Done |
 |---|------|----------------|------|
-| 4.1 | **Open project in Xcode** | Launch Xcode 15+ → File → Open → Select `/mnt/agents/output/project/Package.swift` | [ ] |
+| 4.1 | **Open project in Xcode** | Launch Xcode 26+ → File → Open → Select `/Users/aubreymazinyi/Documents/Cooksy/Package.swift` | [ ] |
 | 4.2 | **Resolve packages** | Xcode will auto-fetch Supabase and RevenueCat dependencies. If not: File > Packages > Resolve Package Versions | [ ] |
 | 4.3 | **Configure Signing** | Project navigator → Cooksy → Signing & Capabilities → Select your **Team** → Enable "Automatically manage signing" | [ ] |
 | 4.4 | **Set Bundle Identifier** | Change to `com.cooksy.app` (or your chosen bundle ID). This MUST match your App Store Connect record. | [ ] |
-| 4.5 | **Set Version and Build** | Marketing Version: `1.0.0`, Build: `1`. Match these in App Store Connect. | [ ] |
-| 4.6 | **Add the ATS configuration** from `AppTransportSecurity.md` into the project's `Info.plist` | Copy the XML snippet from `Core/Security/AppTransportSecurity.md` | [ ] |
+| 4.5 | **Set Version and Build** | Marketing Version: `1.0.0`, Build: `65`. The rejected binary was build `64`, so resubmission needs a newly uploaded build. | [x] |
+| 4.6 | **Verify ATS configuration** in `Info.plist` | HTTPS-only transport is enabled without broad arbitrary-load exceptions or fragile global TLS overrides. | [x] |
 | 4.7 | **Build and run on Simulator** (iPhone 15 Pro) | Product > Destination > iPhone 15 Pro → Product > Run. Verify app launches without crashes. | [ ] |
 | 4.8 | **Build and run on a physical device** | Connect iPhone → Select device in Xcode → Product > Run. This verifies: signing works, entitlements are valid, push notifications register. | [ ] |
 | 4.9 | **Test key user flows** on device: | | [ ] |
@@ -160,7 +159,7 @@ KEY FEATURES TO TEST:
 5. Cook-Along Video Sync — split-screen video + recipe steps (available with Cooksy Pro)
 
 SUBSCRIPTION TESTING:
-- Monthly ($4.99), Yearly ($39.99), and Lifetime ($99.99) options available
+- Monthly ($4.99) and Yearly ($39.99) options available
 - RevenueCat handles purchase display, entitlement checks, and receipt validation
 - The related App Store Connect in-app purchase products must be submitted with this app version
 - Use sandbox Apple ID for testing subscriptions
@@ -265,7 +264,6 @@ COOKSY PRO
 Unlock unlimited imports, cook-along video sync, and unlimited recipe books:
 - Monthly: $4.99
 - Yearly: $39.99 (best value)
-- Lifetime: $99.99 (one-time)
 
 PRIVACY FIRST
 - Your recipes are stored locally on your device

@@ -10,8 +10,8 @@ struct SubscriptionView: View {
     @State private var viewModel = SubscriptionViewModel()
     @Environment(\.dismiss) private var dismiss
 
-    private let termsURL = URL(string: "https://cooksy.app/terms")!
-    private let privacyURL = URL(string: "https://cooksy.app/privacy")!
+    private let termsURL = AppLinks.terms
+    private let privacyURL = AppLinks.privacy
 
     @State private var showTerms = false
     @State private var showPrivacy = false
@@ -105,7 +105,7 @@ struct SubscriptionView: View {
                         .foregroundStyle(.ink)
                         .scalableText()
                 } else {
-                    Text("Cooksy Pro — Lifetime")
+                    Text("Cooksy Pro Active")
                         .font(.cooksCallout.weight(.medium))
                         .foregroundStyle(.ink)
                         .scalableText()
@@ -307,9 +307,7 @@ struct SubscriptionView: View {
     }
 
     private var finePrintText: String {
-        if viewModel.selectedPlan == .lifetime {
-            return "This is a one-time purchase. You'll have permanent access to all Cooksy Pro features. Payment will be charged to your Apple ID account at the time of purchase."
-        } else if viewModel.selectedPlan != .free {
+        if viewModel.selectedPlan != .free {
             return "Subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current period. Your account will be charged for renewal within 24 hours prior to the end of the current period. You can manage or cancel your subscription in your Account Settings."
         } else {
             return "Upgrade to Cooksy Pro anytime to unlock all features."
@@ -345,23 +343,19 @@ struct SubscriptionView: View {
         // Fall back to period matching
         return viewModel.offerings.first { pkg in
             guard let period = pkg.storeProduct.subscriptionPeriod else {
-                return plan == .lifetime
+                return false
             }
             switch plan {
             case .monthly: return period.unit == .month && period.value == 1
             case .yearly: return period.unit == .year && period.value == 1
-            case .lifetime: return false
             case .free: return false
             }
-        } ?? (plan == .lifetime ? viewModel.offerings.first { $0.packageType == .lifetime } : nil)
+        }
     }
 
     /// Returns a human-readable price string for a plan.
     private func priceDisplay(for plan: SubscriptionViewModel.Plan) -> String {
         guard let pkg = findPackage(for: plan) else { return plan.rawValue }
-        if plan == .lifetime {
-            return "\(pkg.localizedPriceString) one-time"
-        }
         return pkg.localizedPriceString
     }
 }
@@ -456,21 +450,17 @@ struct AccessiblePlanCard: View {
         let pkg = offering?.availablePackages.first { pkg in
             if pkg.identifier == plan.packageIdentifier { return true }
             guard let period = pkg.storeProduct.subscriptionPeriod else {
-                return plan == .lifetime
+                return false
             }
             switch plan {
             case .monthly: return period.unit == .month && period.value == 1
             case .yearly: return period.unit == .year && period.value == 1
-            case .lifetime: return false
             case .free: return false
             }
-        } ?? offering?.availablePackages.first { $0.packageType == .lifetime && plan == .lifetime }
+        }
 
         guard let package = pkg else { return plan == .free ? "Free" : "—" }
 
-        if plan == .lifetime {
-            return package.localizedPriceString
-        }
         return package.localizedPriceString
     }
 }

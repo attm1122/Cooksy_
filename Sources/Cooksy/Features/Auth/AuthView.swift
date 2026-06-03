@@ -17,6 +17,9 @@ struct AuthView: View {
     
     /// Focus state for email field
     @FocusState private var emailFocused: Bool
+
+    @State private var showTerms = false
+    @State private var showPrivacy = false
     
     init(onAuthenticated: @escaping () -> Void = {}) {
         self.onAuthenticated = onAuthenticated
@@ -57,6 +60,12 @@ struct AuthView: View {
         .onAppear {
             // Observe Apple credential revocation (user disabled Sign in with Apple in Settings)
             viewModel.observeAppleCredentialRevocation()
+        }
+        .sheet(isPresented: $showTerms) {
+            SafariView(url: AppLinks.terms)
+        }
+        .sheet(isPresented: $showPrivacy) {
+            SafariView(url: AppLinks.privacy)
         }
     }
     
@@ -156,14 +165,28 @@ struct AuthView: View {
 
                 Spacer()
 
-                // Terms text
-                Text("By continuing, you agree to our Terms of Service and Privacy Policy.")
-                    .font(.caption)
-                    .foregroundStyle(.textMuted)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
-                    .scalableText()
-                    .accessibilityLabel("By continuing, you agree to our Terms of Service and Privacy Policy")
+                VStack(spacing: 8) {
+                    Text("By continuing, you agree to our Terms of Service and Privacy Policy.")
+                        .font(.caption)
+                        .foregroundStyle(.textMuted)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                        .scalableText()
+
+                    HStack(spacing: 12) {
+                        Button("Terms") { showTerms = true }
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.brand)
+                            .frame(minHeight: 44)
+                            .accessibilityLabel("View Terms of Service")
+
+                        Button("Privacy") { showPrivacy = true }
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.brand)
+                            .frame(minHeight: 44)
+                            .accessibilityLabel("View Privacy Policy")
+                    }
+                }
             }
             .padding(.horizontal, 24)
         }

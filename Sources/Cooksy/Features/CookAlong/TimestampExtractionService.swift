@@ -2,37 +2,26 @@ import Foundation
 
 // MARK: - TimestampExtractionService
 
-/// Extracts timestamps from a video by transcribing audio and matching
-/// recipe steps to spoken phrases.
-///
-/// In production: Uses OpenAI Whisper API for transcription with word-level timestamps,
-/// then NLP matching to map spoken phrases to recipe steps.
-/// For MVP: Returns mock data or simple heuristic-based timestamps.
+/// Extracts timestamps from a trusted timed transcript and matches recipe steps
+/// to spoken phrases. Audio transcription is intentionally handled by the secure
+/// backend so private AI vendor keys are never bundled into the iOS app.
 @Observable
 @MainActor
 final class TimestampExtractionService {
 
     // MARK: - Dependencies
 
-    private let apiKey: String
     private let cache: SyncMapCache
-    private let session: URLSession
 
     // MARK: - Initialization
 
     /// Creates a new TimestampExtractionService.
     /// - Parameters:
-    ///   - apiKey: OpenAI API key for Whisper transcription
     ///   - cache: Cache layer for persisting sync maps (defaults to in-memory)
-    ///   - session: URLSession for network requests
     init(
-        apiKey: String = "",
-        cache: SyncMapCache = InMemorySyncMapCache(),
-        session: URLSession = .shared
+        cache: SyncMapCache = InMemorySyncMapCache()
     ) {
-        self.apiKey = apiKey
         self.cache = cache
-        self.session = session
     }
 
     // MARK: - Public API
@@ -49,28 +38,17 @@ final class TimestampExtractionService {
             return cached
         }
 
-        // 2. Validate API key is configured
-        guard !apiKey.isEmpty else {
-            throw CooksyError.transcriptionUnavailable(
-                "Cook-along requires a transcription service. This feature will be available in a future update."
-            )
-        }
-
-        // 3. Production path: Transcribe and match
-        //    NOTE: Whisper API integration + NLP step matching is planned for v2.
-        return try await extractTimestampsProduction(
-            for: recipe,
-            videoUrl: videoUrl,
-            videoDuration: 0
+        throw CooksyError.transcriptionUnavailable(
+            "Cook-along requires server-side transcription. This feature will be available in a future update."
         )
     }
 
-    /// Extract timestamps using the full production pipeline:
-    /// download audio → Whisper transcription → NLP matching.
+    /// Extract timestamps from a backend-generated timed transcript.
     func extractTimestampsProduction(
         for recipe: Recipe,
         videoUrl: String,
-        videoDuration: TimeInterval
+        videoDuration: TimeInterval,
+        transcript: TimedTranscript
     ) async throws -> RecipeSyncMap {
 
         // Check cache
@@ -78,16 +56,9 @@ final class TimestampExtractionService {
             return cached
         }
 
-        // Step 1: Download video audio track
-        let audioURL = try await downloadAudioTrack(from: videoUrl)
-
-        // Step 2: Transcribe with Whisper (word-level timestamps)
-        let transcription = try await transcribeWithWhisper(audioUrl: audioURL)
-
-        // Step 3: Match recipe steps to transcription
         let timestamps = matchStepsToTranscription(
             steps: recipe.steps,
-            transcription: transcription,
+            transcription: transcript,
             videoDuration: videoDuration
         )
 
@@ -124,13 +95,6 @@ final class TimestampExtractionService {
         try? await cache.save(syncMap)
     }
 
-    // MARK: - Private: Production Pipeline
-
-    private func downloadAudioTrack(from videoUrl: String) async throws -> URL {
-        // NOTE: AVAssetExportSession audio extraction is planned for v2.
-        // This will be replaced with a backend service call for reliability.
-        throw CooksyError.unknown
-    }
 }
 
 // MARK: - Sync Map Cache Protocol
@@ -161,10 +125,10 @@ actor InMemorySyncMapCache: SyncMapCache {
     }
 }
 
-// MARK: - Whisper API Integration
+// MARK: - Timed Transcript
 
-/// OpenAI Whisper API response structure (word-level timestamps)
-struct WhisperTranscription: Codable, Sendable {
+/// Backend-generated transcript with word-level timestamps.
+struct TimedTranscript: Codable, Sendable {
     struct Word: Codable, Sendable {
         let word: String
         let start: Double
@@ -184,77 +148,9 @@ struct WhisperTranscription: Codable, Sendable {
     let segments: [Segment]?
 }
 
-// MARK: - Whisper API + NLP Matching
+// MARK: - Transcript Matching
 
 extension TimestampExtractionService {
-
-    /// Production: Call OpenAI Whisper API for word-level transcription.
-    ///
-    /// Endpoint: POST https://api.openai.com/v1/audio/transcriptions
-    /// Model: whisper-1
-    /// Required parameter: `timestamp_granularities[]=word`
-    func transcribeWithWhisper(audioUrl: URL) async throws -> WhisperTranscription {
-        guard !apiKey.isEmpty else {
-            throw CooksyError.transcriptionFailed(reason: "API key not configured")
-        }
-
-        let endpoint = URL(string: "https://api.openai.com/v1/audio/transcriptions")!
-
-        var request = URLRequest(url: endpoint)
-        request.httpMethod = "POST"
-        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-
-        // Build multipart form data
-        let boundary = UUID().uuidString
-        request.setValue(
-            "multipart/form-data; boundary=\(boundary)",
-            forHTTPHeaderField: "Content-Type"
-        )
-
-        var body = Data()
-
-        // File
-        let audioData = try Data(contentsOf: audioUrl)
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"audio.m4a\"\r\n".data(using: .utf8)!)
-        body.append("Content-Type: audio/m4a\r\n\r\n".data(using: .utf8)!)
-        body.append(audioData)
-        body.append("\r\n".data(using: .utf8)!)
-
-        // Model
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"model\"\r\n\r\n".data(using: .utf8)!)
-        body.append("whisper-1\r\n".data(using: .utf8)!)
-
-        // Response format
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"response_format\"\r\n\r\n".data(using: .utf8)!)
-        body.append("verbose_json\r\n".data(using: .utf8)!)
-
-        // Word-level timestamps
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"timestamp_granularities[]\"\r\n\r\n".data(using: .utf8)!)
-        body.append("word\r\n".data(using: .utf8)!)
-
-        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
-        request.httpBody = body
-
-        let (data, response) = try await session.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw CooksyError.transcriptionFailed(reason: "Invalid response type")
-        }
-
-        guard httpResponse.statusCode == 200 else {
-            let message = String(data: data, encoding: .utf8) ?? "Unknown error"
-            throw CooksyError.whisperAPIFailure(
-                statusCode: httpResponse.statusCode,
-                message: message
-            )
-        }
-
-        return try JSONDecoder().decode(WhisperTranscription.self, from: data)
-    }
 
     /// Match recipe steps to transcription words using NLP techniques.
     ///
@@ -266,12 +162,12 @@ extension TimestampExtractionService {
     /// 5. Apply confidence based on overlap ratio
     func matchStepsToTranscription(
         steps: [RecipeStep],
-        transcription: WhisperTranscription,
+        transcription: TimedTranscript,
         videoDuration: TimeInterval
     ) -> [RecipeTimestamp] {
 
         // Collect all words from transcription
-        let allWords: [WhisperTranscription.Word]
+        let allWords: [TimedTranscript.Word]
         if let words = transcription.words, !words.isEmpty {
             allWords = words
         } else if let segments = transcription.segments {

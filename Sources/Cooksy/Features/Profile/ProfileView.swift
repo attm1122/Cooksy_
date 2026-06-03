@@ -26,8 +26,8 @@ struct ProfileView: View {
     @State private var showPrivacy = false
     @State private var showTerms = false
 
-    private let privacyURL = URL(string: "https://cooksy.app/privacy")!
-    private let termsURL = URL(string: "https://cooksy.app/terms")!
+    private let privacyURL = AppLinks.privacy
+    private let termsURL = AppLinks.terms
 
     // MARK: - Body
 

@@ -40,34 +40,13 @@
     <false/>
     <key>NSAppTransportSecurity</key>
     <dict>
-        <!-- Strict ATS: Block all non-HTTPS traffic globally -->
+        <!-- ATS remains enabled. Do not add broad exceptions for production. -->
         <key>NSAllowsArbitraryLoads</key>
         <false/>
-        <!-- Block non-HTTPS media loading (images, videos) -->
         <key>NSAllowsArbitraryLoadsForMedia</key>
         <false/>
-        <!-- Block non-HTTPS in web content -->
         <key>NSAllowsArbitraryLoadsInWebContent</key>
         <false/>
-        <!-- Require TLS 1.3 minimum for all connections -->
-        <key>NSExceptionMinimumTLSVersion</key>
-        <string>TLSv1.3</string>
-        <!-- Require certificate transparency for all certificates -->
-        <key>NSRequiresCertificateTransparency</key>
-        <true/>
-        <!-- Supabase API exception -->
-        <key>NSExceptionDomains</key>
-        <dict>
-            <key>qirjjbmrgtailifhmakp.supabase.co</key>
-            <dict>
-                <key>NSExceptionMinimumTLSVersion</key>
-                <string>TLSv1.3</string>
-                <key>NSIncludesSubdomains</key>
-                <true/>
-                <key>NSExceptionRequiresForwardSecrecy</key>
-                <true/>
-            </dict>
-        </dict>
     </dict>
     <key>UILaunchScreen</key>
     <dict>
