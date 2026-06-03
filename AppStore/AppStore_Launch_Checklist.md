@@ -131,7 +131,7 @@
 | # | Task | Details | Done |
 |---|------|---------|------|
 | 5.3.1 | Fill in **App Review Information** | | [ ] |
-| | - Sign-in required? | Yes — provide a demo account email/password, or instructions to use Magic Link OTP | |
+| | - Sign-in required? | Yes — provide the App Review demo OTP below, or instructions to use Magic Link OTP | |
 | | - Contact Information | Your name, phone, email | |
 | | - Notes for reviewer | See "Review Notes" below | |
 | 5.3.2 | Fill in **Release Option** | Choose: "Manually release this version after approval" (recommended for first launch) | [ ] |
@@ -147,9 +147,10 @@ Cooksy is a recipe import and cook-along app. Users paste YouTube, TikTok, or In
 and the app extracts structured recipes with ingredients, steps, and cooking times.
 
 TEST ACCOUNT:
-- Use Magic Link / OTP sign-in with any email address
-- Enter the OTP sent to your email
-- No pre-registered account needed
+- Email: appreview@cooksyapp.uk
+- Verification code: 202626
+- This demo code signs the reviewer directly into Cooksy with full app access.
+- Other users can use Magic Link / OTP sign-in with their own email address.
 
 KEY FEATURES TO TEST:
 1. Recipe import — paste a YouTube cooking video URL
@@ -160,11 +161,13 @@ KEY FEATURES TO TEST:
 
 SUBSCRIPTION TESTING:
 - Monthly ($4.99), Yearly ($39.99), and Lifetime ($99.99) options available
-- RevenueCat handles all purchase processing
+- RevenueCat handles purchase display, entitlement checks, and receipt validation
+- The related App Store Connect in-app purchase products must be submitted with this app version
 - Use sandbox Apple ID for testing subscriptions
 
 PRIVACY:
 - All recipe data stored locally via SwiftData
+- Submitted recipe video links are sent to Cooksy's secure Supabase-backed processing service to extract ingredients, steps, and timings
 - Optional Supabase sync for cross-device access
 - EXIF metadata stripped from all uploaded images
 - No third-party tracking

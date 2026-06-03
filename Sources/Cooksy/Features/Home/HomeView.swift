@@ -20,6 +20,9 @@ struct HomeView: View {
 
     @State private var viewModel = HomeViewModel()
     @State private var importService = ImportService()
+    @AppStorage("hasAcceptedAIProcessingDisclosure") private var hasAcceptedAIProcessingDisclosure = false
+    @State private var pendingImportAfterDisclosure = false
+    @State private var showAIProcessingDisclosure = false
 
     // MARK: - Body
 
@@ -65,6 +68,20 @@ struct HomeView: View {
                 importService: importService
             )
             await viewModel.loadRecipes()
+        }
+        .alert("AI recipe processing", isPresented: $showAIProcessingDisclosure) {
+            Button("Cancel", role: .cancel) {
+                pendingImportAfterDisclosure = false
+            }
+            Button("Continue") {
+                hasAcceptedAIProcessingDisclosure = true
+                if pendingImportAfterDisclosure {
+                    pendingImportAfterDisclosure = false
+                    Task { await viewModel.importRecipe() }
+                }
+            }
+        } message: {
+            Text("Cooksy sends the recipe link you provide to Cooksy's secure processing backend to extract ingredients, steps, and timings. Continue only if you agree to share this link for recipe processing.")
         }
     }
 
@@ -144,9 +161,7 @@ struct HomeView: View {
 
             // Import Button
             Button {
-                Task {
-                    await viewModel.importRecipe()
-                }
+                handleImportTap()
             } label: {
                 HStack(spacing: 8) {
                     if viewModel.isImporting {
@@ -166,6 +181,16 @@ struct HomeView: View {
             .opacity(viewModel.canImport ? 1.0 : 0.6)
             .accessibilityIdentifier(AccessibilityID.saveRecipeButton)
         }
+    }
+
+    private func handleImportTap() {
+        guard hasAcceptedAIProcessingDisclosure else {
+            pendingImportAfterDisclosure = true
+            showAIProcessingDisclosure = true
+            return
+        }
+
+        Task { await viewModel.importRecipe() }
     }
 
     // MARK: - Recently Saved Section

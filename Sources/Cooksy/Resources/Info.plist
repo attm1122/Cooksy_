@@ -17,7 +17,7 @@
     <key>CFBundleShortVersionString</key>
     <string>1.0.0</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>65</string>
     <key>LSRequiresIPhoneOS</key>
     <true/>
     <key>UIApplicationSceneManifest</key>
@@ -93,7 +93,7 @@
     <array>
         <string>fetch</string>
         <string>remote-notification</string>
-    </dict>
+    </array>
     <key>NSUserNotificationUsageDescription</key>
     <string>Cooksy sends notifications when your recipe imports are complete.</string>
     <key>UIUserInterfaceStyle</key>

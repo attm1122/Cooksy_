@@ -166,8 +166,3 @@ final class MockSupabaseService: SupabaseProtocol {
         )
     }
 }
-n the user taps on a notification.
-    func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        didReceive response: UNNotificationResponse,
-       

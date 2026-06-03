@@ -20,8 +20,14 @@ struct ProfileView: View {
     )
 
     @State private var isConfigured = false
-    @State private var showExportSheet = false
     @State private var showDeleteConfirmation = false
+    @State private var showProfileInfo = false
+    @State private var showPasswordInfo = false
+    @State private var showPrivacy = false
+    @State private var showTerms = false
+
+    private let privacyURL = URL(string: "https://cooksy.app/privacy")!
+    private let termsURL = URL(string: "https://cooksy.app/terms")!
 
     // MARK: - Body
 
@@ -49,8 +55,14 @@ struct ProfileView: View {
             .background(Color.cooksBackground)
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.large)
-            .sheet(isPresented: $showExportSheet) {
+            .sheet(isPresented: $viewModel.showExportSheet) {
                 ExportDataSheet(jsonData: viewModel.exportDataJSON)
+            }
+            .sheet(isPresented: $showPrivacy) {
+                SafariView(url: privacyURL)
+            }
+            .sheet(isPresented: $showTerms) {
+                SafariView(url: termsURL)
             }
             .alert("Delete Account?", isPresented: $showDeleteConfirmation) {
                 Button("Cancel", role: .cancel) {}
@@ -59,6 +71,16 @@ struct ProfileView: View {
                 }
             } message: {
                 Text("This will permanently delete your account and all your recipes, books, and data. This action cannot be undone.")
+            }
+            .alert("Profile", isPresented: $showProfileInfo) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Your profile name and email are managed by the sign-in method you used for Cooksy.")
+            }
+            .alert("Password", isPresented: $showPasswordInfo) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Cooksy uses password-free email verification and Sign in with Apple, so there is no app password to change.")
             }
             .task {
                 guard !isConfigured else { return }
@@ -135,7 +157,9 @@ struct ProfileView: View {
                     .font(.cooksH3)
                     .foregroundStyle(Color.ink)
 
-                NavigationLink(value: "subscription") {
+                NavigationLink {
+                    SubscriptionView()
+                } label: {
                     HStack {
                         Text(viewModel.isPro ? "Manage Subscription" : "Upgrade to Cooksy Pro")
                             .font(.cooksCallout)
@@ -170,13 +194,21 @@ struct ProfileView: View {
         VStack(spacing: 24) {
             // Account
             ProfileSection(title: "Account") {
-                NavigationLink(value: "editProfile") {
+                Button {
+                    showProfileInfo = true
+                } label: {
                     ProfileRow(icon: "person.fill", title: "Edit Profile", color: .brand)
                 }
+                .accessibilityLabel("Edit Profile")
 
-                NavigationLink(value: "changePassword") {
+                Divider().decorative()
+
+                Button {
+                    showPasswordInfo = true
+                } label: {
                     ProfileRow(icon: "lock.fill", title: "Change Password", color: .brand)
                 }
+                .accessibilityLabel("Change Password")
             }
 
             // Data
@@ -202,6 +234,25 @@ struct ProfileView: View {
                 } label: {
                     ProfileRow(icon: "trash.fill", title: "Delete Account", color: .cooksDanger)
                 }
+            }
+
+            // Legal
+            ProfileSection(title: "Legal") {
+                Button {
+                    showPrivacy = true
+                } label: {
+                    ProfileRow(icon: "hand.raised.fill", title: "Privacy Policy", color: .brand)
+                }
+                .accessibilityLabel("Privacy Policy")
+
+                Divider().decorative()
+
+                Button {
+                    showTerms = true
+                } label: {
+                    ProfileRow(icon: "doc.text.fill", title: "Terms of Service", color: .brand)
+                }
+                .accessibilityLabel("Terms of Service")
             }
         }
     }

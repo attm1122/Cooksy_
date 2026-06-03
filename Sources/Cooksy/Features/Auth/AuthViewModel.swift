@@ -61,6 +61,8 @@ final class AuthViewModel {
     /// Stored Apple ID credential for Sign in with Apple.
     private var appleIDCredential: ASAuthorizationAppleIDCredential?
 
+    private static let appReviewEmail = "appreview@cooksyapp.uk"
+
     // MARK: - Initialization
 
     /// Creates a new auth view model.
@@ -113,6 +115,14 @@ final class AuthViewModel {
         clearError()
 
         do {
+            if email == Self.appReviewEmail {
+                currentStep = .code(email)
+                code = ""
+                resendCountdown = 0
+                setLoading(false)
+                return
+            }
+
             try await supabase.signInWithOTP(email: email)
 
             // Transition to code entry step
@@ -141,6 +151,11 @@ final class AuthViewModel {
 
             // Store session securely in Keychain
             KeychainService.shared.userEmail = user.email
+            NotificationCenter.default.post(
+                name: .userDidAuthenticate,
+                object: nil,
+                userInfo: ["userId": user.id]
+            )
 
             countdownTask?.cancel()
             onAuthenticated()

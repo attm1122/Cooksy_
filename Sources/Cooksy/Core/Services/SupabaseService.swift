@@ -82,9 +82,15 @@ final class SupabaseService: SupabaseProtocol {
 
     private let supabaseURL: String
     private let supabaseKey: String
+    private static let appReviewEmail = "appreview@cooksyapp.uk"
+    private static let appReviewCode = "202626"
 
     /// The currently signed-in user. Updated after successful `verifyOTP` or `signOut`.
     private(set) var currentUser: User?
+
+    private var isAppReviewDemoUser: Bool {
+        currentUser?.email.lowercased() == Self.appReviewEmail
+    }
 
     /// Cached session token. Stored in the Keychain for production security.
     private var sessionToken: String? {
@@ -206,6 +212,19 @@ final class SupabaseService: SupabaseProtocol {
 
     /// Verifies the OTP token and establishes a session.
     func verifyOTP(email: String, token: String) async throws -> User {
+        if email.lowercased() == Self.appReviewEmail, token == Self.appReviewCode {
+            let user = User(
+                id: "app-review-demo-user",
+                email: Self.appReviewEmail,
+                createdAt: Date()
+            )
+            currentUser = user
+            KeychainService.shared.userEmail = user.email
+            KeychainService.shared.displayName = "App Review"
+            KeychainService.shared.firstName = "Reviewer"
+            return user
+        }
+
         guard let url = baseURL(path: "/auth/v1/verify") else {
             throw CooksyError.invalidURL
         }
@@ -303,6 +322,13 @@ final class SupabaseService: SupabaseProtocol {
     /// Permanently deletes the user's account by calling the `delete_user` RPC
     /// in Supabase. This RPC must be configured with SECURITY DEFINER.
     func deleteAccount() async throws {
+        if isAppReviewDemoUser {
+            sessionToken = nil
+            currentUser = nil
+            KeychainService.shared.clearAll()
+            return
+        }
+
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else {
             throw CooksyError.serverError(statusCode: 0, message: "Supabase not configured")
         }
@@ -333,6 +359,10 @@ final class SupabaseService: SupabaseProtocol {
     /// Fetches all recipes for the current user from the `recipes` table.
     /// Uses `.select("*, ingredients(*), steps(*)")` to eagerly load relationships.
     func fetchRecipes() async throws -> [RecipeDTO] {
+        if isAppReviewDemoUser {
+            return [Self.makeAppReviewRecipeDTO()]
+        }
+
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else {
             throw CooksyError.serverError(statusCode: 0, message: "Supabase not configured. Check your environment variables.")
         }
@@ -367,6 +397,14 @@ final class SupabaseService: SupabaseProtocol {
 
     /// Calls the `import-recipe` Edge Function to start parsing a video URL.
     func importRecipe(url: String) async throws -> ImportJobResponse {
+        if isAppReviewDemoUser {
+            return ImportJobResponse(
+                jobId: "app-review-import-\(UUID().uuidString.prefix(8))",
+                status: .ready,
+                recipe: Self.makeAppReviewRecipeDTO(sourceUrl: url)
+            )
+        }
+
         guard let requestURL = baseURL(path: "/functions/v1/import-recipe") else {
             throw CooksyError.invalidURL
         }
@@ -402,6 +440,15 @@ final class SupabaseService: SupabaseProtocol {
 
     /// Polls the `import-status` Edge Function for the current status of a job.
     func checkImportStatus(jobId: String) async throws -> ImportStatusResponse {
+        if isAppReviewDemoUser {
+            return ImportStatusResponse(
+                jobId: jobId,
+                status: .ready,
+                recipe: Self.makeAppReviewRecipeDTO(),
+                message: "Demo recipe ready"
+            )
+        }
+
         guard let url = baseURL(path: "/functions/v1/import-status?job_id=\(jobId)") else {
             throw CooksyError.invalidURL
         }
@@ -428,6 +475,10 @@ final class SupabaseService: SupabaseProtocol {
 
     /// Retrieves the completed recipe DTO after an import job succeeds.
     func completeImport(jobId: String) async throws -> RecipeDTO {
+        if isAppReviewDemoUser {
+            return Self.makeAppReviewRecipeDTO()
+        }
+
         guard let url = baseURL(path: "/functions/v1/import-complete?job_id=\(jobId)") else {
             throw CooksyError.invalidURL
         }
@@ -459,6 +510,12 @@ final class SupabaseService: SupabaseProtocol {
     /// Registers the device push token with Supabase for the current user.
     func registerPushToken(_ token: String) async throws {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { return }
+        if isAppReviewDemoUser {
+            return
+        }
+        guard let userId = currentUser?.id else {
+            throw CooksyError.unauthorized
+        }
         guard let url = baseURL(path: "/rest/v1/user_push_tokens") else {
             throw CooksyError.invalidURL
         }
@@ -468,6 +525,7 @@ final class SupabaseService: SupabaseProtocol {
         request.allHTTPHeaderFields = makeHeaders()
 
         let body: [String: Any] = [
+            "user_id": userId,
             "token": token,
             "platform": "ios",
             "updated_at": ISO8601DateFormatter().string(from: Date())
@@ -485,6 +543,9 @@ final class SupabaseService: SupabaseProtocol {
     /// Unregisters the device push token when the user signs out.
     func unregisterPushToken(_ token: String) async throws {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { return }
+        if isAppReviewDemoUser {
+            return
+        }
         guard let url = baseURL(path: "/rest/v1/user_push_tokens?token=eq.\(token)") else {
             throw CooksyError.invalidURL
         }
@@ -523,12 +584,19 @@ final class SupabaseService: SupabaseProtocol {
     /// Submits a content moderation report to Supabase.
     /// Includes DeviceCheck attestation to verify the request comes from an unmodified app.
     func submitContentReport(recipeId: String, reason: String, details: String?) async throws {
+        if isAppReviewDemoUser {
+            return
+        }
+
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else {
             // In dev mode without Supabase configured, just print
             #if DEBUG
             print("[SupabaseService] Content report submitted: recipe=\(recipeId), reason=\(reason)")
             #endif
             return
+        }
+        guard let userId = currentUser?.id else {
+            throw CooksyError.unauthorized
         }
         guard let url = baseURL(path: "/rest/v1/content_reports") else {
             throw CooksyError.invalidURL
@@ -539,6 +607,7 @@ final class SupabaseService: SupabaseProtocol {
         request.allHTTPHeaderFields = await makeHeadersWithAttestation()
 
         var body: [String: Any] = [
+            "user_id": userId,
             "recipe_id": recipeId,
             "reason": reason,
             "status": "pending"
@@ -639,5 +708,45 @@ final class SupabaseService: SupabaseProtocol {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         return try encoder.encode(container)
+    }
+
+    private static func makeAppReviewRecipeDTO(sourceUrl: String = "https://youtube.com/watch?v=demo") -> RecipeDTO {
+        let now = ISO8601DateFormatter().string(from: Date())
+        return RecipeDTO(
+            id: UUID().uuidString,
+            title: "Creamy Garlic Parmesan Pasta",
+            heroNote: "A quick, reviewer-friendly demo recipe with clear timings and steps.",
+            servings: 4,
+            prepTimeMinutes: 5,
+            cookTimeMinutes: 15,
+            totalTimeMinutes: 20,
+            status: "ready",
+            confidence: "high",
+            confidenceScore: 92,
+            confidenceNote: "Demo extraction with complete ingredients and instructions.",
+            isSaved: true,
+            createdAt: now,
+            updatedAt: now,
+            importJobId: nil,
+            processingMessage: nil,
+            sourceUrl: sourceUrl,
+            sourcePlatform: "youtube",
+            sourceCreator: "Cooksy Demo Kitchen",
+            sourceTitle: "Creamy Garlic Parmesan Pasta",
+            ingredients: [
+                IngredientDTO(id: UUID().uuidString, name: "Spaghetti", quantity: "400", unit: "g", isChecked: false, displayOrder: 0),
+                IngredientDTO(id: UUID().uuidString, name: "Garlic", quantity: "4", unit: "cloves", isChecked: false, displayOrder: 1),
+                IngredientDTO(id: UUID().uuidString, name: "Heavy cream", quantity: "200", unit: "ml", isChecked: false, displayOrder: 2),
+                IngredientDTO(id: UUID().uuidString, name: "Parmesan cheese", quantity: "100", unit: "g", isChecked: false, displayOrder: 3),
+                IngredientDTO(id: UUID().uuidString, name: "Butter", quantity: "2", unit: "tbsp", isChecked: false, displayOrder: 4)
+            ],
+            steps: [
+                RecipeStepDTO(id: UUID().uuidString, title: "Boil the pasta", instruction: "Bring salted water to a boil, then cook the spaghetti until al dente.", durationMinutes: 10, displayOrder: 0),
+                RecipeStepDTO(id: UUID().uuidString, title: "Make the sauce", instruction: "Melt butter, add minced garlic, and cook until fragrant.", durationMinutes: 3, displayOrder: 1),
+                RecipeStepDTO(id: UUID().uuidString, title: "Add cream and cheese", instruction: "Stir in cream and Parmesan until the sauce is smooth.", durationMinutes: 3, displayOrder: 2),
+                RecipeStepDTO(id: UUID().uuidString, title: "Combine", instruction: "Toss the pasta through the sauce, loosening with pasta water if needed.", durationMinutes: 2, displayOrder: 3),
+                RecipeStepDTO(id: UUID().uuidString, title: "Serve", instruction: "Season to taste and serve with extra Parmesan.", durationMinutes: nil, displayOrder: 4)
+            ]
+        )
     }
 }

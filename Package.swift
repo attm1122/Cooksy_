@@ -26,7 +26,8 @@ let package = Package(
             ],
             path: "Sources/Cooksy",
             resources: [
-                .process("Resources")
+                .process("Resources/Assets.xcassets"),
+                .process("Resources/PrivacyInfo.xcprivacy")
             ]
         ),
         .testTarget(
